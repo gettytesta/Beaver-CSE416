@@ -30,3 +30,10 @@ This project is built using the MERN stack. This requires Nodejs and NPM to run.
             npm i
             npx next dev -p [DESIRED PORT]
         to start frontend.
+       
+Additional Setup frontend (Tailwind CSS and Lucide-React)
+1. Tailwind CSS v3 and Lucide React(Icons)
+    1. npm install -D tailwindcss@3 postcss autoprefixer
+    2. npm install lucide-react
+
+
