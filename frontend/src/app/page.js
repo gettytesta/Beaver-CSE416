@@ -1,7 +1,5 @@
+import { redirect } from "next/navigation";
+{/* Landing Page For Login/Continue as Guest Fix later */}
 export default function Home() {
-  return (
-    <main>
-      <div>Hello World!</div>
-    </main>
-  );
+  redirect("/dashboard");
 }
