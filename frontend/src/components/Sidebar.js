@@ -5,7 +5,7 @@ import { usePathname } from "next/navigation";
 import { LayoutDashboard, NotebookPen, ChartLine, TrendingUpDown, Settings } from "lucide-react";
 
 export default function Sidebar() {
-  const pathname = usePathname(); 
+  const pathname = usePathname(); //path
 
   return (
     <aside className="fixed w-60 h-screen bg-gray-100 p-5 shadow-md">
