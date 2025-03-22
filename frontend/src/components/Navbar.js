@@ -1,6 +1,6 @@
 "use client";
 import { usePathname } from "next/navigation";
-import { Search, Sun, Bell, File, User } from "lucide-react";
+import { Search, Sun, Bell, File, User, ChevronDown  } from "lucide-react";
 
 export default function Navbar() {
   const pathname = usePathname(); 
@@ -43,7 +43,8 @@ export default function Navbar() {
 
       {/* Account Name */}
       <div className="ml-3 text-gray-700 font-medium flex items-center">
-        Account Name <span className="ml-1">▼</span>
+        Account Name 
+        <ChevronDown className="w-4 h-4 ml-1 text-gray-500 relative top-[2px]" />
       </div>
     </header>
   );
