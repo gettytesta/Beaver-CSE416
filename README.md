@@ -34,8 +34,9 @@ This project is built using the MERN stack. This requires Nodejs and NPM to run.
         to start frontend.
        
 Additional Setup frontend (Tailwind CSS and Lucide-React)
-1. Tailwind CSS v3 and Lucide React(Icons)
+1. Tailwind CSS v3 and Lucide React(Icons) and dnd-kit(Movable Lists for Strategies) 
     1. npm install -D tailwindcss@3 postcss autoprefixer
     2. npm install lucide-react
+    3. npm install @dnd-kit/core @dnd-kit/sortable @dnd-kit/modifiers
 
 
