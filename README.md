@@ -17,11 +17,13 @@ This project is built using the MERN stack. This requires Nodejs and NPM to run.
             BACKEND_PORTNO = 3000
             HOST_NAME = "localhost"
 
-    2. Execute
+    2. Navigate to backend folder
+    3. Execute
     
             npm i
             node --env-file=[YOUR .ENV FILE] server.js
         to start backend listener.
+
 
 2. Start frontend
     1. Navigate to frontend folder.
