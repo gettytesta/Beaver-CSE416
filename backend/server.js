@@ -14,3 +14,17 @@ app.listen(portno, err => {
         return console.error(err.message);
     console.log(`Express server listening to port ${portno}.`);
 });
+
+
+// Start MongoDB server
+var mongoose = require('mongoose')
+var mongoDB = 'mongodb://127.0.0.1:27017/beaver_lfp'
+mongoose.connect(mongoDB, {useNewUrlParser: true, useUnifiedTopology: true})
+var db = mongoose.connection
+db.on('error', console.error.bind(console, 'MongoDB connection error:'))
+
+// Import required schemas
+let Investment = require('./models/investment')
+let Scenario = require('./models/scenario')
+let User = require('./models/user')
+let EventSeries = require('./models/eventseries')
