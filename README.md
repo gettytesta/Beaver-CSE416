@@ -9,7 +9,7 @@ This project is built using the MERN stack. This requires Nodejs and NPM to run.
 ## How to execute
 
 1. Start backend
-    1. Create a .env file within the head of the repository.
+    1. Create a .env file within the backend folder of the repository.
     
     .env file should include **BACKEND_PORTNO** field for express server to run on, and **HOST_NAME** field.
             
