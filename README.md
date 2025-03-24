@@ -35,4 +35,6 @@ Additional Setup frontend (Tailwind CSS and Lucide-React)
     2. npm install lucide-react
     3. npm install @dnd-kit/core @dnd-kit/sortable @dnd-kit/modifiers
 
+## Some notes
 
+Uploaded YAML files are not stored in MongoDB, they are stored locally on the server, and they are not uploaded to the repository. 
