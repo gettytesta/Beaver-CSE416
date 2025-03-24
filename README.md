@@ -28,10 +28,3 @@ This project is built using the MERN stack. This requires Nodejs and NPM to run.
     2. CD into the project's frontend directory.
     3. Run: npx next dev -p [DESIRED PORT]
     4. This will run the client locally on your machine. 
-       
-Additional Setup frontend (Tailwind CSS and Lucide-React)
-1. Tailwind CSS v3 and Lucide React(Icons)
-    1. npm install -D tailwindcss@3 postcss autoprefixer
-    2. npm install lucide-react
-
-
