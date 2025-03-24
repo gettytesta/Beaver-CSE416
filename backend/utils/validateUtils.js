@@ -7,11 +7,42 @@ const validStates = [
     'DC', 'AS', 'GU', 'MP', 'PR', 'VI'
 ];
 
-const validateStateCode = function (state) {
+/**
+ * Validates the state code
+ * @param {string} state - The state code to validate
+ * @returns {boolean} - True if the state code is valid, false otherwise
+ */
+exports.validateStateCode = function (state) {
     return validStates.includes(state);
 };
 
-module.exports = {
-    validStates,
-    validateStateCode
+/**
+ * Validates the YAML scenario structure
+ * @param {Object} scenario - The YAML scenario object
+ * @returns {boolean} - True if the scenario is valid, false otherwise
+ */
+exports.validateYAMLScenario = function (scenario) {
+    // Check if the scenario object is valid
+    if (!scenario || typeof scenario !== 'object') {
+        return false;
+    }
+
+    // TODO: Implement scenario validation
+    
+    return true;
+};
+
+/**
+ * Validates the YAML state tax structure
+ * @param {Object} stateTax - The YAML state tax object
+ * @returns {boolean} - True if the state tax is valid, false otherwise
+ */
+exports.validateYAMLStateTax = function (stateTax) {
+    // Check if the scenario object is valid
+    if (!stateTax || typeof stateTax !== 'object') {
+        return false;
+    }
+
+    // TODO: Implement state tax validation
+    return true;
 };

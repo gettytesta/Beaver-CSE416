@@ -26,13 +26,9 @@ This project is built using the MERN stack. This requires Nodejs and NPM to run.
 4. Start frontend
     1. Open command prompt.
     2. CD into the project's frontend directory.
-    3. Run: npx next dev -p [DESIRED PORT]
+    3. Run: npm run dev
     4. This will run the client locally on your machine. 
-       
-Additional Setup frontend (Tailwind CSS and Lucide-React)
-1. Tailwind CSS v3 and Lucide React(Icons) and dnd-kit(Movable Lists for Strategies) 
-    1. npm install -D tailwindcss@3 postcss autoprefixer
-    2. npm install lucide-react
-    3. npm install @dnd-kit/core @dnd-kit/sortable @dnd-kit/modifiers
 
+## Some notes
 
+Uploaded YAML files are not stored in MongoDB, they are stored locally on the server, and they are not uploaded to the repository.

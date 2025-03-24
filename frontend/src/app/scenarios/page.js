@@ -3,7 +3,22 @@
 import Link from "next/link";
 import { Trash2, Filter, Plus } from "lucide-react";
 import ScenarioTable from "@/components/ScenarioTable"; // Import Table Component
+/*TODO : First you need to do Session for this page(Guest & Google) aswell as the GET/POST for Scenarios. If you decide on doing guests you're going to 
+have to change scenario authcontroller (backend) because we dont account for guests in our code, Easy fixes yes cus backend is structured really nice
+, but difficult to tell if it'll work without testing...etc
+Once you are done with this you need to go inside ScenariosTable and basically hook everything together 2k lines of code tho......I'm not sure if we have enough time to do it 
+If it can't be done can someone please try to make it modular pls Split into 
+ScenarioTable_Info
+ScenarioTable_Investments
+ScenarioTable_EventSeries
+ScenarioTable_Spending Strategy
+ScenarioTable_ExpenseWithdrawalStrategy
+ScenarioTable_Roth Conversion Optimizer (this one isn't really needed tbh)
+ScenarioTable_RMD Strategy
 
+We still need automated testing for front end aswell lol
+
+ */
 export default function ScenarioDashboard() {
   return (
     <div className="w-full border-b border-gray-200 pt-16">
@@ -46,3 +61,4 @@ export default function ScenarioDashboard() {
     </div>
   );
 }
+

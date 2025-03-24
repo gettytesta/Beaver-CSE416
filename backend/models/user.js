@@ -9,6 +9,12 @@ const UserSchema = new mongoose.Schema({
       required: true,
       unique: true
     },
+    username: {
+      type: String,
+      required: true,
+      unique: true,
+      trim: true
+    },
     email: {
       type: String,
       required: true,
@@ -27,19 +33,16 @@ const UserSchema = new mongoose.Schema({
       type: Date,
       default: Date.now
     },
-
-    // All yaml files are stored in root/backend/yamls. 
-    // we track a user's yamls by generating a random 
-    // string id when they upload one then put id.yaml 
-    // in yamls and store id in this list.
-    // few notes:
-    // - Only save the yaml to the yamls folder if a user 
-    //   is uploading a yaml containing state tax data. 
-    //   if theyre importing a scenario we convert the yaml 
-    //   into a scenario and save the scenario to the database.
-    // - only allow up to a certain amount of yaml files to be uploaded
-    // - users should be allowed to remove yaml files they've uploaded.
-    YAMLFiles: { type: [String], default: [] },
+  }, {
+    toJSON: { virtuals: true },
+    toObject: { virtuals: true }
   });
+
+// Virtual field for YAML files
+UserSchema.virtual('yamlFiles', {
+  ref: 'YamlFile',
+  localField: '_id',
+  foreignField: 'userId'
+});
 
 module.exports = mongoose.model('User', UserSchema)
