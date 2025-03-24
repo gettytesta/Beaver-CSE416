@@ -1,30 +1,29 @@
-'use client';
+"use client";
 
-import { useRouter } from 'next/navigation';
+import { useRouter } from "next/navigation";
 
 const backendURL = process.env.NEXT_PUBLIC_BACKEND_URL;
 
 export default function LandingPage() {
-  const router = useRouter();
-
   const handleGuest = async () => {
     try {
       const res = await fetch(`${backendURL}/auth/guest`, {
-        method: 'POST',
-        credentials: 'include',
+        method: "POST",
+        credentials: "include",
       });
 
       const data = await res.json();
-      console.log('Guest login response:', data);
+      console.log("Guest login response:", data);
 
       if (res.ok && data.success) {
-        router.push('/dashboard');
+        // ✅ Force full page reload to include new session cookie
+        window.location.href = "/dashboard";
       } else {
-        alert('Guest login failed.');
+        alert("Guest login failed.");
       }
     } catch (error) {
-      console.error('Guest login error:', error);
-      alert('Something went wrong.');
+      console.error("Guest login error:", error);
+      alert("Something went wrong.");
     }
   };
 

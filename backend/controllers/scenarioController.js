@@ -1,7 +1,10 @@
-const Scenario = require('../models/scenario');
+const { Scenario } = require('../models/scenario');
 const User = require('../models/user');
 const { AccessLevels } = require('../models/sharedUser');
 
+/**
+ * Get all scenarios for the authenticated user
+ */
 /**
  * Get all scenarios for the authenticated user
  */

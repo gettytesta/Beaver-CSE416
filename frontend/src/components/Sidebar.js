@@ -1,6 +1,5 @@
 "use client";
 
-import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
@@ -10,42 +9,17 @@ import {
   TrendingUpDown,
   Settings,
 } from "lucide-react";
+import { useUser } from "@/context/UserContext"; // ✅ use context
 
-export default function Sidebar() {
+function Sidebar() {
   const pathname = usePathname();
-  const [user, setUser] = useState(null);
-  const [checkedSession, setCheckedSession] = useState(false);
-
-  useEffect(() => {
-    const fetchUser = async () => {
-      try {
-        const res = await fetch(
-          `${process.env.NEXT_PUBLIC_BACKEND_URL}/auth/current-user`,
-          {
-            credentials: "include",
-          }
-        );
-        const data = await res.json();
-        if (res.ok && data.user) {
-          setUser(data.user);
-        } else {
-          setUser(null);
-        }
-      } catch (err) {
-        setUser(null);
-      } finally {
-        setCheckedSession(true);
-      }
-    };
-
-    fetchUser();
-  }, []);
+  const { user, checkedSession } = useUser();
 
   if (!checkedSession) {
-    return null; // or a loading skeleton if you want
+    return null; // or a loading skeleton
   }
 
-  const isGuest = !user.email;
+  const isGuest = !user?.email;
 
   return (
     <aside className="fixed w-60 h-screen bg-gray-100 p-5 shadow-md">
@@ -77,7 +51,6 @@ export default function Sidebar() {
           active={pathname === "/exploration"}
         />
 
-        {/* Show settings only if user is logged in */}
         {!isGuest && (
           <SidebarItem
             href="/settings"
@@ -110,3 +83,5 @@ const SidebarItem = ({ href, icon: Icon, text, active }) => {
     </Link>
   );
 };
+
+export default Sidebar;

@@ -1,12 +1,43 @@
 "use client";
+
 import { CheckSquare, Square, ArrowDown } from "lucide-react";
 import { useState, useRef, useEffect } from "react";
+import { useUser } from "@/context/UserContext"; // Import UserContext
 
 export default function ScenarioTable() {
+  const { user, checkedSession } = useUser(); // Using UserContext for session and user data
   const [selected, setSelected] = useState(false);
   const [dropdownOpen, setDropdownOpen] = useState(false);
-  const [simulations, setSimulations] = useState(5); // Accepts number or empty string
+  const [simulations, setSimulations] = useState(5); // Default number of simulations
+  const [scenarios, setScenarios] = useState([]); // List of scenarios to display
+  const [error, setError] = useState(null); // For handling errors
+  const [filter, setFilter] = useState("All"); // Filter state (All, Single, Married)
   const dropdownRef = useRef(null);
+
+  // Fetching scenarios once user is authenticated
+  useEffect(() => {
+    if (!checkedSession || !user) return;
+
+    const fetchScenarios = async () => {
+      try {
+        const res = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/api/scenarios`, {
+          credentials: "include",
+        });
+
+        const data = await res.json();
+        if (res.ok && data.success) {
+          setScenarios(data.data || []);
+        } else {
+          setError("Failed to load scenarios");
+        }
+      } catch (err) {
+        console.error("Error fetching scenarios:", err);
+        setError("Something went wrong.");
+      }
+    };
+
+    fetchScenarios();
+  }, [checkedSession, user]);
 
   const toggleSelection = () => setSelected(!selected);
 
@@ -32,17 +63,10 @@ export default function ScenarioTable() {
   const handleFilterSelect = (option) => {
     console.log("Selected Filter:", option);
     setDropdownOpen(false);
-
-    if (option === "All" || option === "Single" || option === "Married") {
-      setSelected(true);
-    } else if (option === "None") {
-      setSelected(false);
-    }
-
-    //Add row-filter logic here
+    setFilter(option);
   };
 
-  //Close dropdown on outside click
+  // Close dropdown on outside click
   useEffect(() => {
     const handleClickOutside = (event) => {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
@@ -53,6 +77,22 @@ export default function ScenarioTable() {
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
+
+  // Filter the scenarios based on the selected filter
+  const filteredScenarios = scenarios.filter((scenario) => {
+    if (filter === "All") return true;
+    if (filter === "Single" && !scenario.isMarriedCouple) return true;
+    if (filter === "Married" && scenario.isMarriedCouple) return true;
+    return false;
+  });
+
+  if (error) {
+    return <div className="text-center mt-20 text-red-500">{error}</div>;
+  }
+
+  if (!checkedSession) {
+    return <div className="text-center mt-20 text-gray-500">Loading scenarios...</div>;
+  }
 
   return (
     <div className="w-full p-1 relative">
@@ -128,46 +168,54 @@ export default function ScenarioTable() {
         </thead>
 
         <tbody>
-          <tr className="border-b border-gray-200 hover:bg-gray-50 transition">
-            <td className="p-4 text-left">
-              <button onClick={toggleSelection} className="flex items-center justify-center">
-                {selected ? (
-                  <CheckSquare className="w-5 h-5 text-blue-500" />
-                ) : (
-                  <Square className="w-5 h-5 text-gray-500" />
-                )}
-              </button>
-            </td>
-            <td className="p-4">Scenario 1</td>
-            <td className="p-4">Single</td>
-            <td className="p-4 text-center">2</td>
-            <td className="p-4 text-center">10</td>
-            <td className="p-4 text-center">
-              <input
-                type="number"
-                min="0"
-                className="w-24 px-2 py-1 border border-gray-300 rounded-md text-sm"
-                value={simulations}
-                onChange={handleSimChange}
-                onBlur={handleSimBlur}
-              />
-            </td>
-            <td className="p-4 text-center">
-              <button className="px-5 py-2 bg-gray-500 text-white rounded-md text-base font-medium">
-                Choose Parameters
-              </button>
-            </td>
-            <td className="p-4 text-center" colSpan={2}>
-              <div className="flex justify-center gap-6">
-                <button className="px-5 py-2 bg-gray-600 text-white rounded-md text-base font-medium">
-                  Edit
+          {filteredScenarios.map((scenario) => (
+            <tr key={scenario._id} className="border-b border-gray-200 hover:bg-gray-50 transition">
+              <td className="p-4 text-left">
+                <button onClick={toggleSelection} className="flex items-center justify-center">
+                  {selected ? (
+                    <CheckSquare className="w-5 h-5 text-blue-500" />
+                  ) : (
+                    <Square className="w-5 h-5 text-gray-500" />
+                  )}
                 </button>
-                <button className="px-5 py-2 bg-orange-500 text-white rounded-md text-base font-medium">
-                  Run
+              </td>
+              <td className="p-4">{scenario.name}</td>
+              <td className="p-4">{scenario.isMarriedCouple ? "Married" : "Single"}</td>
+              <td className="p-4 text-center">
+                {/* Safe length check for investments */}
+                {Array.isArray(scenario.investments) ? scenario.investments.length : 0}
+              </td>
+              <td className="p-4 text-center">
+                {/* Safe length check for eventSeriesSet */}
+                {Array.isArray(scenario.eventSeriesSet) ? scenario.eventSeriesSet.length : 0}
+              </td>
+              <td className="p-4 text-center">
+                <input
+                  type="number"
+                  min="0"
+                  className="w-24 px-2 py-1 border border-gray-300 rounded-md text-sm"
+                  value={simulations}
+                  onChange={handleSimChange}
+                  onBlur={handleSimBlur}
+                />
+              </td>
+              <td className="p-4 text-center">
+                <button className="px-5 py-2 bg-gray-500 text-white rounded-md text-base font-medium">
+                  Choose Parameters
                 </button>
-              </div>
-            </td>
-          </tr>
+              </td>
+              <td className="p-4 text-center" colSpan={2}>
+                <div className="flex justify-center gap-6">
+                  <button className="px-5 py-2 bg-gray-600 text-white rounded-md text-base font-medium">
+                    Edit
+                  </button>
+                  <button className="px-5 py-2 bg-orange-500 text-white rounded-md text-base font-medium">
+                    Run
+                  </button>
+                </div>
+              </td>
+            </tr>
+          ))}
         </tbody>
       </table>
     </div>
