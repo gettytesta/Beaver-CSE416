@@ -7,6 +7,9 @@ backend/node_modules/
 backend/logs/*.csv
 backend/logs/*.log
 
+# Ignore uploads:
+backend/uploads/*
+
 # Next.js build output
 .next/
 frontend/.next
