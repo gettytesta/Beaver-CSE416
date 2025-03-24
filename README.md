@@ -22,6 +22,8 @@ This project is built using the MERN stack. This requires Nodejs and NPM to run.
     2. CD into the project's backend directory.
     3. Run: npm start
     4. This will run the server locally on your machine.
+    5. Populate Temp Data into DB using your UserID on MongoDBCompass to view ScenariosTable
+    6. ex: populate_db_example.txt
 
 4. Start frontend
     1. Open command prompt.
