@@ -9,9 +9,10 @@ const authController = require('../controllers/authController');
  * @access  Public
  * @returns Redirects to Google's consent screen
  */
-router.get('/google',
-    passport.authenticate('google', {
-        scope: ['profile', 'email']
+router.get("/google",
+    passport.authenticate("google", {
+      scope: ["profile", "email"],
+      prompt: "select_account consent", //force re-consent even if user is already signed in
     })
 );
 
@@ -43,5 +44,8 @@ router.get('/current-user', authController.getCurrentUser);
  * @returns Redirects to frontend after successful logout
  */
 router.get('/logout', authController.logout);
+
+//guest login
+router.post('/guest', authController.guestLogin);
 
 module.exports = router;

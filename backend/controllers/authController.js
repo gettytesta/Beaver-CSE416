@@ -1,7 +1,8 @@
 // Google callback handler
 exports.googleCallback = (req, res) => {
-    // Successful authentication, redirect to client app
-    res.redirect(process.env.CLIENT_REDIRECT_URL || 'http://localhost:5000'); 
+    req.session.save(() => {
+      res.redirect(process.env.CLIENT_URL || 'http://localhost:3000/dashboard');
+    });
 };
 
 // Get current user
@@ -15,10 +16,15 @@ exports.getCurrentUser = async (req, res) => {
         }
 
         // Populate the user's YAML files (just the IDs and names, not content)
-        const user = await req.user.populate({
-            path: 'yamlFiles',
-            select: 'name description fileType createdAt updatedAt'
-        });
+        //const user = await req.user.populate({
+            //path: 'yamlFiles',
+            //select: 'name description fileType createdAt updatedAt'
+        //});
+
+        // Removed yamlFiles population because we're no longer using a unified YamlFile model.
+        // Instead, user-uploaded YAMLs are stored separately as either Scenario or StateTaxYaml models.
+        // Keeping this populate call would result in a Mongoose error since 'YamlFile' is not registered.
+        const user = req.user;
 
         res.status(200).json({
             success: true,
@@ -28,7 +34,7 @@ exports.getCurrentUser = async (req, res) => {
                 email: user.email,
                 name: user.name,
                 profilePicture: user.profilePicture,
-                yamlFiles: user.yamlFiles
+                //yamlFiles: user.yamlFiles
             }
         });
     } catch (error) {
@@ -56,3 +62,18 @@ exports.logout = (req, res) => {
         });
     });
 };
+
+
+exports.guestLogin = (req, res) => {
+    // create a simple guest user object
+    const guestUser = { username: 'guest', isGuest: true };
+  
+    // Log them in using passport
+    req.login(guestUser, (err) => {
+      if (err) {
+        console.error('Guest login error:', err);
+        return res.status(500).json({ success: false, message: 'Guest login failed' });
+      }
+      return res.status(200).json({ success: true, user: guestUser });
+    });
+  };

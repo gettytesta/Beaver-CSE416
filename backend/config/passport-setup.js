@@ -45,15 +45,28 @@ passport.use(
 
 // Serialize user into the session
 passport.serializeUser((user, done) => {
-    done(null, user.id);
-});
+    if (user && user._id) {
+      // It's a Google (DB) user: store their ID
+      done(null, { type: 'db', id: user._id });
+    } else {
+      // It's a guest or no DB record:
+      // store the entire user object (or some simplified version)
+      done(null, { type: 'guest', guestData: user });
+    }
+  });
 
 // Deserialize user from the session
-passport.deserializeUser(async (id, done) => {
+passport.deserializeUser(async (serialized, done) => {
     try {
-        const user = await User.findById(id);
-        done(null, user);
-    } catch (error) {
-        done(error, null);
+      if (serialized.type === 'db') {
+        // We have a real DB user:
+        const user = await User.findById(serialized.id);
+        return done(null, user || null);
+      } else {
+        // It's a guest: no DB lookup required
+        return done(null, serialized.guestData);
+      }
+    } catch (err) {
+      done(err, null);
     }
-});
+  });
