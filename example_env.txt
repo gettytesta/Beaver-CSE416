@@ -1,0 +1,20 @@
+Create a .env file in the root directory with the following fields:
+
+# Server Configuration
+PORT=5000
+NODE_ENV=development
+
+# Google OAuth Credentials
+GOOGLE_CLIENT_ID=your-google-client-id.apps.googleusercontent.com
+GOOGLE_CLIENT_SECRET=your-google-client-secret
+
+# MongoDB Database Connection
+MONGO_URI=mongodb://127.0.0.1:27017/beaver_lfp
+# when we create a mongodb cluster this should be: mongodb+srv://your-db-user:your-db-password@your-cluster.mongodb.net/your-db-name?retryWrites=true&w=majority
+
+# Session Secret (for Express-session or JWT secret)
+SESSION_SECRET=your-random-session-secret
+
+# Frontend URL (for CORS and Redirects)
+CLIENT_URL=http://localhost:3000
+
