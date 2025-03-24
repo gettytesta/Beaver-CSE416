@@ -2,6 +2,7 @@ const fs = require('fs');
 const yaml = require('js-yaml');
 const { Scenario } = require('../models/scenario');
 const { convertYamlToScenario, convertScenarioToYaml } = require('../utils/yamlUtils');
+const path = require('path');
 
 /**
  * Import a scenario YAML file, validate it and convert to a scenario object
@@ -130,6 +131,44 @@ exports.exportScenarioYaml = async (req, res) => {
         res.status(500).json({
             success: false,
             message: 'Error exporting scenario to YAML',
+            error: error.message
+        });
+    }
+};
+
+/**
+ * Get list of states that have YAML tax files available
+ */
+exports.getAvailableStateTaxFiles = async (req, res) => {
+    try {
+        const yamlsDir = path.join(__dirname, '..', 'yamls');
+        const files = fs.readdirSync(yamlsDir);
+        
+        // Filter for state tax YAML files and extract state codes
+        // Files are named with 2 uppercase letters (e.g., NY.yaml)
+        const stateTaxFiles = files
+            .filter(file => file.match(/^[A-Z]{2}\.yaml$/))
+            .map(file => {
+                const stateCode = file.substring(0, 2);
+                return { stateCode };
+            });
+        
+        // Create an object with state codes
+        const statesWithTax = stateTaxFiles.reduce((acc, { stateCode }) => {
+            if (!acc[stateCode]) {
+                acc[stateCode] = true;
+            }
+            return acc;
+        }, {});
+        
+        res.status(200).json({
+            success: true,
+            data: Object.keys(statesWithTax)
+        });
+    } catch (error) {
+        res.status(500).json({
+            success: false,
+            message: 'Error getting available state tax files',
             error: error.message
         });
     }
