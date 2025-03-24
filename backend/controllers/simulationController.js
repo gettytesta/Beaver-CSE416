@@ -2,6 +2,8 @@ const Scenario = require('../models/scenario').Scenario;
 const { Worker } = require('worker_threads');
 const path = require('path');
 const os = require('os');
+const { getStateTax, getFederalTax, getRMDTable } = require('../utils/scrapeUtils');
+const { convertYamlToStateTax } = require('../utils/yamlUtils');
 
 // Maximum number of simulations allowed per request
 const MAX_SIMULATIONS = 10000;
@@ -15,7 +17,6 @@ const MAX_CONCURRENT_WORKERS = Math.max(1, Math.floor(os.cpus().length * 0.75));
  */
 exports.runSimulation = async (req, res) => {
     try {
-        
         const { scenarioId } = req.params; // Get the scenario ID from the request
         let numSimulations = parseInt(req.body.numSimulations) || 50;  // Get the number of simulations from the request body
         numSimulations = Math.min(numSimulations, MAX_SIMULATIONS); // Enforce maximum number of simulations
@@ -46,9 +47,37 @@ exports.runSimulation = async (req, res) => {
                 }
             }
         }
+
+        // Get current year for tax data
+        const currentYear = new Date().getFullYear();
+        
+        // Get federal tax and RMD table data
+        const [federalTax, rmdTable] = await Promise.all([
+            getFederalTax(currentYear),
+            getRMDTable(currentYear)
+        ]);
+
+        // Handle state tax data if YAML file is provided, if not try to get the file from the server's yamls.
+        let stateTax = null;
+        if (req.file) {
+            try {
+                stateTax = await convertYamlToStateTax(req.file);
+            } catch (error) {
+                console.error('Error converting YAML to state tax:', error);
+                // Continue without state tax data
+            }
+        } else {
+            // Get state tax data based on users state of residence
+            try {
+                stateTax = await getStateTax(scenario.userStateOfResidence);
+            } catch (error) {
+                console.error('Error converting YAML to state tax:', error);
+                // Continue without state tax data
+            }
+        }
         
         // Run parallel simulations using worker threads
-        const results = await runParallelSimulations(scenario, numSimulations);
+        const results = await runParallelSimulations(scenario, numSimulations, federalTax, stateTax, rmdTable);
         
         // Process and format the results
         const formattedResults = formatSimulationResults(results, scenario);
@@ -69,7 +98,7 @@ exports.runSimulation = async (req, res) => {
 /**
  * Run multiple simulations in parallel using worker threads
  */
-async function runParallelSimulations(scenario, numSimulations) {
+async function runParallelSimulations(scenario, numSimulations, federalTax, stateTax, rmdTable) {
     return new Promise((resolve) => {
         const results = [];
         let completedWorkers = 0;
@@ -89,7 +118,10 @@ async function runParallelSimulations(scenario, numSimulations) {
             const worker = new Worker(path.join(__dirname, '../workers/simulationWorker.js'), {
                 workerData: {
                     scenario: scenario.toObject(),
-                    simulationId
+                    simulationId,
+                    federalTax,
+                    stateTax,
+                    rmdTable
                 }
             });
             

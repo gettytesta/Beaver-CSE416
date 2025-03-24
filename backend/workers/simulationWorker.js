@@ -1,18 +1,43 @@
 const { parentPort, workerData } = require('worker_threads');
 
-// This function runs a single simulation
-// TODO: add more parameters to the simulation like federal and state tax, rmd, etc.
-function runSingleSimulation(scenario, simulationId) {
-    // TODO: Implement the simulation
-    return {
-        simulationId,
-        result: 'Simulation result'
-    };
+/**
+ * Runs a single simulation with the provided tax data
+ * @param {Object} scenario - The scenario to simulate
+ * @param {string} simulationId - The ID of the simulation
+ * @param {Object} federalTax - The federal tax data
+ * @param {Object|null} stateTax - The state tax data (if applicable)
+ * @param {Object} rmdTable - The RMD table
+ * @returns {Object} The simulation result
+ */
+async function runSingleSimulation(scenario, simulationId, federalTax, stateTax, rmdTable) {
+    try {
+        // TODO: Implement the simulation using federalTax and stateTax data
+        return {
+            simulationId,
+            result: 'Simulation result',
+            taxData: {
+                federal: federalTax,
+                state: stateTax
+            }
+        };
+    } catch (error) {
+        console.error('Error in simulation:', error);
+        throw error;
+    }
 }
 
-// When the worker starts, run the simulation with the data passed from the main thread
-const { scenario, simulationId } = workerData;
-const result = runSingleSimulation(scenario, simulationId);
-
-// Send the result back to the main thread
-parentPort.postMessage(result); 
+// Handle messages from the parent thread
+parentPort.on('message', async (data) => {
+    try {
+        const result = await runSingleSimulation(
+            data.scenario, 
+            data.simulationId,
+            data.federalTax,
+            data.stateTax,
+            data.rmdTable
+        );
+        parentPort.postMessage({ success: true, data: result });
+    } catch (error) {
+        parentPort.postMessage({ success: false, error: error.message });
+    }
+}); 
