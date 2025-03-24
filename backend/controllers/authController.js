@@ -5,21 +5,37 @@ exports.googleCallback = (req, res) => {
 };
 
 // Get current user
-exports.getCurrentUser = (req, res) => {
-    if (req.user) {
+exports.getCurrentUser = async (req, res) => {
+    try {
+        if (!req.user) {
+            return res.status(401).json({
+                success: false,
+                message: 'Not authenticated'
+            });
+        }
+
+        // Populate the user's YAML files (just the IDs and names, not content)
+        const user = await req.user.populate({
+            path: 'yamlFiles',
+            select: 'name description fileType createdAt updatedAt'
+        });
+
         res.status(200).json({
             success: true,
             user: {
-                id: req.user._id,
-                email: req.user.email,
-                name: req.user.name,
-                profilePicture: req.user.profilePicture
+                id: user._id,
+                username: user.username,
+                email: user.email,
+                name: user.name,
+                profilePicture: user.profilePicture,
+                yamlFiles: user.yamlFiles
             }
         });
-    } else {
-        res.status(401).json({
+    } catch (error) {
+        res.status(500).json({
             success: false,
-            message: 'Not authenticated'
+            message: 'Error retrieving user data',
+            error: error.message
         });
     }
 };
