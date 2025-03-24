@@ -26,7 +26,7 @@ This project is built using the MERN stack. This requires Nodejs and NPM to run.
 4. Start frontend
     1. Open command prompt.
     2. CD into the project's frontend directory.
-    3. Run: npm start
+    3. Run: npm run dev
     4. This will run the client locally on your machine. 
 
 ## Some notes
