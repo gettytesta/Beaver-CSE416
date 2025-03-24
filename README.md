@@ -8,34 +8,35 @@ This project is built using the MERN stack. This requires Nodejs and NPM to run.
 
 ## How to execute
 
-1. Start backend
-    1. Create a .env file within the backend folder of the repository.
-    
-    .env file should include **BACKEND_PORTNO** field for express server to run on, and **HOST_NAME** field.
-            
-            # example config.env file
-            BACKEND_PORTNO = 3000
-            HOST_NAME = "localhost"
+1. Install dependencies
+    1. Open command prompt.
+    2. CD into the project's root directory.
+    3. Execute:
+                npm run install-all
 
-    2. Navigate to backend folder
-    3. Execute
-    
-            npm i
-            node --env-file=[YOUR .ENV FILE] server.js
-        to start backend listener.
+2. Create Environment Variables
+    1. Create a .env file in the root directory.
+    2. It should include all the fields specified in example_env.txt.   
 
+3. Start the MongoDB database locally
+    1. TODO add instructions for this
 
-2. Start frontend
-    1. Navigate to frontend folder.
-    2. Execute
-    
-            npm i
-            npx next dev -p [DESIRED PORT]
-        to start frontend.
+4. Start backend
+    1. Open command prompt.
+    2. CD into the project's backend directory.
+    3. Execute:
+                npm start
+
+5. Start frontend
+    1. Open command prompt.
+    2. CD into the project's frontend directory.
+    3. Execute:
+                npx next dev -p [DESIRED PORT]
        
 Additional Setup frontend (Tailwind CSS and Lucide-React)
-1. Tailwind CSS v3 and Lucide React(Icons)
+1. Tailwind CSS v3 and Lucide React(Icons) and dnd-kit(Movable Lists for Strategies) 
     1. npm install -D tailwindcss@3 postcss autoprefixer
     2. npm install lucide-react
+    3. npm install @dnd-kit/core @dnd-kit/sortable @dnd-kit/modifiers
 
 
