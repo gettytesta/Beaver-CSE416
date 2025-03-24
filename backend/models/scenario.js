@@ -4,7 +4,7 @@ var mongoose = require('mongoose')
 var Schema = mongoose.Schema
 
 const { DistributionSchema } = require('./distribution');
-const { validateStateCode } = require('./utils/validateUtils');
+const { validateStateCode } = require('../utils/validateUtils');
 
 var ScenarioSchema = new Schema({
     name: { type: String, required: true },

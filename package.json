@@ -1,9 +1,4 @@
 {
-  "dependencies": {
-    "express": "^4.21.2",
-    "mongoose": "^8.12.2",
-    "remixicon": "^4.6.0"
-  },
   "name": "beaver-lfp",
   "version": "1.0.0",
   "description": "CSE 416 Spring 2025, Team Beaver: Lifetime Financial Planner",
