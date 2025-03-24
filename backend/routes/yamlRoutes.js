@@ -1,54 +1,45 @@
 const express = require('express');
 const router = express.Router();
+const multer = require('multer');
+const path = require('path');
+const fs = require('fs');
 const yamlController = require('../controllers/yamlController');
-const { upload } = require('../utils/fileUtils');
-const authMiddleware = require('../middleware/authMiddleware');
+const auth = require('../middleware/authMiddleware');
 
-// All routes require authentication
-router.use(authMiddleware);
+// Configure multer for file uploads
+const storage = multer.diskStorage({
+    destination: function (req, file, cb) {
+        cb(null, 'uploads/');
+    },
+    filename: function (req, file, cb) {
+        cb(null, Date.now() + path.extname(file.originalname));
+    }
+});
+
+const upload = multer({ storage: storage });
 
 /**
- * @route   POST /api/yaml/scenario/import
- * @desc    Import a scenario from a YAML file
+ * @route   POST /api/yaml/scenario
+ * @desc    Import a scenario from YAML
  * @access  Private
- * @param   {File} yamlFile - The YAML file to import
  * @returns {Object} Created scenario object
  */
-router.post('/scenario/import', upload.single('yamlFile'), yamlController.importScenarioYaml);
+router.post('/scenario', auth, upload.single('file'), yamlController.importScenarioYaml);
 
 /**
- * @route   GET /api/yaml/scenario/export/:id
- * @desc    Export a scenario as a YAML file
+ * @route   GET /api/yaml/scenario/:id
+ * @desc    Export a scenario as YAML
  * @access  Private
- * @param   {string} id - ID of the scenario to export
- * @returns {File} YAML file download
+ * @returns {Object} YAML representation of the scenario
  */
-router.get('/scenario/export/:id', yamlController.exportScenarioYaml);
+router.get('/scenario/:id', auth, yamlController.exportScenarioYaml);
 
 /**
- * @route   POST /api/yaml/statetax/import
- * @desc    Import a state tax configuration from a YAML file
- * @access  Private
- * @param   {File} yamlFile - The YAML file to import
- * @returns {Object} Created state tax configuration object
+ * @route   GET /api/yaml/statetax/available
+ * @desc    Get list of states that have YAML tax files available
+ * @access  Public
+ * @returns {Object} List of states with available tax YAML files
  */
-router.post('/statetax/import', upload.single('yamlFile'), yamlController.importStateTaxYaml);
-
-/**
- * @route   GET /api/yaml/statetax
- * @desc    Get all state tax YAML configurations for the current user
- * @access  Private
- * @returns {Array} Array of state tax configuration objects
- */
-router.get('/statetax', yamlController.getStateTaxYamls);
-
-/**
- * @route   DELETE /api/yaml/statetax/:id
- * @desc    Delete a state tax YAML configuration
- * @access  Private
- * @param   {string} id - ID of the state tax configuration to delete
- * @returns {Object} Success message
- */
-router.delete('/statetax/:id', yamlController.deleteStateTaxYaml);
+router.get('/statetax/available', yamlController.getAvailableStateTaxFiles);
 
 module.exports = router; 
