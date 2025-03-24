@@ -1,30 +1,47 @@
-const DEFAULT_PORTNO = 3000;
-
 const express = require('express');
+const mongoose = require('mongoose');
+const bodyParser = require('body-parser');
+const cors = require('cors');
+const passport = require('passport');
+const session = require('express-session');
 const app = express();
+
+// Middleware
+app.use(bodyParser.json());
+app.use(bodyParser.urlencoded({ extended: true }));
+app.use(cors({
+  origin: process.env.CLIENT_URL,
+  credentials: true
+}));
+
+// Session configuration
+app.use(session({
+  secret: process.SESSION_SECRET,
+  resave: false,
+  saveUninitialized: false
+}));
+
+// Initialize Passport
+app.use(passport.initialize());
+app.use(passport.session());
+require('./config/passport-setup');
+
+// Routes
+const authRoutes = require('./routes/authRoutes');
+app.use('/auth', authRoutes);
 
 app.get('/', async (_, res) => {
     return res.send('Hello, World');
 });
 
+// MongoDB Connection
+const portno = process.env.BACKEND_PORTNO || 5000;
+const mongoDB = process.env.MONGO_URI;
 
-const portno = process.env.BACKEND_PORTNO || DEFAULT_PORTNO;
-app.listen(portno, err => {
-    if (err)
-        return console.error(err.message);
-    console.log(`Express server listening to port ${portno}.`);
-});
-
-
-// Start MongoDB server
-var mongoose = require('mongoose')
-var mongoDB = 'mongodb://127.0.0.1:27017/beaver_lfp'
-mongoose.connect(mongoDB, {useNewUrlParser: true, useUnifiedTopology: true})
-var db = mongoose.connection
-db.on('error', console.error.bind(console, 'MongoDB connection error:'))
-
-// Import required schemas
-let Investment = require('./models/investment')
-let Scenario = require('./models/scenario')
-let User = require('./models/user')
-let EventSeries = require('./models/eventseries')
+mongoose.connect(mongoDB)
+    .then(() => {
+        app.listen(portno, () => {
+            console.log(`Express server listening to port ${portno}.`);
+        });
+    })
+    .catch(err => console.error('MongoDB connection error:', err.message));
