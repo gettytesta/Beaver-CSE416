@@ -14,6 +14,7 @@ import {
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { useState, useRef } from "react";
+import axios from "axios";
 
 export default function AddScenario() {
   const [filingStatus, setFilingStatus] = useState("single");
@@ -2182,8 +2183,20 @@ export default function AddScenario() {
                 inflationAssumption: inflation.type,
                 // TODO - I thiiiink initial limit should be passed as a number. Idk if this works.
                 initialLimit: parseFloat(inflation.value),
-                // TODO - Spending strategy
+                // TODO - Spending strategy. Needs to be implemented in the model
+                // TODO - expenseWithdrawlStrategy
+                rmdStrategy: rmdStrategy,
+                // TODO - rcoStrategy. Idt it's in the frontend yet
+                // TODO - rcoSettings. Needs to be implemented in the model
+                financialGoal: financialGoal,
+                userStateOfResidence: state,
               }
+
+              // TODO - FIX THIS    VVVV    LINK, AND MAKE IT GO TO THE RIGHT PLACE
+              axios.post('http://localhost:8000/add_scenario/', newScenario).then((resp) => {
+                console.log(resp.data)
+                // TODO - SEND THE USER TO THE SCENARIOS PAGE AFTER CLICKING SAVE SCENARIO
+            })
             } else {
               alert("Invalid scenario!!")
             }

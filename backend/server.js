@@ -32,6 +32,18 @@ mongoose.connect(process.env.MONGO_URI)
     .then(() => console.log('Connected to MongoDB'))
     .catch(err => console.error('MongoDB connection error:', err));
 
+// Import required schemas
+let Scenarios = require('./models/scenario')
+let Distributions = require('./models/distribution')
+let Users = require('./models/user')
+let Investments = require('./models/investment')
+
+// Start server
+const PORT = process.env.BACKEND_PORTNO || 5000;
+app.listen(PORT, () => {
+    console.log(`Server running on port ${PORT}`);
+});
+
 // Routes
 const authRoutes = require('./routes/authRoutes');
 app.use('/auth', authRoutes);
@@ -40,8 +52,11 @@ app.get('/', async (_, res) => {
     return res.send('Hello, World');
 });
 
-// Start server
-const PORT = process.env.BACKEND_PORTNO || 5000;
-app.listen(PORT, () => {
-    console.log(`Server running on port ${PORT}`);
-});
+// Add a scenario to the database
+app.post('/add_scenario/', (req, res) => {
+    // TODO - MAKE THIS FUNCTIONAL
+    Scenarios.create(req.body).then((dat) => {
+        // TODO - MAKE SURE THE SCENARIO GETS ADDED TO THE USER'S SCENARIO LIST
+        res.send("Scenario added")
+    })
+})
