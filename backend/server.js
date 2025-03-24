@@ -36,10 +36,12 @@ mongoose.connect(process.env.MONGO_URI)
 const authRoutes = require('./routes/authRoutes');
 const yamlRoutes = require('./routes/yamlRoutes');
 const scenarioRoutes = require('./routes/scenarioRoutes');
+const simulationRoutes = require('./routes/simulationRoutes');
 
 app.use('/auth', authRoutes);
 app.use('/api/yaml', yamlRoutes);
 app.use('/api/scenarios', scenarioRoutes);
+app.use('/api/simulations', simulationRoutes);
 
 app.get('/', async (_, res) => {
     return res.send('Hello, World');
