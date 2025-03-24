@@ -31,4 +31,4 @@ This project is built using the MERN stack. This requires Nodejs and NPM to run.
 
 ## Some notes
 
-Uploaded YAML files are not stored in MongoDB, they are stored locally on the server, and they are not uploaded to the repository.
+State Tax YAML files are not stored in MongoDB, they are stored locally on the server, and they are not uploaded to the repository, you'll need to put your own (named following the convention "NY.yaml") state tax data in backend/yamls.
