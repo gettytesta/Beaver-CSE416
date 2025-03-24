@@ -1,7 +1,7 @@
 // Google callback handler
 exports.googleCallback = (req, res) => {
     // Successful authentication, redirect to client app
-    res.redirect(process.env.CLIENT_URL || 'http://localhost:5000'); 
+    res.redirect(process.env.CLIENT_REDIRECT_URL || 'http://localhost:5000'); 
 };
 
 // Get current user
