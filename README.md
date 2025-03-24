@@ -24,7 +24,7 @@ This project is built using the MERN stack. This requires Nodejs and NPM to run.
         1. Open command prompt.
         2. CD into the project's backend directory.
         3. Execute 
-                node start
+                npm start
 
 5. Start frontend
         1. Open command prompt.
