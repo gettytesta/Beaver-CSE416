@@ -40,40 +40,6 @@ router.get('/scenario/:id', auth, yamlController.exportScenarioYaml);
  * @access  Public
  * @returns {Object} List of states with available tax YAML files
  */
-router.get('/statetax/available', (req, res) => {
-    try {
-        const yamlsDir = path.join(__dirname, '..', 'yamls');
-        const files = fs.readdirSync(yamlsDir);
-        
-        // Filter for state tax YAML files and extract state codes
-        const stateTaxFiles = files
-            .filter(file => file.match(/^[a-z]{2}_tax_\d{4}\.yaml$/))
-            .map(file => {
-                const stateCode = file.substring(0, 2).toUpperCase();
-                const year = parseInt(file.substring(7, 11));
-                return { stateCode, year };
-            });
-        
-        // Group by state code
-        const statesWithTax = stateTaxFiles.reduce((acc, { stateCode, year }) => {
-            if (!acc[stateCode]) {
-                acc[stateCode] = [];
-            }
-            acc[stateCode].push(year);
-            return acc;
-        }, {});
-        
-        res.status(200).json({
-            success: true,
-            data: statesWithTax
-        });
-    } catch (error) {
-        res.status(500).json({
-            success: false,
-            message: 'Error getting available state tax files',
-            error: error.message
-        });
-    }
-});
+router.get('/statetax/available', yamlController.getAvailableStateTaxFiles);
 
 module.exports = router; 
