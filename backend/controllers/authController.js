@@ -6,38 +6,53 @@ exports.googleCallback = (req, res) => {
 };
 
 // Get current user
+// Get current user
 exports.getCurrentUser = async (req, res) => {
     try {
-        if (!req.user) {
-            return res.status(401).json({
-                success: false,
-                message: 'Not authenticated'
+        if (req.user) {
+            // Populate the user's YAML files (just the IDs and names, not content)
+            //const user = await req.user.populate({
+                //path: 'yamlFiles',
+                //select: 'name description fileType createdAt updatedAt'
+            //});
+
+            // Removed yamlFiles population because we're no longer using a unified YamlFile model.
+            // Instead, user-uploaded YAMLs are stored separately as either Scenario or StateTaxYaml models.
+            // Keeping this populate call would result in a Mongoose error since 'YamlFile' is not registered.
+            const user = req.user;
+
+            return res.status(200).json({
+                success: true,
+                user: {
+                    id: user._id,
+                    username: user.username,
+                    email: user.email,
+                    name: user.name,
+                    profilePicture: user.profilePicture,
+                    //yamlFiles: user.yamlFiles
+                }
             });
         }
 
-        // Populate the user's YAML files (just the IDs and names, not content)
-        //const user = await req.user.populate({
-            //path: 'yamlFiles',
-            //select: 'name description fileType createdAt updatedAt'
-        //});
+        // Handle guest sessions (added)
+        if (req.session?.passport?.user?.isGuest) {
+            return res.status(200).json({
+                success: true,
+                user: {
+                    username: "Guest",
+                    isGuest: true
+                }
+            });
+        }
 
-        // Removed yamlFiles population because we're no longer using a unified YamlFile model.
-        // Instead, user-uploaded YAMLs are stored separately as either Scenario or StateTaxYaml models.
-        // Keeping this populate call would result in a Mongoose error since 'YamlFile' is not registered.
-        const user = req.user;
-
-        res.status(200).json({
-            success: true,
-            user: {
-                id: user._id,
-                username: user.username,
-                email: user.email,
-                name: user.name,
-                profilePicture: user.profilePicture,
-                //yamlFiles: user.yamlFiles
-            }
+        // No authenticated user or guest
+        return res.status(401).json({
+            success: false,
+            message: 'Not authenticated'
         });
-    } catch (error) {
+    } 
+    
+    catch (error) {
         res.status(500).json({
             success: false,
             message: 'Error retrieving user data',

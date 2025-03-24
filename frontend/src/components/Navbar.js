@@ -10,9 +10,12 @@ import {
   User,
   ChevronDown,
 } from "lucide-react";
+import { useUser } from "@/context/UserContext"; // ✅ Import the context
 
-export default function Navbar({ user }) {
+export default function Navbar() {
   const pathname = usePathname();
+  const { user } = useUser(); // ✅ Grab user from context
+
   const pageTitle =
     pathname === "/scenarios"
       ? "Scenario Dashboard"
@@ -27,13 +30,9 @@ export default function Navbar({ user }) {
   const [showLogoutModal, setShowLogoutModal] = useState(false);
   const dropdownRef = useRef(null);
 
-  // Close dropdown if clicking outside
   useEffect(() => {
     const handleClickOutside = (e) => {
-      if (
-        dropdownRef.current &&
-        !dropdownRef.current.contains(e.target)
-      ) {
+      if (dropdownRef.current && !dropdownRef.current.contains(e.target)) {
         setDropdownOpen(false);
       }
     };
