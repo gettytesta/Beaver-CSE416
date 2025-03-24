@@ -28,3 +28,7 @@ This project is built using the MERN stack. This requires Nodejs and NPM to run.
     2. CD into the project's frontend directory.
     3. Run: npx next dev -p [DESIRED PORT]
     4. This will run the client locally on your machine. 
+
+## Some notes
+
+Uploaded YAML files are not stored in MongoDB, they are stored locally on the server, and they are not uploaded to the repository.
