@@ -7,8 +7,6 @@ const backendURL = process.env.NEXT_PUBLIC_BACKEND_URL;
 export default function LandingPage() {
   const router = useRouter();
 
-
-  //HARD CODE or just use .env.local BackendURL
   const handleGuest = async () => {
     try {
       const res = await fetch(`${backendURL}/auth/guest`, {
@@ -17,8 +15,9 @@ export default function LandingPage() {
       });
 
       const data = await res.json();
+      console.log('Guest login response:', data);
 
-      if (data.success) {
+      if (res.ok && data.success) {
         router.push('/dashboard');
       } else {
         alert('Guest login failed.');
@@ -30,7 +29,7 @@ export default function LandingPage() {
   };
 
   const handleLogin = () => {
-    window.location.href = `${backendURL}/auth/google`;
+    window.location.href = `${backendURL}/auth/google?prompt=select_account`;
   };
 
   return (
