@@ -12,9 +12,9 @@ var ScenarioSchema = new Schema({
     // SharedToIDs
     isMarriedCouple: { type: Boolean, required: true },
     userBirthYear: { type: Number, required: true },
-    spouseBirthYear: { type: Number, required: true },
+    spouseBirthYear: { type: Number, required: false },
     userLifeExpectancy: { type: DistributionSchema, required: true },
-    spouseLifeExpectancy: { type: DistributionSchema, required: true },
+    spouseLifeExpectancy: { type: DistributionSchema, required: false },
     investments: { type: [Schema.Types.ObjectId], ref: 'Investment', default: [] },
     eventSeriesSet: { type: [Schema.Types.ObjectId], ref: 'EventSeries', default: [] },
     inflationAssumption: { type: DistributionSchema, required: true },

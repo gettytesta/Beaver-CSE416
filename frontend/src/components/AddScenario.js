@@ -2162,8 +2162,31 @@ export default function AddScenario() {
       <div className="flex justify-center">
         <button
           onClick={() => {
-            // Logic to save the scenario can go here
-            alert("Scenario saved!");
+            // Check if the data represents a valid scenario
+            if (checkScenario()) {
+              // Create a new scenario to send to backend
+
+              // TP: ChatGPT. "Create a js object for a scenario using the following
+              //     data." The names of the state variables were given and the
+              //     format in which it will be stored in the backend. The code was
+              //     changed to fix errors and some logic.
+              const newScenario = {
+                name: scenarioName,
+                // TODO - OWNERID AND SHAREDTO IDS
+                isMarriedCouple: filingStatus === "single" ? false : true,
+                userBirthYear: parseInt(birthYears[0]),
+                spouseBirthYear: filingStatus === "married" ? parseInt(birthYears[1]) : null,
+                // TODO - USER AND SPOUSE LIFE EXPECTANCY
+                investments: investments,
+                eventSeriesSet: eventSeries,
+                inflationAssumption: inflation.type,
+                // TODO - I thiiiink initial limit should be passed as a number. Idk if this works.
+                initialLimit: parseFloat(inflation.value),
+                // TODO - Spending strategy
+              }
+            } else {
+              alert("Invalid scenario!!")
+            }
           }}
           className="px-6 py-2 bg-indigo-600 text-white rounded hover:bg-indigo-700"
         >
@@ -2176,4 +2199,13 @@ export default function AddScenario() {
 
 </div> 
 );
+}
+
+
+// Function to check the data for a scenario and make sure its valid
+function checkScenario() {
+    // GETTY - I'm not doing this. For the video we make, just make sure the data we input is valid.
+    // Tbh I don't even know what is valid and whats not
+
+    return true
 }
