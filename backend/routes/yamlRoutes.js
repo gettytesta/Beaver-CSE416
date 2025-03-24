@@ -2,10 +2,10 @@ const express = require('express');
 const router = express.Router();
 const yamlController = require('../controllers/yamlController');
 const { upload } = require('../utils/fileUtils');
-const authUtils = require('../utils/authUtils');
+const authMiddleware = require('../middleware/authMiddleware');
 
 // All routes require authentication
-router.use(authUtils.authenticateUser);
+router.use(authMiddleware);
 
 // Import a scenario YAML file
 router.post('/scenario/import', upload.single('yamlFile'), yamlController.importScenarioYaml);

@@ -7,7 +7,6 @@ const { DistributionSchema } = require('./distribution');
 const { validateStateCode } = require('../utils/validateUtils');
 const { SharedUserSchema } = require('./sharedUser');
 
-
 var ScenarioSchema = new Schema({
     name: { type: String, required: true },
     userId: { type: Schema.Types.ObjectId, ref: 'User', required: true },
@@ -51,6 +50,5 @@ ScenarioSchema.pre('save', function(next) {
 });
 
 module.exports = {
-    Scenario: mongoose.model('Scenario', ScenarioSchema),
-    AccessLevels
+    Scenario: mongoose.model('Scenario', ScenarioSchema)
 }
