@@ -1,64 +1,115 @@
 "use client";
 
+
+
+// TP: ChatGPT. Prompt: "Can you help me connect a dashboard page to a backend in a MERN stack app using Next.js? 
+// I want to fetch a list of saved scenarios from an API route like /api/scenarios using session cookies."
+// ChatGPT helped with the fetch logic and how to include credentials in the request. 
+// I implemented the rest of the component, including error handling, dynamic scenario counts, 
+// connecting the reusable ScenarioTable component, and all layout and styling details — 
+// such as spacing, padding, and button alignment using Tailwind CSS.
+
+
 import Link from "next/link";
 import { Trash2, Filter, Plus } from "lucide-react";
-import ScenarioTable from "@/components/ScenarioTable"; // Import Table Component
-/*TODO : First you need to do Session for this page(Guest & Google) aswell as the GET/POST for Scenarios. If you decide on doing guests you're going to 
-have to change scenario authcontroller (backend) because we dont account for guests in our code, Easy fixes yes cus backend is structured really nice
-, but difficult to tell if it'll work without testing...etc
-Once you are done with this you need to go inside ScenariosTable and basically hook everything together 2k lines of code tho......I'm not sure if we have enough time to do it 
-If it can't be done can someone please try to make it modular pls Split into 
-ScenarioTable_Info
-ScenarioTable_Investments
-ScenarioTable_EventSeries
-ScenarioTable_Spending Strategy
-ScenarioTable_ExpenseWithdrawalStrategy
-ScenarioTable_Roth Conversion Optimizer (this one isn't really needed tbh)
-ScenarioTable_RMD Strategy
+import { useEffect, useState } from "react";
+import ScenarioTable from "@/components/ScenarioTable";
+import { useUser } from "@/context/UserContext";
 
-We still need automated testing for front end aswell lol
-
- */
 export default function ScenarioDashboard() {
+  const { user, checkedSession } = useUser(); //Access user session info
+  const [scenarios, setScenarios] = useState([]); //List of saved scenarios
+  const [loading, setLoading] = useState(true); 
+  const [error, setError] = useState(null); 
+
+  useEffect(() => {
+    
+    if (!checkedSession) return;
+
+    const fetchScenarios = async () => {
+      try {
+        const res = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/api/scenarios`, {
+          credentials: "include", //session cookies
+        });
+
+        const data = await res.json();
+
+        if (res.ok && data.success) {
+          setScenarios(data.data || []);
+        } else {
+          console.warn("Scenarios fetch failed:", data);
+          setError(data.message || "Failed to load scenarios");
+        }
+      } catch (err) {
+        console.error("Error fetching scenarios:", err);
+        setError("Something went wrong.");
+      } finally {
+        setLoading(false); //Hide loading once fetch is complete
+      }
+    };
+
+    //Only fetch if the user is authenticated possible issue remember to fix thsi for guest if issues arise TODO
+    if (user) {
+      fetchScenarios();
+    }
+  }, [checkedSession, user]);
+
+  //loading state while fetching data
+  if (!checkedSession || loading) {
+    return <div className="text-center mt-20 text-gray-500">Loading scenarios...</div>;
+  }
+
+  //if fetch fails
+  if (error) {
+    return <div className="text-center mt-20 text-red-500">{error}</div>;
+  }
+
   return (
     <div className="w-full border-b border-gray-200 pt-16">
+
+      {/* Top bar with title and action buttons */}
       <div className="h-[78px] flex items-center justify-between px-6">
-        {/* Left Section - Title and Scenario Count */}
+
+        {/* Title and dynamic scenario count */}
         <div className="flex items-center space-x-3">
           <h2 className="text-2xl font-semibold leading-none">Saved Scenarios:</h2>
           <span className="text-blue-600 text-md hover:underline cursor-pointer leading-none pt-2">
-            Num of Scenarios
+            {scenarios.length} {scenarios.length === 1 ? "Scenario" : "Scenarios"}
           </span>
         </div>
 
-        {/* Right Section - Delete, Filters, Add, Share */}
+        {/* Right-side action buttons */}
         <div className="flex items-center space-x-8">
+        
+          {/* Placeholder Delete Button */}
           <button className="text-gray-600 hover:text-gray-900 flex items-center justify-center text-lg">
             <Trash2 className="w-6 h-6 mr-1" />
-            <span className="leading-none font-semibold">Delete</span>
+            <span className="font-semibold">Delete</span>
           </button>
 
+          {/* Placeholder Filter Button */}
           <button className="text-gray-600 hover:text-gray-900 flex items-center justify-center text-lg">
             <Filter className="w-6 h-6 mr-1" />
-            <span className="leading-none font-semibold">Filters</span>
+            <span className="font-semibold">Filters</span>
           </button>
 
+          {/* Navigate to Add Scenario form */}
           <Link href="/scenarios/add">
             <button className="px-5 py-3 bg-blue-500 text-white rounded-md flex items-center justify-center text-lg font-semibold hover:bg-blue-600">
               <span>Add Scenario</span>
-              <Plus className="w-5 h-5 relative top-[1px] ml-1.5" />
+              <Plus className="w-5 h-5 ml-1.5" />
             </button>
           </Link>
 
-          <button className="px-5 py-3 bg-gray-600 text-white rounded-md flex items-center justify-center text-lg">
+          {/* Placeholder Share Button */}
+          <button className="px-5 py-3 bg-gray-600 text-white rounded-md text-lg">
             Share
           </button>
         </div>
       </div>
 
-      {/* Table Goes Here */}
-      <ScenarioTable />
+      {/* Table displaying saved scenarios */}
+      <ScenarioTable scenarios={scenarios} />
     </div>
   );
 }
-

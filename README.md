@@ -22,6 +22,8 @@ This project is built using the MERN stack. This requires Nodejs and NPM to run.
     2. CD into the project's backend directory.
     3. Run: npm start
     4. This will run the server locally on your machine.
+    5. Populate Temp Data into DB using your UserID on MongoDBCompass to view ScenariosTable
+    6. ex: populate_db_example.txt in backend directory
 
 4. Start frontend
     1. Open command prompt.
@@ -31,4 +33,4 @@ This project is built using the MERN stack. This requires Nodejs and NPM to run.
 
 ## Some notes
 
-Uploaded YAML files are not stored in MongoDB, they are stored locally on the server, and they are not uploaded to the repository.
+State Tax YAML files are not stored in MongoDB, they are stored locally on the server, and they are not uploaded to the repository, you'll need to put your own (named following the convention "NY.yaml") state tax data in backend/yamls.
