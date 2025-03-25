@@ -3,6 +3,8 @@
 var mongoose = require('mongoose')
 var Schema = mongoose.Schema
 
+const { InvestmentTypeSchema } = require('./investmentType');
+
 // Enum for account tax status
 // MIGHT NEED TO BE MOVED, DEPENDING ON WHERE THIS IS NEEDED
 const AccountTaxStatus = Object.freeze({
@@ -12,7 +14,7 @@ const AccountTaxStatus = Object.freeze({
 });
 
 var InvestmentSchema = new Schema({
-    // type
+    type: {type: InvestmentTypeSchema, required: true},
     value: {type: Number, required: true},
     accountTaxStatus: {
         type: String,

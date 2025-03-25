@@ -78,6 +78,12 @@ exports.runSimulation = async (req, res) => {
         
         // Run parallel simulations using worker threads
         const results = await runParallelSimulations(scenario, numSimulations, federalTax, stateTax, rmdTable);
+
+        const resultsToLog = results[0]; // First results should be logged
+
+        // TODO: Save resultsToLog as a name_datetime.csv and name_datetime.log in backend/logs
+        // See examples.txt in logs for how to format each document.
+        // The simulation results data structure will probably be changed.
         
         // Process and format the results
         const formattedResults = formatSimulationResults(results, scenario);
