@@ -3,12 +3,15 @@
 import { useUser } from "@/context/UserContext";
 
 export default function Dashboard() {
-  const { user, checkedSession } = useUser();
+  const { user, checkedSession } = useUser(); //Access user session and loading state
 
+
+  //Wait until session check finishes
   if (!checkedSession) {
     return <div className="text-center mt-20">Loading...</div>;
   }
 
+  //Handle unauthenticated users direct access to /dashboard without logging in
   if (!user) {
     return (
       <div className="text-center mt-20">
@@ -20,6 +23,7 @@ export default function Dashboard() {
     );
   }
 
+  //Determine if the user is a guest (no email in session)= We can change this later by passing in a IsGuest true or false boolean from the context
   const isGuest = !user?.email;
 
   return (

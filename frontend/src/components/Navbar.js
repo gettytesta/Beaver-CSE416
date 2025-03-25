@@ -1,5 +1,13 @@
 "use client";
 
+
+// TP: ChatGPT. Prompt: "Can you help me create a navigation bar for a MERN stack app using Next.js? 
+// It should show different views depending on whether the user is logged in or a guest, include a dropdown for logout."
+// ChatGPT helped scaffold the main structure, including conditional user rendering, dropdown state logic, 
+// and logout handling. I customized the layout using Tailwind CSS, added UI elements like the search bar and action icons, 
+// and built a modal to confirm logout for better user experience.
+
+
 import { usePathname } from "next/navigation";
 import { useRef, useEffect, useState } from "react";
 import {
@@ -10,12 +18,13 @@ import {
   User,
   ChevronDown,
 } from "lucide-react";
-import { useUser } from "@/context/UserContext"; // ✅ Import the context
+import { useUser } from "@/context/UserContext"; //Access user session context
 
 export default function Navbar() {
-  const pathname = usePathname();
-  const { user } = useUser(); // ✅ Grab user from context
+  const pathname = usePathname(); //Get current route
+  const { user } = useUser(); //Get current user from session context
 
+  //Determine which title to display based on the route Need to fix this for when click ADD scenario btw TODO
   const pageTitle =
     pathname === "/scenarios"
       ? "Scenario Dashboard"
@@ -25,11 +34,17 @@ export default function Navbar() {
       ? "Scenario Exploration"
       : "Dashboard";
 
-  const isLoggedIn = !!user?.email;
-  const [dropdownOpen, setDropdownOpen] = useState(false);
-  const [showLogoutModal, setShowLogoutModal] = useState(false);
+
+      //NEED TO Fix this maybe boolean ?
+  const isLoggedIn = !!user?.email; 
+
+  const [dropdownOpen, setDropdownOpen] = useState(false); //State for profile dropdown
+  const [showLogoutModal, setShowLogoutModal] = useState(false); //State for logout confirmation modal
+
+  // Detect clicks outside of dropdown (when its opened)
   const dropdownRef = useRef(null);
 
+  //Close dropdown when clicking outside
   useEffect(() => {
     const handleClickOutside = (e) => {
       if (dropdownRef.current && !dropdownRef.current.contains(e.target)) {
@@ -42,17 +57,21 @@ export default function Navbar() {
       document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
+
+
+  //If you click handle logout
   const handleLogout = async () => {
     try {
       await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/auth/logout`, {
         method: "GET",
-        credentials: "include",
+        credentials: "include", // Send cookies
       });
-      window.location.href = "/";
+      window.location.href = "/"; // Redirect after logout
     } catch (err) {
       console.error("Logout failed:", err);
     }
   };
+
 
   const handleConfirmLogout = () => {
     setShowLogoutModal(false);
@@ -61,7 +80,10 @@ export default function Navbar() {
 
   return (
     <>
+      {/* Navbar Header */}
       <header className="fixed top-0 left-60 right-0 bg-white shadow h-16 flex items-center px-6 z-50">
+
+        {/* Dynamic Page Title */}
         <h1 className="text-3xl font-bold text-gray-800">{pageTitle}</h1>
 
         <div className="flex-1 ml-60"></div>
@@ -76,7 +98,7 @@ export default function Navbar() {
           />
         </div>
 
-        {/* Icons */}
+        {/* Icon Section */}
         <div className="flex items-center space-x-6 ml-12">
           <Sun className="w-6 h-6 text-gray-500 cursor-pointer" />
           <Bell className="w-6 h-6 text-gray-500 cursor-pointer" />
@@ -85,12 +107,13 @@ export default function Navbar() {
 
         <div className="flex-1 max-w-[55px]"></div>
 
-        {/* Profile + Dropdown */}
+        {/* Authenticated User Dropdown */}
         {isLoggedIn ? (
           <div
             className="relative flex items-center space-x-3 cursor-pointer"
             ref={dropdownRef}
           >
+            {/* Profile Circle */}
             <div
               className="w-10 h-10 bg-blue-500 rounded-full flex items-center justify-center"
               onClick={() => setDropdownOpen((prev) => !prev)}
@@ -98,6 +121,7 @@ export default function Navbar() {
               <User className="w-6 h-6 text-white" />
             </div>
 
+            {/* Username and Dropdown Arrow */}
             <div
               className="text-gray-700 font-medium flex items-center"
               onClick={() => setDropdownOpen((prev) => !prev)}
@@ -106,7 +130,7 @@ export default function Navbar() {
               <ChevronDown className="w-4 h-4 ml-1 text-gray-500 relative top-[2px]" />
             </div>
 
-            {/* Dropdown */}
+            {/* Dropdown Menu */}
             {dropdownOpen && (
               <div className="absolute right-0 top-full mt-2 w-48 bg-white shadow-lg rounded-lg py-2 z-50 border border-gray-200">
                 <button
@@ -122,6 +146,7 @@ export default function Navbar() {
             )}
           </div>
         ) : (
+          //Guest View (no email)
           <div className="flex items-center ml-3 space-x-3">
             <div className="w-10 h-10 bg-gray-300 rounded-full flex items-center justify-center">
               <User className="w-6 h-6 text-white" />

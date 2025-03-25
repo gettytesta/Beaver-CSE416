@@ -1,4 +1,16 @@
 "use client";
+
+
+// TP: ChatGPT. Prompt: "I need help with UI/UX challenges in a complex scenario builder page, such as modals, dropdowns, and popups.
+// Also looking to implement drag-and-drop reordering for investments."
+//
+// Since this file grew large over time, I asked ChatGPT several specific questions throughout development, mostly related to 
+// UI/UX implementation. It helped me design and refine interactive elements like modals, dropdown menus, popups, 
+// and drag-and-drop behavior for investment ordering. The backend is not yet connected — the current focus is frontend interaction and layout.
+//
+// TODO: This file is currently ~2000 lines and should be modularized into smaller components for readability and maintainability.
+
+
 import {
   DndContext,
   closestCenter,
