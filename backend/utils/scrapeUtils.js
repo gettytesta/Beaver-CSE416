@@ -1,5 +1,6 @@
 const FederalTax = require('../models/federalTax');
 const RMDTable = require('../models/RMDTable');
+const { convertYamlToStateTax } = require('./yamlUtils');
 const axios = require('axios');
 const cheerio = require('cheerio');
 
@@ -416,10 +417,36 @@ async function getRMDTable(year) {
  */
 async function getStateTax(stateCode) {
     try {
-        // TODO Implement this function
         // stateCode should be an upper case 2 letter string representing the state name
-        // try getting stateCode.yaml
-        // if gotten convert it to a StateTax with convertYamlToStateTax in yamlUtils.js
+        const fs = require('fs');
+        const path = require('path');
+        const yaml = require('js-yaml');
+        
+        // Ensure stateCode is uppercase
+        const formattedStateCode = stateCode.toUpperCase();
+        
+        // Build the path to the YAML file
+        const yamlPath = path.join(__dirname, '..', 'yamls', `${formattedStateCode}.yaml`);
+        
+        // Check if the file exists
+        if (!fs.existsSync(yamlPath)) {
+            throw new Error(`State tax file for ${formattedStateCode} not found`);
+        }
+        
+        // Read and parse the YAML file
+        const fileContent = fs.readFileSync(yamlPath, 'utf8');
+        const parsedYaml = yaml.load(fileContent);
+        
+        // Create a file-like object to match the expected input for convertYamlToStateTax
+        const fileObj = {
+            path: yamlPath,
+            buffer: Buffer.from(fileContent)
+        };
+        
+        // Convert YAML to StateTax object
+        const stateTax = await convertYamlToStateTax(fileObj);
+        
+        return stateTax;
     } catch (error) {
         console.error('Error getting state tax:', error);
         throw error;
@@ -452,6 +479,6 @@ module.exports = {
     getStateTax,
     getFederalTax,
     getRMDTable,
-    // Export for testing
-    scrapeRMDTable
+    scrapeRMDTable,
+    scrapeFederalTax
 };

@@ -8,7 +8,10 @@
     "client": "cd frontend && npm run start",
     "install-all": "npm install && npm run install-client && npm run install-server",
     "install-client": "cd frontend && npm install",
-    "install-server": "cd backend && npm install"
+    "install-server": "cd backend && npm install",
+    "test": "concurrently \"npm test:server\" \"npm test:client\"",
+    "test:server": "cd backend && npm run test",
+    "test:client": "cd frontend && npm run test"
   },
   "devDependencies": {
     "concurrently": "^8.2.2"
