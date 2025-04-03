@@ -6,6 +6,7 @@ var Schema = mongoose.Schema
 const { DistributionSchema } = require('./distribution');
 const { validateStateCode } = require('../utils/validateUtils');
 const { SharedUserSchema } = require('./sharedUser');
+const { InvestmentSchema } = require('./investment');
 
 var ScenarioSchema = new Schema({
     name: { type: String, required: true },
@@ -13,10 +14,14 @@ var ScenarioSchema = new Schema({
     sharedWith: [SharedUserSchema],
     isMarriedCouple: { type: Boolean, required: true },
     userBirthYear: { type: Number, required: true },
-    spouseBirthYear: { type: Number, required: true },
+    spouseBirthYear: { type: Number, required: function () { return this.isMarriedCouple;} },
+    userRetirementAge: { type: Number, required: true },
+    spouseRetirementAge: { type: Number, required: function () { return this.isMarriedCouple; } },
     userLifeExpectancy: { type: DistributionSchema, required: true },
-    spouseLifeExpectancy: { type: DistributionSchema, required: true },
-    investments: { type: [Schema.Types.ObjectId], ref: 'Investment', default: [] },
+    spouseLifeExpectancy: { type: DistributionSchema, required: function () { return this.isMarriedCouple;} },
+    //investments
+    investments: { type: [InvestmentSchema], default: [] },
+
     eventSeriesSet: { type: [Schema.Types.ObjectId], ref: 'EventSeries', default: [] },
     inflationAssumption: { type: DistributionSchema, required: true },
     initialLimit: { type: Number, required: true },

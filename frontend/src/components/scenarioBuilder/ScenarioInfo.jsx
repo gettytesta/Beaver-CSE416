@@ -19,8 +19,12 @@ export default function ScenarioInfo({
   setScenarioName,
   setShowLifespanModal,
   renderYearDropdown,
-  renderRetirementAge
+  renderRetirementAge,
+  ignoreStateTax,
+  setIgnoreStateTax
 }) {
+  const stateName = states.find((s) => s.code === state)?.name || state;
+
   return (
     <>
       <div className="flex justify-between items-center bg-indigo-400 text-white px-6 py-3 rounded-t-md">
@@ -85,17 +89,19 @@ export default function ScenarioInfo({
               className="border border-gray-300 rounded-md px-3 py-2 w-64 focus:outline-none focus:ring-2 focus:ring-indigo-400"
             >
               {states.map((s) => (
-                <option key={s} value={s}>{s}</option>
+                <option key={s.code} value={s.code}>
+                  {s.name}
+                </option>
               ))}
             </select>
 
-            {stateRequiresUpload && (
+            {stateRequiresUpload && !ignoreStateTax && (
               <div className="mt-4 bg-yellow-100 border-l-4 border-yellow-400 text-yellow-700 p-4 rounded-md">
                 <div className="flex flex-col sm:flex-row sm:items-center sm:space-x-4">
                   <span className="flex items-center mb-2 sm:mb-0">
-                    ⚠️ We don’t currently have tax data for <strong className="ml-1">{state}</strong>. Financial projections will ignore state income tax unless you upload a YAML file.
+                    ⚠️ We don’t currently have tax data for <strong className="ml-1">{stateName}</strong>. Financial projections will ignore state income tax unless you upload a YAML file.
                   </span>
-                  <div>
+                  <div className="flex flex-col sm:flex-row sm:space-x-2">
                     <input
                       type="file"
                       accept=".yaml,.yml"
@@ -105,12 +111,24 @@ export default function ScenarioInfo({
                     />
                     <button
                       onClick={() => fileInputRef.current?.click()}
-                      className="mt-2 sm:mt-0 px-4 py-2 bg-indigo-500 hover:bg-indigo-600 text-white font-semibold rounded-md"
+                      className="px-4 py-2 bg-indigo-500 hover:bg-indigo-600 text-white font-semibold rounded-md"
                     >
                       Upload State Tax YAML
                     </button>
+                    <button
+                      onClick={() => setIgnoreStateTax(true)}
+                      className="px-4 py-2 bg-gray-200 hover:bg-gray-300 text-gray-800 font-semibold rounded-md"
+                    >
+                      Ignore Warning
+                    </button>
                   </div>
                 </div>
+              </div>
+            )}
+
+            {stateRequiresUpload && ignoreStateTax && (
+              <div className="mt-4 bg-orange-100 border-l-4 border-orange-400 text-orange-700 p-4 rounded-md">
+                ⚠️ You chose to ignore state tax data. Financial projections will <strong>exclude state income tax</strong>.
               </div>
             )}
           </div>

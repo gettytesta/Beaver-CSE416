@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 
 export default function useScenarioInfo() {
   const [filingStatus, setFilingStatus] = useState("single");
@@ -10,23 +10,68 @@ export default function useScenarioInfo() {
   const [showLifespanModal, setShowLifespanModal] = useState(false);
   const [lifespanTypes, setLifespanTypes] = useState(["fixed"]);
   const [lifespanValues, setLifespanValues] = useState([{ value: "" }]);
+  const [ignoreStateTax, setIgnoreStateTax] = useState(false);
 
   const fileInputRef = useRef(null);
   const currentYear = new Date().getFullYear();
   const yearOptions = Array.from({ length: 125 }, (_, i) => `${currentYear - i}`);
 
   const states = [
-    "No State Taxes", "Alabama", "Alaska", "Arizona", "Arkansas", "California", "Colorado",
-    "Connecticut", "Delaware", "District of Columbia", "Florida", "Georgia", "Hawaii", "Idaho",
-    "Illinois", "Indiana", "Iowa", "Kansas", "Kentucky", "Louisiana", "Maine", "Maryland",
-    "Massachusetts", "Michigan", "Minnesota", "Mississippi", "Missouri", "Montana", "Nebraska",
-    "Nevada", "New Hampshire", "New Jersey", "New Mexico", "New York", "North Carolina",
-    "North Dakota", "Ohio", "Oklahoma", "Oregon", "Pennsylvania", "Rhode Island",
-    "South Carolina", "South Dakota", "Tennessee", "Texas", "Utah", "Vermont", "Virginia",
-    "Washington", "West Virginia", "Wisconsin", "Wyoming"
+    { name: "No State Taxes", code: "NONE" },
+    { name: "Alabama", code: "AL" },
+    { name: "Alaska", code: "AK" },
+    { name: "Arizona", code: "AZ" },
+    { name: "Arkansas", code: "AR" },
+    { name: "California", code: "CA" },
+    { name: "Colorado", code: "CO" },
+    { name: "Connecticut", code: "CT" },
+    { name: "Delaware", code: "DE" },
+    { name: "District of Columbia", code: "DC" },
+    { name: "Florida", code: "FL" },
+    { name: "Georgia", code: "GA" },
+    { name: "Hawaii", code: "HI" },
+    { name: "Idaho", code: "ID" },
+    { name: "Illinois", code: "IL" },
+    { name: "Indiana", code: "IN" },
+    { name: "Iowa", code: "IA" },
+    { name: "Kansas", code: "KS" },
+    { name: "Kentucky", code: "KY" },
+    { name: "Louisiana", code: "LA" },
+    { name: "Maine", code: "ME" },
+    { name: "Maryland", code: "MD" },
+    { name: "Massachusetts", code: "MA" },
+    { name: "Michigan", code: "MI" },
+    { name: "Minnesota", code: "MN" },
+    { name: "Mississippi", code: "MS" },
+    { name: "Missouri", code: "MO" },
+    { name: "Montana", code: "MT" },
+    { name: "Nebraska", code: "NE" },
+    { name: "Nevada", code: "NV" },
+    { name: "New Hampshire", code: "NH" },
+    { name: "New Jersey", code: "NJ" },
+    { name: "New Mexico", code: "NM" },
+    { name: "New York", code: "NY" },
+    { name: "North Carolina", code: "NC" },
+    { name: "North Dakota", code: "ND" },
+    { name: "Ohio", code: "OH" },
+    { name: "Oklahoma", code: "OK" },
+    { name: "Oregon", code: "OR" },
+    { name: "Pennsylvania", code: "PA" },
+    { name: "Rhode Island", code: "RI" },
+    { name: "South Carolina", code: "SC" },
+    { name: "South Dakota", code: "SD" },
+    { name: "Tennessee", code: "TN" },
+    { name: "Texas", code: "TX" },
+    { name: "Utah", code: "UT" },
+    { name: "Vermont", code: "VT" },
+    { name: "Virginia", code: "VA" },
+    { name: "Washington", code: "WA" },
+    { name: "West Virginia", code: "WV" },
+    { name: "Wisconsin", code: "WI" },
+    { name: "Wyoming", code: "WY" }
   ];
 
-  const unavailableStates = ["Wyoming", "Alaska"];
+  const unavailableStates = ["WY", "AK"];
   const stateRequiresUpload = unavailableStates.includes(state);
 
   const handleYamlUpload = (e) => {
@@ -110,6 +155,11 @@ export default function useScenarioInfo() {
       />
     </div>
   );
+
+  useEffect(() => {
+    //If user switches to a new state, reset the ignoreStateTax flag
+    setIgnoreStateTax(false);
+  }, [state]);
 
   const renderLifespanModal = () => (
     <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center">
@@ -199,6 +249,8 @@ export default function useScenarioInfo() {
     handleFilingStatusChange,
     renderYearDropdown,
     renderRetirementAge,
-    renderLifespanModal
+    renderLifespanModal,
+    ignoreStateTax,             
+    setIgnoreStateTax
   };
 }

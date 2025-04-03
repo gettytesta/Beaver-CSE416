@@ -30,6 +30,7 @@ import ScenarioInfo from "./scenarioBuilder/ScenarioInfo";
 import useScenarioInfo from "./scenarioBuilder/useScenarioInfo";
 import Investments from "./scenarioBuilder/Investments";
 import useInvestments from "./scenarioBuilder/useInvestments";
+import EventSeries from "./scenarioBuilder/EventSeries";
 
 
 export default function AddScenario() {
@@ -62,10 +63,12 @@ export default function AddScenario() {
     renderLifespanModal,
     showLifespanModal,
     setShowLifespanModal,
+    ignoreStateTax,             
+    setIgnoreStateTax
   } = useScenarioInfo();
   //components/UseScenarioInfo.jsx to edit this
 
-  // ================== INVESTMENTS INFO SECTION ==================
+  // ================== INVESTMENTS SECTION ==================
 
   const {
     investments,
@@ -86,16 +89,13 @@ export default function AddScenario() {
     handleDeleteInvestmentType,
   } = useInvestments();
 
-  ////////////////////////////////////////////////////////////////////////////
-
-
-
+  // ================== EVENT SERIES SECTION ==================
 
 
   const [eventSeries, setEventSeries] = useState([]);
-
   
   const [editingEventIndex, setEditingEventIndex] = useState(null);
+
   const [showEventModal, setShowEventModal] = useState(false);
 
   const [tempEvent, setTempEvent] = useState(null);
@@ -106,6 +106,78 @@ export default function AddScenario() {
     value: ""
   });
 
+  const handleEventSeriesChange = (index, field, value) => {
+    const updated = [...eventSeries];
+    if (field === "startType") {
+      updated[index].start.type = value;
+    } else if (field === "startValue") {
+      updated[index].start.value = value;
+    } else if (field === "durationType") {
+      updated[index].duration.type = value;
+    } else if (field === "durationValue") {
+      updated[index].duration.value = value;
+    } else {
+      updated[index][field] = value;
+    }
+    setEventSeries(updated);
+  };
+  
+  const addEventSeries = () => {
+    setEventSeries([
+      ...eventSeries,
+      {
+        name: "",
+        description: "",
+        start: { type: "fixed", value: "" },
+        duration: { type: "fixed", value: "" },
+        type: "", //FIX THIS LATER EEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEE REMEMBER THIS
+        invest: {
+          allocationType: "fixed",
+          selected: [],
+          allocations: {},
+        },
+        rebalance: {
+          allocationType: "fixed",
+          selected: [],
+          allocations: {},
+        },
+      },
+    ]);
+  };
+
+  const removeEventSeries = (indexToRemove) => {
+    const updated = eventSeries.filter((_, index) => index !== indexToRemove);
+    setEventSeries(updated);
+  };
+  const openEventModal = (index) => {
+    const original = eventSeries[index];
+  
+    const investDefaults = original.type === "invest"
+      ? {
+          allocationType: original.invest?.allocationType || "fixed",
+          selected: original.invest?.selected || [],
+          allocations: original.invest?.allocations || {},
+        }
+      : undefined;
+  
+    const rebalanceDefaults = original.type === "rebalance"
+      ? {
+          allocationType: original.rebalance?.allocationType || "fixed",
+          selected: original.rebalance?.selected || [],
+          allocations: original.rebalance?.allocations || {},
+        }
+      : undefined;
+  
+    setEditingEventIndex(index);
+    setTempEvent({
+      ...original,
+      ...(original.type === "invest" && { invest: investDefaults }),
+      ...(original.type === "rebalance" && { rebalance: rebalanceDefaults }),
+    });
+    setShowEventModal(true);
+  };
+  
+  ///////////////////////////////////////////////////////////////////////////////////////////////
 
  //TEMP DUMMY DATA
   const [spendingStrategy, setSpendingStrategy] = useState([
@@ -166,82 +238,7 @@ export default function AddScenario() {
     "IRA",
     "Pre-Tax Mutual Fund"
   ]);
-
-
   
-
-
-  const handleEventSeriesChange = (index, field, value) => {
-    const updated = [...eventSeries];
-    if (field === "startType") {
-      updated[index].start.type = value;
-    } else if (field === "startValue") {
-      updated[index].start.value = value;
-    } else if (field === "durationType") {
-      updated[index].duration.type = value;
-    } else if (field === "durationValue") {
-      updated[index].duration.value = value;
-    } else {
-      updated[index][field] = value;
-    }
-    setEventSeries(updated);
-  };
-  
-  const addEventSeries = () => {
-    setEventSeries([
-      ...eventSeries,
-      {
-        name: "",
-        description: "",
-        start: { type: "fixed", value: "" },
-        duration: { type: "fixed", value: "" },
-        type: "", //FIX THIS LATER EEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEE REMEMBER THIS
-        invest: {
-          allocationType: "fixed",
-          selected: [],
-          allocations: {},
-        },
-        rebalance: {
-          allocationType: "fixed",
-          selected: [],
-          allocations: {},
-        },
-      },
-    ]);
-  };
-
-  const removeEventSeries = (indexToRemove) => {
-    const updated = eventSeries.filter((_, index) => index !== indexToRemove);
-    setEventSeries(updated);
-  };
-
-  const openEventModal = (index) => {
-    const original = eventSeries[index];
-  
-    const investDefaults = original.type === "invest"
-      ? {
-          allocationType: original.invest?.allocationType || "fixed",
-          selected: original.invest?.selected || [],
-          allocations: original.invest?.allocations || {},
-        }
-      : undefined;
-  
-    const rebalanceDefaults = original.type === "rebalance"
-      ? {
-          allocationType: original.rebalance?.allocationType || "fixed",
-          selected: original.rebalance?.selected || [],
-          allocations: original.rebalance?.allocations || {},
-        }
-      : undefined;
-  
-    setEditingEventIndex(index);
-    setTempEvent({
-      ...original,
-      ...(original.type === "invest" && { invest: investDefaults }),
-      ...(original.type === "rebalance" && { rebalance: rebalanceDefaults }),
-    });
-    setShowEventModal(true);
-  };  
 
   const renderEventModal = () => {
     if (editingEventIndex === null || !tempEvent) return null;
@@ -1165,7 +1162,6 @@ export default function AddScenario() {
 
   
 
-
   return (
     <div className="w-full px-4 mt-20">
       {showLifespanModal && renderLifespanModal()}
@@ -1196,85 +1192,34 @@ export default function AddScenario() {
         setShowLifespanModal={setShowLifespanModal}
         renderYearDropdown={renderYearDropdown}
         renderRetirementAge={renderRetirementAge}
+        ignoreStateTax={ignoreStateTax}
+        setIgnoreStateTax={setIgnoreStateTax}
       />
 
       {/* Investments Section */}
       <Investments
-  investments={investments}
-  investmentTypes={investmentTypes}
-  setShowInvestmentTypeModal={setShowInvestmentTypeModal}
-  handleInvestmentChange={handleInvestmentChange}
-  addInvestment={addInvestment}
-  removeInvestment={removeInvestment}
-  handleEditInvestmentType={handleEditInvestmentType}
-  handleDeleteInvestmentType={handleDeleteInvestmentType}
-/>
+        investments={investments}
+        investmentTypes={investmentTypes}
+        setShowInvestmentTypeModal={setShowInvestmentTypeModal}
+        handleInvestmentChange={handleInvestmentChange}
+        addInvestment={addInvestment}
+        removeInvestment={removeInvestment}
+        handleEditInvestmentType={handleEditInvestmentType}
+        handleDeleteInvestmentType={handleDeleteInvestmentType}
+      />
 
 
       {/* Event Series Section */}
-      {showEventModal && renderEventModal()}
+      {/*showEventModal && renderEventModal()*/}
 
-      <div className="w-full border border-gray-300 rounded-md p-6 mt-8 bg-gray-50">
-        <h2 className="text-lg font-semibold text-gray-800 mb-4">Event Series</h2>
-
-        <div className="space-y-4">
-          {eventSeries.map((event, index) => (
-            <div
-              key={index}
-              className="border border-gray-300 rounded-md p-4 bg-white shadow-sm"
-            >
-              <div className="flex justify-between items-start mb-2">
-                <div>
-                  <h3 className="text-md font-semibold text-gray-800">
-                    {event.name || "Unnamed Event Series"}
-                  </h3>
-                  {event.description && (
-                    <p className="text-sm text-gray-600">{event.description}</p>
-                  )}
-                </div>
-                <div className="flex space-x-2">
-                  <button
-                    onClick={() => openEventModal(index)}
-                    className="px-3 py-1 bg-indigo-500 text-white text-sm rounded hover:bg-indigo-600"
-                  >
-                    Edit
-                  </button>
-                  <button
-                    onClick={() => removeEventSeries(index)}
-                    className="px-3 py-1 bg-red-500 text-white text-sm rounded hover:bg-red-600"
-                  >
-                    Delete
-                  </button>
-                </div>
-              </div>
-
-              <div className="text-sm text-gray-700 space-y-1">
-                <p>
-                  <span className="font-medium">Start:</span> {event.start.type} – {event.start.value || "–"}
-                </p>
-                <p>
-                  <span className="font-medium">Duration:</span> {event.duration.type} – {event.duration.value || "–"}
-                </p>
-              </div>
-            </div>
-          ))}
-        </div>
-
-        {/* Add Event Button at Bottom */}
-        <div className="flex justify-center mt-6">
-          <button
-            onClick={addEventSeries}
-            className="px-4 py-2 bg-green-500 text-white rounded hover:bg-green-600"
-          >
-            + Add Another Event Series
-          </button>
-        </div>
-      </div>
-
-
-
-
-
+      <EventSeries
+        eventSeries={eventSeries}
+        showEventModal={showEventModal}
+        renderEventModal={renderEventModal}
+        openEventModal={openEventModal}
+        removeEventSeries={removeEventSeries}
+        addEventSeries={addEventSeries}
+      />
 
       {/* Spending Strategy Section */}
       <div className="w-full border border-gray-300 rounded-md p-6 mt-8 bg-gray-50">

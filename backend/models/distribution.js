@@ -1,64 +1,59 @@
-// Distribution Document Schema
-
 const mongoose = require('mongoose');
 const Schema = mongoose.Schema;
 
-// Enum for distribution types
+//Define the enum
 const DistributionTypes = Object.freeze({
-    FIXED: "fixed",
-    NORMAL: "normal",
-    UNIFORM: "uniform",
+  FIXED: "fixed",
+  NORMAL: "normal",
+  UNIFORM: "uniform",
 });
 
-// General distribution model with discriminator key
+//Embedded Distribution Schema
 const DistributionSchema = new Schema({
-    type: {
-        type: String,
-        enum: Object.values(DistributionTypes),
-        required: true,
+  type: {
+    type: String,
+    enum: Object.values(DistributionTypes),
+    required: true,
+  },
+  value: {
+    type: Number,
+    required: function () {
+      return this.type === 'fixed';
     },
-}, { discriminatorKey: 'type' });
-
-const Distribution = mongoose.model('Distribution', DistributionSchema);
-
-// Fixed Distribution
-const FixedDistribution = Distribution.discriminator(
-    DistributionTypes.FIXED,
-    new Schema({
-        value: { type: Number, required: true }
-    })
-);
-
-// Normal Distribution
-const NormalDistribution = Distribution.discriminator(
-    DistributionTypes.NORMAL,
-    new Schema({
-        mean: { type: Number, required: true },
-        stdev: { type: Number, required: true, min: 0 }
-    })
-);
-
-// Uniform Distribution
-const UniformDistribution = Distribution.discriminator(
-    DistributionTypes.UNIFORM,
-    new Schema({
-        lower: { type: Number, required: true },
-        upper: {
-            type: Number, required: true,
-            validate: {
-                validator: function (v) {
-                    return v > this.lower;
-                },
-                message: 'Upper bound must be greater than lower bound'
-            }
-        }
-    })
-);
+  },
+  mean: {
+    type: Number,
+    required: function () {
+      return this.type === 'normal';
+    },
+  },
+  stdev: {
+    type: Number,
+    min: 0,
+    required: function () {
+      return this.type === 'normal';
+    },
+  },
+  lower: {
+    type: Number,
+    required: function () {
+      return this.type === 'uniform';
+    },
+  },
+  upper: {
+    type: Number,
+    required: function () {
+      return this.type === 'uniform';
+    },
+    validate: {
+      validator: function (v) {
+        return this.type !== 'uniform' || v > this.lower;
+      },
+      message: 'Upper must be greater than lower.',
+    },
+  },
+});
 
 module.exports = {
-    DistributionSchema,
-    Distribution,
-    FixedDistribution,
-    NormalDistribution,
-    UniformDistribution,
+  DistributionSchema,
 };

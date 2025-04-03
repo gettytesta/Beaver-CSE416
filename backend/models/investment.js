@@ -23,4 +23,7 @@ var InvestmentSchema = new Schema({
     },
 })
 
-module.exports = mongoose.model('Investment', InvestmentSchema)
+module.exports = {
+    Investment: mongoose.model('Investment', InvestmentSchema),
+    InvestmentSchema,
+};
