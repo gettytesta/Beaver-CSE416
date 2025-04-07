@@ -11,7 +11,7 @@ require('dotenv').config();
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use(cors({
-    origin: process.env.CLIENT_URL,
+    origin: process.env.FRONTEND_URL,
     credentials: true
 }));
 
@@ -19,7 +19,13 @@ app.use(cors({
 app.use(session({
     secret: process.env.SESSION_SECRET,
     resave: false,
-    saveUninitialized: false
+    saveUninitialized: false,
+    cookie: {
+        maxAge: 24 * 60 * 60 * 1000, // 1 day
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'lax'
+    }
 }));
 
 // Initialize Passport
@@ -34,7 +40,14 @@ mongoose.connect(process.env.MONGO_URI)
 
 // Routes
 const authRoutes = require('./routes/authRoutes');
+const yamlRoutes = require('./routes/yamlRoutes');
+const scenarioRoutes = require('./routes/scenarioRoutes');
+const simulationRoutes = require('./routes/simulationRoutes');
+
 app.use('/auth', authRoutes);
+app.use('/api/yaml', yamlRoutes);
+app.use('/api/scenarios', scenarioRoutes);
+app.use('/api/simulations', simulationRoutes);
 
 app.get('/', async (_, res) => {
     return res.send('Hello, World');

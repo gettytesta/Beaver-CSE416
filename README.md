@@ -11,32 +11,26 @@ This project is built using the MERN stack. This requires Nodejs and NPM to run.
 1. Install dependencies
     1. Open command prompt.
     2. CD into the project's root directory.
-    3. Execute:
-                npm run install-all
+    3. Run: npm run install-all
 
 2. Create Environment Variables
-    1. Create a .env file in the root directory.
+    1. Create a .env file, place it in the backend directory.
     2. It should include all the fields specified in example_env.txt.   
 
-3. Start the MongoDB database locally
-    1. TODO add instructions for this
-
-4. Start backend
+3. Start backend
     1. Open command prompt.
     2. CD into the project's backend directory.
-    3. Execute:
-                npm start
+    3. Run: npm start
+    4. This will run the server locally on your machine.
+    5. Populate Temp Data into DB using your UserID on MongoDBCompass to view ScenariosTable
+    6. ex: populate_db_example.txt in backend directory
 
-5. Start frontend
+4. Start frontend
     1. Open command prompt.
     2. CD into the project's frontend directory.
-    3. Execute:
-                npx next dev -p [DESIRED PORT]
-       
-Additional Setup frontend (Tailwind CSS and Lucide-React)
-1. Tailwind CSS v3 and Lucide React(Icons) and dnd-kit(Movable Lists for Strategies) 
-    1. npm install -D tailwindcss@3 postcss autoprefixer
-    2. npm install lucide-react
-    3. npm install @dnd-kit/core @dnd-kit/sortable @dnd-kit/modifiers
+    3. Run: npm run dev
+    4. This will run the client locally on your machine. 
 
+## Some notes
 
+State Tax YAML files are not stored in MongoDB, they are stored locally on the server, and they are not uploaded to the repository, you'll need to put your own (named following the convention "NY.yaml") state tax data in backend/yamls.

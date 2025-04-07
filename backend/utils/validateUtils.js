@@ -7,11 +7,11 @@ const validStates = [
     'DC', 'AS', 'GU', 'MP', 'PR', 'VI'
 ];
 
-const validateStateCode = function (state) {
+/**
+ * Validates the state code
+ * @param {string} state - The state code to validate
+ * @returns {boolean} - True if the state code is valid, false otherwise
+ */
+exports.validateStateCode = function (state) {
     return validStates.includes(state);
-};
-
-module.exports = {
-    validStates,
-    validateStateCode
 };

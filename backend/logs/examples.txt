@@ -1,3 +1,11 @@
+example user_datetime.csv:
+Year,Stocks,Bonds,Cash
+2025,50000,30000,20000
+2026,52000,31000,21000
+2027,54000,32000,22000
+2028,56000,33000,23000
+
+example user_datetime.log:
 [2025] Income: Received salary of $80,000
 [2025] Expense: Paid living expenses of $50,000
 [2025] Invest: Invested $20,000 into Stocks

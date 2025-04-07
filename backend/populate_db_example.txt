@@ -1,0 +1,95 @@
+Example 1:
+Remember to change UseriD to specified 
+
+
+{
+  "name": "Retirement Planning Scenario",
+  "userId": ObjectId("CHANGE THIS TO UR USERID FROM USERS DB"),
+  "sharedWith": [],
+  "isMarriedCouple": true,
+  "userBirthYear": 1980,
+  "spouseBirthYear": 1982,
+  "userLifeExpectancy": { "type": "fixed", "value": 85 },
+  "spouseLifeExpectancy": { "type": "fixed", "value": 88 },
+  "investments": [
+    ObjectId("60c8b1451b54992d08b30c7b"), 
+    ObjectId("60c8b1451b54992d08b30c7c")
+  ],
+  "eventSeriesSet": [],
+  "inflationAssumption": { "type": "fixed", "value": 0.02 },
+  "initialLimit": 100000,
+  "expenseWithdrawlStrategy": [],
+  "rmdStrategy": [],
+  "rothConversionStrategy": [],
+  "financialGoal": 500000,
+  "userStateOfResidence": "NY",
+  "createdAt": "2025-03-24T00:00:00Z",
+  "updatedAt": "2025-03-24T00:00:00Z"
+}
+
+
+example 2:
+{
+  "name": "Test Scenario 1",
+  "userId": { "$oid": "CHANGE THIS TO UR USERID FROM USERS DB" },
+  "sharedWith": [],
+  "isMarriedCouple": false,
+  "userBirthYear": 1995,
+  "spouseBirthYear": 1995,
+  "userLifeExpectancy": {
+    "type": "fixed",
+    "value": 90
+  },
+  "spouseLifeExpectancy": {
+    "type": "fixed",
+    "value": 90
+  },
+  "investments": [],
+  "eventSeriesSet": [],
+  "inflationAssumption": {
+    "type": "fixed",
+    "value": 0.03
+  },
+  "initialLimit": 1000000,
+  "expenseWithdrawlStrategy": [],
+  "rmdStrategy": [],
+  "rothConversionStrategy": [],
+  "financialGoal": 1200000,
+  "userStateOfResidence": "NY",
+  "createdAt": { "$date": "2025-03-24T12:00:00.000Z" },
+  "updatedAt": { "$date": "2025-03-24T12:00:00.000Z" }
+}
+
+Example 3:
+
+
+{
+  "name": "Test Scenario 2",
+  "userId": { "$oid": "CHANGE THIS TO UR USERID FROM USERS DB" },
+  "sharedWith": [],
+  "isMarriedCouple": true,
+  "userBirthYear": 1983,
+  "spouseBirthYear": 1985,
+  "userLifeExpectancy": {
+    "type": "fixed",
+    "value": 85
+  },
+  "spouseLifeExpectancy": {
+    "type": "fixed",
+    "value": 88
+  },
+  "investments": [],
+  "eventSeriesSet": [],
+  "inflationAssumption": {
+    "type": "fixed",
+    "value": 0.025
+  },
+  "initialLimit": 900000,
+  "expenseWithdrawlStrategy": [],
+  "rmdStrategy": [],
+  "rothConversionStrategy": [],
+  "financialGoal": 1500000,
+  "userStateOfResidence": "CA",
+  "createdAt": { "$date": "2025-03-24T14:00:00.000Z" },
+  "updatedAt": { "$date": "2025-03-24T14:00:00.000Z" }
+}

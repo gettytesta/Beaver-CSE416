@@ -4,12 +4,13 @@ var mongoose = require('mongoose')
 var Schema = mongoose.Schema
 
 const { DistributionSchema } = require('./distribution');
-const { validateStateCode } = require('./utils/validateUtils');
+const { validateStateCode } = require('../utils/validateUtils');
+const { SharedUserSchema } = require('./sharedUser');
 
 var ScenarioSchema = new Schema({
     name: { type: String, required: true },
-    // OwnerID
-    // SharedToIDs
+    userId: { type: Schema.Types.ObjectId, ref: 'User', required: true },
+    sharedWith: [SharedUserSchema],
     isMarriedCouple: { type: Boolean, required: true },
     userBirthYear: { type: Number, required: true },
     spouseBirthYear: { type: Number, required: true },
@@ -32,6 +33,22 @@ var ScenarioSchema = new Schema({
             message: 'Invalid US state abbreviation'
         }
     },
-})
+    createdAt: {
+        type: Date,
+        default: Date.now
+    },
+    updatedAt: {
+        type: Date,
+        default: Date.now
+    }
+});
 
-module.exports = mongoose.model('Scenario', ScenarioSchema)
+// Update the updatedAt field on save
+ScenarioSchema.pre('save', function(next) {
+    this.updatedAt = Date.now();
+    next();
+});
+
+module.exports = {
+    Scenario: mongoose.model('Scenario', ScenarioSchema)
+}
