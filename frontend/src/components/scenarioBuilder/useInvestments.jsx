@@ -107,36 +107,56 @@ export default function useInvestments() {
         />
   
         {/* Return Distribution Section */}
-        <div>
-          <label className="block font-medium">Expected Annual Return</label>
-          <select
-            value={newInvestmentType.returnDistribution.type}
-            onChange={(e) => {
-              const newType = e.target.value;
-              let returnValue = {};
-              if (newType === "fixed" || newType === "percent") returnValue = { value: "" };
-              else if (newType === "normal") returnValue = { mean: "", stdev: "" };
-              setNewInvestmentType({
-                ...newInvestmentType,
-                returnDistribution: { type: newType, ...returnValue },
-              });
-            }}
-            className="w-full border px-3 py-2 rounded"
-          >
-            <option value="fixed">Fixed</option>
-            <option value="percent">Percent</option>
-            <option value="normal">Normal Distribution</option>
-          </select>
-        </div>
-  
+        <label className="block font-medium mb-1">Return Format</label>
+        <select
+          value={newInvestmentType.returnAmtOrPct}
+          onChange={(e) =>
+            setNewInvestmentType({ ...newInvestmentType, returnAmtOrPct: e.target.value })
+          }
+          className="w-full border px-3 py-2 rounded mb-4"
+        >
+          <option value="amount">Amount ($)</option>
+          <option value="percent">Percent (%)</option>
+        </select>
+
+        {/* Return Distribution Type Selector */}
+        <label className="block font-medium mb-1">Expected Annual Return</label>
+        <select
+          value={newInvestmentType.returnDistribution.type}
+          onChange={(e) => {
+            const distType = e.target.value;
+            const newDist = { type: distType };
+
+            if (distType === "fixed") newDist.value = "";
+            else if (distType === "normal") {
+              newDist.mean = "";
+              newDist.stdev = "";
+            }
+
+            setNewInvestmentType({
+              ...newInvestmentType,
+              returnDistribution: newDist,
+            });
+          }}
+          className="w-full border px-3 py-2 rounded mb-4"
+        >
+          <option value="fixed">Fixed</option>
+          <option value="normal">Normal Distribution</option>
+        </select>
+
+        {/* Conditionally Render Return Inputs */}
         {newInvestmentType.returnDistribution.type === "fixed" && (
           <div className="relative">
-            <span className="absolute inset-y-0 left-0 pl-3 flex items-center text-gray-500 text-sm pointer-events-none">$</span>
+            <span className="absolute inset-y-0 left-0 pl-3 flex items-center text-gray-500 text-sm pointer-events-none">
+              {newInvestmentType.returnAmtOrPct === "amount" ? "$" : "%"}
+            </span>
             <input
               type="text"
-              inputMode="numeric"
+              inputMode="decimal"
               pattern="[0-9]*"
-              placeholder="e.g. 500"
+              placeholder={
+                newInvestmentType.returnAmtOrPct === "amount" ? "e.g. 500" : "e.g. 5"
+              }
               className="pl-7 pr-3 border border-gray-300 rounded-md py-2 w-full focus:outline-none focus:ring-2 focus:ring-indigo-400"
               value={newInvestmentType.returnDistribution.value}
               onChange={(e) =>
@@ -144,47 +164,21 @@ export default function useInvestments() {
                   ...newInvestmentType,
                   returnDistribution: {
                     ...newInvestmentType.returnDistribution,
-                    value: e.target.value.replace(/\D/g, "")
-                  }
+                    value: e.target.value.replace(/\D/g, ""),
+                  },
                 })
               }
             />
           </div>
         )}
-  
-        {newInvestmentType.returnDistribution.type === "percent" && (
-          <div className="relative">
-            <input
-              type="text"
-              inputMode="decimal"
-              pattern="^\d*\.?\d*$"
-              placeholder="e.g. 7"
-              className="pl-3 pr-7 border border-gray-300 rounded-md py-2 w-full focus:outline-none focus:ring-2 focus:ring-indigo-400"
-              value={newInvestmentType.returnDistribution.value}
-              onChange={(e) => {
-                let val = e.target.value;
-                if (/^\d*\.?\d*$/.test(val)) {
-                  if (parseFloat(val) <= 100 || val === "") {
-                    setNewInvestmentType({
-                      ...newInvestmentType,
-                      returnDistribution: {
-                        ...newInvestmentType.returnDistribution,
-                        value: val
-                      }
-                    });
-                  }
-                }
-              }}
-            />
-            <span className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-500 text-sm pointer-events-none">%</span>
-          </div>
-        )}
-  
+
         {newInvestmentType.returnDistribution.type === "normal" && (
           <div className="flex gap-2">
             <input
               type="number"
-              placeholder="Mean"
+              placeholder={
+                newInvestmentType.returnAmtOrPct === "amount" ? "Mean ($)" : "Mean (%)"
+              }
               value={newInvestmentType.returnDistribution.mean || ""}
               onChange={(e) =>
                 setNewInvestmentType({
@@ -199,7 +193,9 @@ export default function useInvestments() {
             />
             <input
               type="number"
-              placeholder="Stdev"
+              placeholder={
+                newInvestmentType.returnAmtOrPct === "amount" ? "Stdev ($)" : "Stdev (%)"
+              }
               value={newInvestmentType.returnDistribution.stdev || ""}
               onChange={(e) =>
                 setNewInvestmentType({
@@ -216,36 +212,56 @@ export default function useInvestments() {
         )}
   
         {/* Income Distribution Section */}
-        <div>
-          <label className="block font-medium">Expected Annual Income</label>
-          <select
-            value={newInvestmentType.incomeDistribution.type}
-            onChange={(e) => {
-              const newType = e.target.value;
-              let incomeValue = {};
-              if (newType === "fixed" || newType === "percent") incomeValue = { value: "" };
-              else if (newType === "normal") incomeValue = { mean: "", stdev: "" };
-              setNewInvestmentType({
-                ...newInvestmentType,
-                incomeDistribution: { type: newType, ...incomeValue },
-              });
-            }}
-            className="w-full border px-3 py-2 rounded"
-          >
-            <option value="fixed">Fixed</option>
-            <option value="percent">Percent</option>
-            <option value="normal">Normal Distribution</option>
-          </select>
-        </div>
-  
+        <label className="block font-medium mb-1 mt-4">Income Format</label>
+        <select
+          value={newInvestmentType.incomeAmtOrPct}
+          onChange={(e) =>
+            setNewInvestmentType({ ...newInvestmentType, incomeAmtOrPct: e.target.value })
+          }
+          className="w-full border px-3 py-2 rounded mb-4"
+        >
+          <option value="amount">Amount ($)</option>
+          <option value="percent">Percent (%)</option>
+        </select>
+
+        {/* Income Distribution Type */}
+        <label className="block font-medium mb-1">Expected Annual Income</label>
+        <select
+          value={newInvestmentType.incomeDistribution.type}
+          onChange={(e) => {
+            const distType = e.target.value;
+            const newDist = { type: distType };
+
+            if (distType === "fixed") newDist.value = "";
+            else if (distType === "normal") {
+              newDist.mean = "";
+              newDist.stdev = "";
+            }
+
+            setNewInvestmentType({
+              ...newInvestmentType,
+              incomeDistribution: newDist,
+            });
+          }}
+          className="w-full border px-3 py-2 rounded mb-4"
+        >
+          <option value="fixed">Fixed</option>
+          <option value="normal">Normal Distribution</option>
+        </select>
+
+        {/* Conditionally Render Income Inputs */}
         {newInvestmentType.incomeDistribution.type === "fixed" && (
           <div className="relative">
-            <span className="absolute inset-y-0 left-0 pl-3 flex items-center text-gray-500 text-sm pointer-events-none">$</span>
+            <span className="absolute inset-y-0 left-0 pl-3 flex items-center text-gray-500 text-sm pointer-events-none">
+              {newInvestmentType.incomeAmtOrPct === "amount" ? "$" : "%"}
+            </span>
             <input
               type="text"
-              inputMode="numeric"
+              inputMode="decimal"
               pattern="[0-9]*"
-              placeholder="e.g. 300"
+              placeholder={
+                newInvestmentType.incomeAmtOrPct === "amount" ? "e.g. 300" : "e.g. 3"
+              }
               className="pl-7 pr-3 border border-gray-300 rounded-md py-2 w-full focus:outline-none focus:ring-2 focus:ring-indigo-400"
               value={newInvestmentType.incomeDistribution.value}
               onChange={(e) =>
@@ -253,47 +269,21 @@ export default function useInvestments() {
                   ...newInvestmentType,
                   incomeDistribution: {
                     ...newInvestmentType.incomeDistribution,
-                    value: e.target.value.replace(/\D/g, "")
+                    value: e.target.value.replace(/\D/g, ""),
                   },
                 })
               }
             />
           </div>
         )}
-  
-        {newInvestmentType.incomeDistribution.type === "percent" && (
-          <div className="relative">
-            <input
-              type="text"
-              inputMode="decimal"
-              pattern="^\d*\.?\d*$"
-              placeholder="e.g. 3"
-              className="pl-3 pr-7 border border-gray-300 rounded-md py-2 w-full focus:outline-none focus:ring-2 focus:ring-indigo-400"
-              value={newInvestmentType.incomeDistribution.value}
-              onChange={(e) => {
-                let val = e.target.value;
-                if (/^\d*\.?\d*$/.test(val)) {
-                  if (parseFloat(val) <= 100 || val === "") {
-                    setNewInvestmentType({
-                      ...newInvestmentType,
-                      incomeDistribution: {
-                        ...newInvestmentType.incomeDistribution,
-                        value: val,
-                      },
-                    });
-                  }
-                }
-              }}
-            />
-            <span className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-500 text-sm pointer-events-none">%</span>
-          </div>
-        )}
-  
+
         {newInvestmentType.incomeDistribution.type === "normal" && (
           <div className="flex gap-2">
             <input
               type="number"
-              placeholder="Mean"
+              placeholder={
+                newInvestmentType.incomeAmtOrPct === "amount" ? "Mean ($)" : "Mean (%)"
+              }
               value={newInvestmentType.incomeDistribution.mean || ""}
               onChange={(e) =>
                 setNewInvestmentType({
@@ -308,7 +298,9 @@ export default function useInvestments() {
             />
             <input
               type="number"
-              placeholder="Stdev"
+              placeholder={
+                newInvestmentType.incomeAmtOrPct === "amount" ? "Stdev ($)" : "Stdev (%)"
+              }
               value={newInvestmentType.incomeDistribution.stdev || ""}
               onChange={(e) =>
                 setNewInvestmentType({
