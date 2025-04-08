@@ -5,8 +5,7 @@ var Schema = mongoose.Schema
 
 const { InvestmentTypeSchema } = require('./investmentType');
 
-// Enum for account tax status
-// MIGHT NEED TO BE MOVED, DEPENDING ON WHERE THIS IS NEEDED
+
 const AccountTaxStatus = Object.freeze({
     NON_RETIREMENT: "nonretirement",
     PRE_TAX_RETIREMENT: "pretaxretirement",

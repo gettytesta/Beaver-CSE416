@@ -1,16 +1,36 @@
 import React from "react";
+import EventModal from "./EventModal";
 
 export default function EventSeries({
   eventSeries,
   showEventModal,
-  renderEventModal,
+  tempEvent,
+  setTempEvent,
+  editingEventIndex,
+  setEditingEventIndex,
+  setShowEventModal,
+  filingStatus,
+  setEventSeries,
+  investments,
   openEventModal,
   removeEventSeries,
   addEventSeries,
 }) {
   return (
     <div className="w-full border border-gray-300 rounded-md p-6 mt-8 bg-gray-50">
-      {showEventModal && renderEventModal()}
+      {showEventModal && (
+        <EventModal
+          filingStatus={filingStatus}
+          tempEvent={tempEvent}
+          setTempEvent={setTempEvent}
+          editingEventIndex={editingEventIndex}
+          setEditingEventIndex={setEditingEventIndex}
+          setShowEventModal={setShowEventModal}
+          eventSeries={eventSeries}
+          setEventSeries={setEventSeries}
+          investments={investments}
+        />
+      )}
 
       <h2 className="text-lg font-semibold text-gray-800 mb-4">Event Series</h2>
 
