@@ -253,12 +253,13 @@ export default function AddScenario() {
           // Checks if the user is a guest or not
           // Checks if a local session exists for a guest
           if (guestSession && guestSession.isGuest) {
-            alert("guest user, session works")
+            // If the user is a guest, save the scenario to the guest session
             // TODO - SAVE THE SCENARIO TO THE GUEST SESSION
             guestSession.scenarioName = scenarioName;
             sessionStorage.setItem("guestSession", JSON.stringify(guestSession));
           } else {
-            alert("not a guest user, session works")
+            // If the user is not a guest, save the scenario to the database
+            // TODO - SAVE THE SCENARIO TO THE DATABASE
           }
           alert("Scenario saved!");
         }}

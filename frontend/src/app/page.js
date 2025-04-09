@@ -40,6 +40,7 @@ export default function LandingPage() {
 
   // Redirects to the Google OAuth login page on the backend
   const handleLogin = () => {
+    // Clear any existing session data
     sessionStorage.removeItem("guestSession");
     window.location.href = `${backendURL}/auth/google?prompt=select_account`;
   };
