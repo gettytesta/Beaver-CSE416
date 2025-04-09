@@ -6,7 +6,6 @@ exports.googleCallback = (req, res) => {
 };
 
 // Get current user
-// Get current user
 exports.getCurrentUser = async (req, res) => {
     try {
         if (req.user) {
