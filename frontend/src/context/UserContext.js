@@ -15,7 +15,7 @@ import axios from "axios";
 const UserContext = createContext();
 
 export function UserProvider({ children }) {
-  const [user, setUser] = useState(null); //What user is logged in 
+  const [user, setUser] = useState(null); // What user is logged in 
   const [checkedSession, setCheckedSession] = useState(false); 
 
   useEffect(() => {

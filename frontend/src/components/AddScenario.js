@@ -25,6 +25,7 @@ import {
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { useState, useRef } from "react";
+// Check if the user is a guest or not
 import ScenarioInfo from "./scenarioBuilder/ScenarioInfo";
 import useScenarioInfo from "./scenarioBuilder/useScenarioInfo";
 import Investments from "./scenarioBuilder/Investments";
@@ -194,6 +195,10 @@ export default function AddScenario() {
     }
   };
 
+// ================== CHECK IF USER IS GUEST ==================
+  // Retrieves the guest session from sessionStorage. Will be null if the user is not a guest.
+  const guestSession = JSON.parse(sessionStorage.getItem("guestSession"));
+
   return (
     <div className="w-full px-4 mt-20">
       {showLifespanModal && renderLifespanModal()}
@@ -295,6 +300,23 @@ export default function AddScenario() {
     <div className="w-full mt-8 mb-8 flex justify-center">
       <button
         //onClick={handleSaveScenario}
+        onClick={() => {
+          // Logic to save the scenario can go here
+          // TODO - CREATE THE SCENARIO OBJECT
+          
+          // Checks if the user is a guest or not
+          // Checks if a local session exists for a guest
+          if (guestSession && guestSession.isGuest) {
+            // If the user is a guest, save the scenario to the guest session
+            // TODO - SAVE THE SCENARIO TO THE GUEST SESSION
+            guestSession.scenarioName = scenarioName;
+            sessionStorage.setItem("guestSession", JSON.stringify(guestSession));
+          } else {
+            // If the user is not a guest, save the scenario to the database
+            // TODO - SAVE THE SCENARIO TO THE DATABASE
+          }
+          alert("Scenario saved!");
+        }}
         className="px-6 py-2 bg-indigo-600 text-white rounded hover:bg-indigo-700"
       >
         Save Scenario

@@ -24,6 +24,9 @@ export default function LandingPage() {
       console.log("Guest login response:", data);
 
       if (res.ok && data.success) {
+        // Store guest session data in sessionStorage
+        sessionStorage.setItem("guestSession", JSON.stringify(data.user));
+
         //Redirect to dashboard using full page reload to ensure session cookie is recognized
         window.location.href = "/dashboard";
       } else {
@@ -35,8 +38,10 @@ export default function LandingPage() {
     }
   };
 
-  //Redirects to the Google OAuth login page on the backend
+  // Redirects to the Google OAuth login page on the backend
   const handleLogin = () => {
+    // Clear any existing session data
+    sessionStorage.removeItem("guestSession");
     window.location.href = `${backendURL}/auth/google?prompt=select_account`;
   };
 
