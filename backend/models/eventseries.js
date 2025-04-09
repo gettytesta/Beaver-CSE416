@@ -1,6 +1,8 @@
 const mongoose = require("mongoose");
 const Schema = mongoose.Schema;
 
+const { DistributionSchema } = require('./distribution');
+
 const EventStartSchema = new Schema({
     type: {
       type: String,
@@ -42,26 +44,7 @@ const EventStartSchema = new Schema({
     },
   
     changeDistribution: { // 2. Fixed, Uniform, or Normal
-      type: new Schema({
-        type: {
-          type: String,
-          enum: ['fixed', 'uniform', 'normal'],
-          required: true,
-        },
-        value: { type: Number }, // for fixed
-        mean: { type: Number },  // for normal
-        stdev: { type: Number }, // for normal
-        lower: { type: Number }, // for uniform
-        upper: {
-          type: Number,
-          validate: {
-            validator: function (v) {
-              return this.type !== 'uniform' || v > this.lower;
-            },
-            message: 'Upper must be greater than lower',
-          },
-        },
-      }),
+      type: DistributionSchema,
       required: true
     },
   
@@ -83,50 +66,7 @@ const EventStartSchema = new Schema({
     },
   
     changeDistribution: {
-      type: new Schema({
-        type: {
-          type: String,
-          enum: ["fixed", "normal", "uniform"],
-          required: true,
-        },
-        value: {
-          type: Number,
-          required: function () {
-            return this.type === "fixed";
-          },
-        },
-        mean: {
-          type: Number,
-          required: function () {
-            return this.type === "normal";
-          },
-        },
-        stdev: {
-          type: Number,
-          min: 0,
-          required: function () {
-            return this.type === "normal";
-          },
-        },
-        lower: {
-          type: Number,
-          required: function () {
-            return this.type === "uniform";
-          },
-        },
-        upper: {
-          type: Number,
-          required: function () {
-            return this.type === "uniform";
-          },
-          validate: {
-            validator: function (v) {
-              return this.type !== "uniform" || v > this.lower;
-            },
-            message: "Upper must be greater than lower.",
-          },
-        },
-      }),
+      type: DistributionSchema,
       required: true,
     },
   
@@ -277,26 +217,7 @@ const EventStartSchema = new Schema({
     },
   
     duration: {
-      type: new Schema({
-        type: {
-          type: String,
-          enum: ['fixed', 'uniform', 'normal'],
-          required: true,
-        },
-        value: { type: Number },         // fixed
-        mean: { type: Number },          // normal
-        stdev: { type: Number, min: 0 }, // normal
-        lower: { type: Number },         // uniform
-        upper: {
-          type: Number,
-          validate: {
-            validator: function (v) {
-              return this.type !== 'uniform' || v > this.lower;
-            },
-            message: 'Upper must be greater than lower',
-          },
-        },
-      }, { _id: false }),
+      type: DistributionSchema,
       required: true,
     },
   

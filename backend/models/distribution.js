@@ -6,6 +6,7 @@ const DistributionTypes = Object.freeze({
   FIXED: "fixed",
   NORMAL: "normal",
   UNIFORM: "uniform",
+  GBM: "gbm",
 });
 
 //Embedded Distribution Schema
@@ -18,42 +19,55 @@ const DistributionSchema = new Schema({
   value: {
     type: Number,
     required: function () {
-      return this.type === 'fixed';
+      return this.type === DistributionTypes.FIXED;
     },
   },
   mean: {
     type: Number,
     required: function () {
-      return this.type === 'normal';
+      return this.type === DistributionTypes.NORMAL;
     },
   },
   stdev: {
     type: Number,
     min: 0,
     required: function () {
-      return this.type === 'normal';
+      return this.type === DistributionTypes.NORMAL;
     },
   },
   lower: {
     type: Number,
     required: function () {
-      return this.type === 'uniform';
+      return this.type === DistributionTypes.UNIFORM;
     },
   },
   upper: {
     type: Number,
     required: function () {
-      return this.type === 'uniform';
+      return this.type === DistributionTypes.UNIFORM;
     },
     validate: {
       validator: function (v) {
-        return this.type !== 'uniform' || v > this.lower;
+        return this.type !== DistributionTypes.UNIFORM || v > this.lower;
       },
       message: 'Upper must be greater than lower.',
     },
   },
+  mu: {
+    type: Number,
+    required: function() {
+      return this.type === DistributionTypes.GBM;
+    }
+  },
+  sigma: {
+    type: Number,
+    required: function() {
+      return this.type === DistributionTypes.GBM;
+    }
+  }
 });
 
 module.exports = {
   DistributionSchema,
+  DistributionTypes,
 };

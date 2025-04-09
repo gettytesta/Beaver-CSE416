@@ -33,7 +33,7 @@ var ScenarioSchema = new Schema({
     },
 
     //Expense Strategy
-    expenseWithdrawlStrategy: { type: [Schema.Types.ObjectId], ref: 'Investment', default: [] },
+    expenseWithdrawalStrategy: { type: [Schema.Types.ObjectId], ref: 'Investment', default: [] },
 
     //inflation assumption
     inflationAssumption: { type: DistributionSchema, required: true },
