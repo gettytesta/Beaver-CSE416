@@ -27,7 +27,7 @@ var ScenarioSchema = new Schema({
 
     //Spending Strategy
     spendingStrategy: {
-        type: [Schema.Types.ObjectId], // references to EventSeries (not just names)
+        type: [Schema.Types.ObjectId], //references to EventSeries (not just names)
         ref: 'EventSeries', // reference to the EventSeries model
         default: [],
     },
