@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from "react";
+import axios from "axios"; 
 
 export default function useScenarioInfo() {
   const [filingStatus, setFilingStatus] = useState("single");
@@ -8,8 +9,7 @@ export default function useScenarioInfo() {
   const [financialGoal, setFinancialGoal] = useState("");
   const [birthYears, setBirthYears] = useState([""]);
   const [showLifespanModal, setShowLifespanModal] = useState(false);
-  const [lifespanTypes, setLifespanTypes] = useState(["fixed"]);
-  const [lifespanValues, setLifespanValues] = useState([{ value: "" }]);
+  const [lifespanValues, setLifespanValues] = useState([{ type: "fixed", value: "" }]);
   const [ignoreStateTax, setIgnoreStateTax] = useState(false);
 
   const fileInputRef = useRef(null);
@@ -94,12 +94,13 @@ export default function useScenarioInfo() {
   };
 
   const handleLifespanTypeChange = (index, type) => {
-    const updated = [...lifespanTypes];
-    updated[index] = type;
-    setLifespanTypes(updated);
-    const updatedValues = [...lifespanValues];
-    updatedValues[index] = type === "fixed" ? { value: "" } : { mean: "", stdev: "" };
-    setLifespanValues(updatedValues);
+    const updated = [...lifespanValues];
+    if (type === "fixed") {
+      updated[index] = { type: "fixed", value: "" };
+    } else {
+      updated[index] = { type: "normal", mean: "", stdev: "" };
+    }
+    setLifespanValues(updated);
   };
 
   const handleLifespanValueChange = (index, key, value) => {
@@ -113,18 +114,20 @@ export default function useScenarioInfo() {
     if (status === "single") {
       setBirthYears([birthYears[0] || ""]);
       setRetirementAges([retirementAges[0] || ""]);
-      setLifespanTypes([lifespanTypes[0] || "fixed"]);
-      setLifespanValues([lifespanValues[0] || { value: "" }]);
+      setLifespanValues([lifespanValues[0] || { type: "fixed", value: "" }]);
     } else {
       setBirthYears([birthYears[0] || "", birthYears[1] || ""]);
       setRetirementAges([retirementAges[0] || "", retirementAges[1] || ""]);
-      setLifespanTypes([lifespanTypes[0] || "fixed", lifespanTypes[1] || "fixed"]);
       setLifespanValues([
-        lifespanValues[0] || { value: "" },
-        lifespanValues[1] || { value: "" },
+        lifespanValues[0] || { type: "fixed", value: "" },
+        lifespanValues[1] || { type: "fixed", value: "" }
       ]);
     }
   };
+
+  useEffect(() => {
+    setIgnoreStateTax(false);
+  }, [state]);
 
   const renderYearDropdown = (label, index, placeholder) => (
     <div className="flex flex-col">
@@ -156,11 +159,6 @@ export default function useScenarioInfo() {
     </div>
   );
 
-  useEffect(() => {
-    //If user switches to a new state, reset the ignoreStateTax flag
-    setIgnoreStateTax(false);
-  }, [state]);
-
   const renderLifespanModal = () => (
     <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center">
       <div className="bg-white p-6 rounded-lg w-full max-w-xl space-y-6">
@@ -171,14 +169,14 @@ export default function useScenarioInfo() {
               {filingStatus === "married" && index === 1 ? "Spouse" : "User"} Life Expectancy
             </label>
             <select
-              value={lifespanTypes[index] || "fixed"}
+              value={lifespanValues[index]?.type || "fixed"}
               onChange={(e) => handleLifespanTypeChange(index, e.target.value)}
               className="border border-gray-300 rounded-md px-3 py-2 w-full"
             >
               <option value="fixed">Fixed</option>
               <option value="normal">Normal (Dist.)</option>
             </select>
-            {lifespanTypes[index] === "fixed" ? (
+            {lifespanValues[index]?.type === "fixed" ? (
               <input
                 type="number"
                 placeholder="e.g. 80"
@@ -233,8 +231,6 @@ export default function useScenarioInfo() {
     setBirthYears,
     showLifespanModal,
     setShowLifespanModal,
-    lifespanTypes,
-    setLifespanTypes,
     lifespanValues,
     setLifespanValues,
     fileInputRef,

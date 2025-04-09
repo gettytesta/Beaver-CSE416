@@ -173,7 +173,7 @@ export default function ScenarioTable() {
             </th>
             <th className="p-4 text-center">
               <div className="flex items-center justify-center gap-1">
-                # of Simulations
+                Last Updated
                 <ArrowDown className="w-4 h-4" />
               </div>
             </th>
@@ -209,22 +209,21 @@ export default function ScenarioTable() {
                 {Array.isArray(scenario.eventSeriesSet) ? scenario.eventSeriesSet.length : 0}
               </td>
 
-              {/* Simulations input */}
-              <td className="p-4 text-center">
-                <input
-                  type="number"
-                  min="0"
-                  className="w-24 px-2 py-1 border border-gray-300 rounded-md text-sm"
-                  value={simulations}
-                  onChange={handleSimChange}
-                  onBlur={handleSimBlur}
-                />
+              {/* Last Updated */}
+              <td className="p-4 text-center text-sm text-gray-700">
+                {scenario.updatedAt
+                  ? new Date(scenario.updatedAt).toLocaleDateString("en-US", {
+                      year: "numeric",
+                      month: "short",
+                      day: "numeric",
+                    })
+                  : "—"}
               </td>
 
               {/* Scenario Exploration button */}
               <td className="p-4 text-center">
                 <button className="px-5 py-2 bg-gray-500 text-white rounded-md text-base font-medium">
-                  Choose Parameters
+                  Export
                 </button>
               </td>
 
@@ -235,7 +234,7 @@ export default function ScenarioTable() {
                     Edit
                   </button>
                   <button className="px-5 py-2 bg-orange-500 text-white rounded-md text-base font-medium">
-                    Run
+                    View
                   </button>
                 </div>
               </td>

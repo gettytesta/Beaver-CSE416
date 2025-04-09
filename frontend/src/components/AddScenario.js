@@ -141,6 +141,58 @@ export default function AddScenario() {
 // ================== RMD STRATEGY  SECTION =================
   const [rmdStrategy, setRmdStrategy] = useState([]);
   
+/////////////////////////SAVE SCENARIO////////////////////////////////////
+///I FORGOT TO ADD USERCONTEXT!!
+
+  const handleSaveScenario = async () => {
+    try {   
+
+      //Build payload
+      const scenarioInfoPayload = {
+        name: scenarioName,
+        isMarriedCouple: filingStatus === "married",
+        userBirthYear: birthYears[0],
+        spouseBirthYear: filingStatus === "married" ? birthYears[1] : undefined,
+        userRetirementAge: retirementAges[0],
+        spouseRetirementAge: filingStatus === "married" ? retirementAges[1] : undefined,
+        userLifeExpectancy: lifespanValues[0],
+        spouseLifeExpectancy: filingStatus === "married" ? lifespanValues[1] : undefined,
+        userStateOfResidence: state,
+        ignoreStateTax,
+        financialGoal: financialGoal,
+        //investments next
+      };
+       // 🧠 Add your debug logs here:
+      console.log("SCENARIO NAME:", scenarioName);
+      console.log("FILING STATUS:", filingStatus);
+      console.log("USER BIRTH YEAR:", birthYears[0]);
+      console.log("SPOUSE BIRTH YEAR:", filingStatus === "married" ? birthYears[1] : "N/A");
+      console.log("USER LIFE EXPECTANCY:", lifespanValues[0]);
+      console.log("SPOUSE LIFE EXPECTANCY:", filingStatus === "married" ? lifespanValues[1] : "N/A");
+      console.log("STATE OF RESIDENCE:", state);
+      console.log("FINANCIAL GOAL:", financialGoal);
+      //TODO: Before finalizing, re-enable the POST request and ensure YAML state tax availability is checked properly. (it's not correctly done in the backend )
+      //Inside useScenarioInfo
+
+      console.log("IGNORE STATE TAX:", ignoreStateTax);
+      console.log("Sending Scenario Info:", scenarioInfoPayload); // TEMP debug
+
+      /*const res = await axios.post(
+        `${process.env.NEXT_PUBLIC_BACKEND_URL}/api/scenarios`,
+        scenarioInfoPayload,
+        { withCredentials: true }
+      );*/
+
+      if (res.data?.success) {
+        alert("✅ Scenario saved successfully!");
+      } else {
+        alert("❌ Failed to save scenario.");
+      }
+    } catch (err) {
+      console.error("Save scenario error:", err.response?.data || err.message);
+      alert("❌ Error saving scenario.");
+    }
+  };
 
   return (
     <div className="w-full px-4 mt-20">
@@ -242,10 +294,7 @@ export default function AddScenario() {
     {/* Save button*/}
     <div className="w-full mt-8 mb-8 flex justify-center">
       <button
-        onClick={() => {
-          // Logic to save the scenario can go here
-          alert("Scenario saved!");
-        }}
+        //onClick={handleSaveScenario}
         className="px-6 py-2 bg-indigo-600 text-white rounded hover:bg-indigo-700"
       >
         Save Scenario
