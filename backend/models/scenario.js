@@ -6,6 +6,8 @@ var Schema = mongoose.Schema
 const { DistributionSchema } = require('./distribution');
 const { validateStateCode } = require('../utils/validateUtils');
 const { SharedUserSchema } = require('./sharedUser');
+const { InvestmentSchema } = require('./investment');
+const { EventSeriesSchema } = require('./eventseries');
 
 var ScenarioSchema = new Schema({
     name: { type: String, required: true },
@@ -13,18 +15,40 @@ var ScenarioSchema = new Schema({
     sharedWith: [SharedUserSchema],
     isMarriedCouple: { type: Boolean, required: true },
     userBirthYear: { type: Number, required: true },
-    spouseBirthYear: { type: Number, required: true },
+    spouseBirthYear: { type: Number, required: function () { return this.isMarriedCouple;} },
+    userRetirementAge: { type: Number, required: true },
+    spouseRetirementAge: { type: Number, required: function () { return this.isMarriedCouple; } },
     userLifeExpectancy: { type: DistributionSchema, required: true },
-    spouseLifeExpectancy: { type: DistributionSchema, required: true },
-    investments: { type: [Schema.Types.ObjectId], ref: 'Investment', default: [] },
-    eventSeriesSet: { type: [Schema.Types.ObjectId], ref: 'EventSeries', default: [] },
+    spouseLifeExpectancy: { type: DistributionSchema, required: function () { return this.isMarriedCouple;} },
+    //investments
+    investments: { type: [InvestmentSchema], default: [] },
+    //eventSeries 
+    eventSeriesSet: { type: [EventSeriesSchema], default: [] },        //each scenario has its OWN eventSeries
+
+    //Spending Strategy
+    spendingStrategy: {
+        type: [Schema.Types.ObjectId], //references to EventSeries (not just names)
+        ref: 'EventSeries', // reference to the EventSeries model
+        default: [],
+    },
+
+    //Expense Strategy
+    expenseWithdrawalStrategy: { type: [Schema.Types.ObjectId], ref: 'Investment', default: [] },
+
+    //inflation assumption
     inflationAssumption: { type: DistributionSchema, required: true },
-    initialLimit: { type: Number, required: true },
-    // spendingStrategy
-    expenseWithdrawlStrategy: { type: [Schema.Types.ObjectId], ref: 'Investment', default: [] },
-    rmdStrategy: { type: [Schema.Types.ObjectId], ref: 'Investment', default: [] },
+
+    //roth conversion strategy 
+    rothConversionOpt: { type: Boolean, default: false },
+    rothConversionStart: { type: Number },
+    rothConversionEnd: { type: Number },
     rothConversionStrategy: { type: [Schema.Types.ObjectId], ref: 'Investment', default: [] },
-    // rcoSettings
+
+    //not in frontend (not needed)
+    afterTaxContributionLimit: { type: Number, required: true },
+    
+    rmdStrategy: { type: [Schema.Types.ObjectId], ref: 'Investment', default: [] },
+
     financialGoal: { type: Number, required: true },
     userStateOfResidence: {
         type: String, required: true,

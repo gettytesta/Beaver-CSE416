@@ -44,7 +44,7 @@ exports.importScenarioYaml = async (req, res) => {
         let scenarioData;
 
         try {
-            scenarioData = convertYamlToScenario(parsedYaml, req.user._id);
+            scenarioData = await convertYamlToScenario(parsedYaml, req.user._id);
         } catch (error) {
             // Remove the uploaded file if conversion fails
             fs.unlinkSync(req.file.path);

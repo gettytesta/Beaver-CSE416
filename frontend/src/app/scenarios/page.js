@@ -11,25 +11,24 @@
 
 
 import Link from "next/link";
-import { Trash2, Filter, Plus } from "lucide-react";
+import { Trash2, Filter, Plus, Upload } from "lucide-react";
 import { useEffect, useState } from "react";
 import ScenarioTable from "@/components/ScenarioTable";
 import { useUser } from "@/context/UserContext";
 
 export default function ScenarioDashboard() {
-  const { user, checkedSession } = useUser(); //Access user session info
-  const [scenarios, setScenarios] = useState([]); //List of saved scenarios
+  const { user, checkedSession } = useUser(); // Access user session info
+  const [scenarios, setScenarios] = useState([]); // List of saved scenarios
   const [loading, setLoading] = useState(true); 
   const [error, setError] = useState(null); 
 
   useEffect(() => {
-    
     if (!checkedSession) return;
 
     const fetchScenarios = async () => {
       try {
         const res = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/api/scenarios`, {
-          credentials: "include", //session cookies
+          credentials: "include", // session cookies
         });
 
         const data = await res.json();
@@ -44,22 +43,21 @@ export default function ScenarioDashboard() {
         console.error("Error fetching scenarios:", err);
         setError("Something went wrong.");
       } finally {
-        setLoading(false); //Hide loading once fetch is complete
+        setLoading(false); // Hide loading once fetch is complete
       }
     };
 
-    //Only fetch if the user is authenticated possible issue remember to fix thsi for guest if issues arise TODO
     if (user) {
       fetchScenarios();
     }
   }, [checkedSession, user]);
 
-  //loading state while fetching data
+  // Loading state while fetching data
   if (!checkedSession || loading) {
     return <div className="text-center mt-20 text-gray-500">Loading scenarios...</div>;
   }
 
-  //if fetch fails
+  // If fetch fails
   if (error) {
     return <div className="text-center mt-20 text-red-500">{error}</div>;
   }
@@ -80,20 +78,20 @@ export default function ScenarioDashboard() {
 
         {/* Right-side action buttons */}
         <div className="flex items-center space-x-8">
-        
-          {/* Placeholder Delete Button */}
+          
+          {/* Delete Button (optional batch actions later) */}
           <button className="text-gray-600 hover:text-gray-900 flex items-center justify-center text-lg">
             <Trash2 className="w-6 h-6 mr-1" />
             <span className="font-semibold">Delete</span>
           </button>
 
-          {/* Placeholder Filter Button */}
+          {/* Filter Button */}
           <button className="text-gray-600 hover:text-gray-900 flex items-center justify-center text-lg">
             <Filter className="w-6 h-6 mr-1" />
             <span className="font-semibold">Filters</span>
           </button>
 
-          {/* Navigate to Add Scenario form */}
+          {/* Add Scenario */}
           <Link href="/scenarios/add">
             <button className="px-5 py-3 bg-blue-500 text-white rounded-md flex items-center justify-center text-lg font-semibold hover:bg-blue-600">
               <span>Add Scenario</span>
@@ -101,7 +99,13 @@ export default function ScenarioDashboard() {
             </button>
           </Link>
 
-          {/* Placeholder Share Button */}
+          {/* Import Button (NEW) */}
+          <button className="px-5 py-3 bg-blue-800 text-white rounded-md flex items-center justify-center text-lg font-medium hover:bg-blue-900">
+            <Upload className="w-5 h-5 mr-2" />
+            Import
+          </button>
+
+          {/* Share Button SHOULDNT BE VISIBLE IF GUEST!!*/}
           <button className="px-5 py-3 bg-gray-600 text-white rounded-md text-lg">
             Share
           </button>

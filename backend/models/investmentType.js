@@ -1,17 +1,40 @@
 // Investment Type Document Schema
 
-var mongoose = require('mongoose')
-var Schema = mongoose.Schema
+const mongoose = require('mongoose');
+const Schema = mongoose.Schema;
 
 const { DistributionSchema } = require('./distribution');
 
-var InvestmentTypeSchema = new Schema({
-    name: {type: String, required: true},
-    description: {type: String, required: false},
-    expectedAnnualReturn: {type: DistributionSchema, required: true},
-    expenseRatio: {type: Number, required: true},
-    expectedAnnualIncome: {type: DistributionSchema, required: true},
-    isTaxed: {type: Boolean, required: true},
-})
+const InvestmentTypeSchema = new Schema({
+  name: { type: String, required: true }, //////////////////////////
+  description: { type: String, required: true }, //required for consistency ////////////////////////
+  //NEW: Specify whether return is in amount or percent
+  returnAmtOrPct: {
+    type: String,
+    enum: ['amount', 'percent'],
+    required: true,
+  },
 
-module.exports = mongoose.model('InvestmentType', InvestmentTypeSchema)
+  //Already existing: return distribution (fixed, normal, uniform)
+  expectedAnnualReturn: {
+    type: DistributionSchema,
+    required: true,
+  },
+  expenseRatio: { type: Number, required: true, min: 0 }, // safe to keep min: 0 /////////////////////
+  //INCOME
+  incomeAmtOrPct: {
+    type: String,
+    enum: ['amount', 'percent'],
+    required: true,
+  },
+  expectedAnnualIncome: {
+    type: DistributionSchema,
+    required: true,
+  },
+  taxability: { type: Boolean, required: true }, //true = taxable, false = tax-exempt
+});
+
+module.exports = {
+  InvestmentType: mongoose.model('InvestmentType', InvestmentTypeSchema),
+  InvestmentTypeSchema,
+};

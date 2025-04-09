@@ -1,86 +1,266 @@
-// Event Series Document Schema
-
-var mongoose = require('mongoose')
-var Schema = mongoose.Schema
+const mongoose = require("mongoose");
+const Schema = mongoose.Schema;
 
 const { DistributionSchema } = require('./distribution');
-const { AssetSchema } = require('./asset');
 
-// GETTY - Idk if we need to make different models depending on the event series. For now, this is unfinished.
-// ^ I made subclasses of EventSeries using a discriminator key
-
-// TODO - startYear type should be changed to represent the types it can be (startwith or a distribution-- see scenario.yaml)
-// not sure if a new model has to be made for this or smth
-
-// Enum for event types
-// MIGHT NEED TO BE MOVED, DEPENDING ON WHERE THIS IS NEEDED
-const EventTypes = Object.freeze({
-    INCOME: "income",
-    EXPENSE: "expense",
-    INVEST: "invest",
-    REBALANCE: "rebalance",
-});
-
-var EventSeriesSchema = new Schema({
-    name: {type: String, required: true},
-    description: {type: String, required: true},
-    startYear: {type: Number, required: true},
-    duration: {type: DistributionSchema, required: true},
+const EventStartSchema = new Schema({
     type: {
-        type: String,
-        enum: Object.values(EventTypes),
-        required: true,
+      type: String,
+      required: true,
+      enum: ['fixed', 'uniform', 'normal', 'startWith', 'startAfter'],
     },
-}, { discriminatorKey: 'type' });
+    // For 'fixed'
+    value: { type: Number },
+  
+    // For 'uniform'
+    lower: { type: Number },
+    upper: {
+      type: Number,
+      validate: {
+        validator: function (v) {
+          return this.type !== 'uniform' || v > this.lower;
+        },
+        message: 'Upper must be greater than lower',
+      },
+    },
+  
+    // For 'normal'
+    mean: { type: Number },
+    stdev: { type: Number, min: 0 },
+  
+    // For startWith / startAfter (reference another event series by name)
+    eventSeries: { type: String },
+  });
 
-const EventSeries = mongoose.model('EventSeries', EventSeriesSchema);
 
-const IncomeEventSeries = EventSeries.discriminator(
-    EventTypes.INCOME,
-    new Schema({
-        initialAmount: {type: Number, required: true},
-        isPercentChange: {type: Boolean, required: true}, // false -> change represented as an amount, true -> change represented as percent
-        changeDistribution: {type: DistributionSchema, required: true},
-        isInflationAdjusted: {type: Boolean, required: true},
-        userFraction: {type: Number, required: true},
-        isSocialSecurity: {type: Boolean, required: true},
-    })
-);
+  //NEED TO ADD VALIDATORS
+  const IncomeSchema = new Schema({
+    initialAmount: { type: Number, required: true }, // 1. Initial $
+  
+    changeAmtOrPct: { // 2. Amount vs Percentage
+      type: String,
+      enum: ['amount', 'percent'],
+      required: true,
+    },
+  
+    changeDistribution: { // 2. Fixed, Uniform, or Normal
+      type: DistributionSchema,
+      required: true
+    },
+  
+    adjustForInflation: { type: Boolean, required: true }, // 3. Inflation
+  
+    userPct: { type: Number, min: 0, max: 100 }, // 4. % for user (optional if not married)
+  
+    isSocialSecurity: { type: Boolean, required: true }, // 5. Social Security flag
+  });
 
-const ExpenseEventSeries = EventSeries.discriminator(
-    EventTypes.EXPENSE,
-    new Schema({
-        initialAmount: {type: Number, required: true},
-        isPercentChange: {type: Boolean, required: true}, // false -> change represented as an amount, true -> change represented as percent
-        changeDistribution: {type: DistributionSchema, required: true},
-        isInflationAdjusted: {type: Boolean, required: true},
-        userFraction: {type: Number, required: true},
-        isDiscretionary: {type: Boolean, required: true},
-    })
-);
 
-const InvestEventSeries = EventSeries.discriminator(
-    EventTypes.INVEST,
-    new Schema({
-        assetAllocation: {type:[AssetSchema], required: true},
-        isGlidePath: {type: Boolean, required: true},
-        assetAllocation2: {type:[AssetSchema], required: true},
-        maxCash: {type: Number, required: true},
-    })
-);
+  const ExpenseSchema = new Schema({
+    initialAmount: { type: Number, required: true },
+  
+    changeAmtOrPct: {
+      type: String,
+      enum: ["amount", "percent"],
+      required: true,
+    },
+  
+    changeDistribution: {
+      type: DistributionSchema,
+      required: true,
+    },
+  
+    adjustForInflation: { type: Boolean, required: true },
+    userPct: { type: Number, required: true }, // used if isMarried
+    discretionary: { type: Boolean, required: true },
+  });
 
-const RebalanceEventSeries = EventSeries.discriminator(
-    EventTypes.REBALANCE,
-    new Schema({
-        assetAllocation: {type:[AssetSchema], required: true},
-    })
-);
+
+  const InvestSchema = new Schema({
+    allocationType: {
+      type: String,
+      enum: ['fixed', 'glide'],
+      default: 'fixed',
+      required: true,
+    },
+  
+    selectedInvestments: [
+      {
+        type: Schema.Types.ObjectId,
+        ref: 'Investment',
+        required: true,
+      },
+    ],
+  
+    allocations: {
+      type: Map,
+      of: new Schema(
+        {
+          value: {
+            type: Number,
+            min: 0,
+            max: 100,
+          },
+          initial: {
+            type: Number,
+            min: 0,
+            max: 100,
+          },
+          final: {
+            type: Number,
+            min: 0,
+            max: 100,
+          },
+        },
+        { _id: false }
+      ),
+      required: true,
+      validate: {
+        validator: function (allocations) {
+          const isGlide = this.allocationType === 'glide';
+  
+          const total = Array.from(allocations.values()).reduce((sum, obj) => {
+            if (isGlide) {
+              return sum + ((obj.initial || 0) + (obj.final || 0)) / 2;
+            }
+            return sum + (obj.value || 0);
+          }, 0);
+  
+          return Math.round(total) === 100;
+        },
+        message:
+          'Total allocation must sum to 100%. For glide, both initial and final totals should equal 100%.',
+      },
+    },
+  
+    // maxCash addition
+    maxCash: {
+      type: Number,
+      min: 0,
+      default: 0,
+      required: true,
+    },
+  });
+
+  const RebalanceSchema = new Schema({
+    allocationType: {
+      type: String,
+      enum: ['fixed', 'glide'],
+      default: 'fixed',
+      required: true,
+    },
+  
+    selectedInvestments: [
+      {
+        type: Schema.Types.ObjectId,
+        ref: 'Investment',
+        required: true,
+      },
+    ],
+  
+    allocations: {
+      type: Map,
+      of: new Schema(
+        {
+          value: {
+            type: Number,
+            min: 0,
+            max: 100,
+          },
+          initial: {
+            type: Number,
+            min: 0,
+            max: 100,
+          },
+          final: {
+            type: Number,
+            min: 0,
+            max: 100,
+          },
+        },
+        { _id: false }
+      ),
+      required: true,
+      validate: {
+        validator: function (allocations) {
+          const isGlide = this.allocationType === 'glide';
+  
+          const total = Array.from(allocations.values()).reduce((sum, obj) => {
+            if (isGlide) {
+              return sum + ((obj.initial || 0) + (obj.final || 0)) / 2;
+            }
+            return sum + (obj.value || 0);
+          }, 0);
+  
+          return Math.round(total) === 100;
+        },
+        message:
+          'Total allocation must sum to 100%. For glide, both initial and final totals should equal 100%.',
+      },
+    },
+  });
+
+  const EventSeriesSchema = new Schema({
+    name: {
+      type: String,
+      required: true,
+    },
+  
+    description: {
+      type: String,
+      default: "", // Optional
+    },
+  
+    start: {
+      type: EventStartSchema,
+      required: true,
+    },
+  
+    duration: {
+      type: DistributionSchema,
+      required: true,
+    },
+  
+    type: {
+      type: String,
+      enum: ['income', 'expense', 'invest', 'rebalance'],
+      required: true,
+    },
+  
+    income: {
+      type: IncomeSchema,
+      required: function () {
+        return this.type === 'income';
+      },
+    },
+  
+    expense: {
+      type: ExpenseSchema,
+      required: function () {
+        return this.type === 'expense';
+      },
+    },
+  
+    invest: {
+      type: InvestSchema,
+      required: function () {
+        return this.type === 'invest';
+      },
+    },
+  
+    rebalance: {
+      type: RebalanceSchema,
+      required: function () {
+        return this.type === 'rebalance';
+      },
+    },
+  });
+  
 
 module.exports = {
-    EventTypes,
-    EventSeries,
-    IncomeEventSeries,
-    ExpenseEventSeries,
-    InvestEventSeries,
-    RebalanceEventSeries,
-};
+    EventSeriesSchema,
+    IncomeSchema,
+    ExpenseSchema,
+    InvestSchema,
+    RebalanceSchema,
+  };
