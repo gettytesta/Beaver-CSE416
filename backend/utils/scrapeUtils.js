@@ -34,262 +34,280 @@ function parseRateToDecimal(rateStr) {
 }
 
 /**
- * Scrape federal tax information from IRS websites
- * @param {number} year - The year to scrape tax information for (defaults to current year)
- * @returns {Promise<Object>} The federal tax information
+ * Initialize a federal tax data object for a given year
+ * @param {number} year - The tax year
+ * @returns {Object} An initialized federal tax data object
  */
-async function scrapeFederalTax(year = new Date().getFullYear()) {
-    try {
-        console.log(`Scraping federal tax information for year ${year}`);
-
-        // Initialize federal tax object with the year
-        const federalTaxData = {
-            year,
-            single: {
-                standardDeduction: 0,
-                incomeTaxBrackets: [],
-                capitalGainsBrackets: []
-            },
-            marriedFilingJointly: {
-                standardDeduction: 0,
-                incomeTaxBrackets: [],
-                capitalGainsBrackets: []
-            }
-        };
-
-        // Scrape income tax rates and brackets from IRS website
-        // URL: https://www.irs.gov/filing/federal-income-tax-rates-and-brackets
-        const incomeTaxResponse = await axios.get('https://www.irs.gov/filing/federal-income-tax-rates-and-brackets');
-        let $ = cheerio.load(incomeTaxResponse.data);
-
-        // === FIND SINGLE TAXPAYER TABLE ===
-        // Locate the table that follows an <h2> containing "single taxpayer"
-        const singleTable = $('h2:contains("single")')
-            .nextAll('table').first();
-
-        singleTable.find('tbody tr').each((i, row) => {
-            const columns = $(row).find('td');
-            if (columns.length === 3) {
-                const rate = parseRateToDecimal($(columns[0]).text().trim());
-                const lowerBound = parseMoneyToNumber($(columns[1]).text().trim());
-                const upperBound = parseMoneyToNumber($(columns[2]).text().trim());
-
-                federalTaxData.single.incomeTaxBrackets.push({
-                    lowerBound,
-                    upperBound,
-                    rate
-                });
-            }
-        });
-
-        // === FIND MARRIED FILING JOINTLY TABLE ===
-        // Locate the table inside the collapsible div following the correct <h4>
-        const marriedTable = $('h4 a:contains("Married filing jointly")')
-            .closest('h4')
-            .nextAll('.collapsible-item-collapse')
-            .find('table').first();
-
-        marriedTable.find('tbody tr').each((i, row) => {
-            const columns = $(row).find('td');
-            if (columns.length === 3) {
-                const rate = parseRateToDecimal($(columns[0]).text().trim());
-                const lowerBound = parseMoneyToNumber($(columns[1]).text().trim());
-                const upperBound = parseMoneyToNumber($(columns[2]).text().trim());
-
-                federalTaxData.marriedFilingJointly.incomeTaxBrackets.push({
-                    lowerBound,
-                    upperBound,
-                    rate
-                });
-            }
-        });
-
-        // Fallback to hardcoded values if we couldn't parse the tables
-        if (federalTaxData.single.incomeTaxBrackets.length === 0) {
-            console.warn('Could not parse single tax brackets, using fallback values');
-            federalTaxData.single.incomeTaxBrackets = [
-                { lowerBound: 0, upperBound: 11600, rate: 0.10 },
-                { lowerBound: 11601, upperBound: 47150, rate: 0.12 },
-                { lowerBound: 47151, upperBound: 100525, rate: 0.22 },
-                { lowerBound: 100526, upperBound: 191950, rate: 0.24 },
-                { lowerBound: 191951, upperBound: 243725, rate: 0.32 },
-                { lowerBound: 243726, upperBound: 609350, rate: 0.35 },
-                { lowerBound: 609351, upperBound: Infinity, rate: 0.37 }
-            ];
+function initializeFederalTaxData(year) {
+    return {
+        year,
+        single: {
+            standardDeduction: 0,
+            incomeTaxBrackets: [],
+            capitalGainsBrackets: []
+        },
+        marriedFilingJointly: {
+            standardDeduction: 0,
+            incomeTaxBrackets: [],
+            capitalGainsBrackets: []
         }
+    };
+}
 
-        // Fallback to hardcoded values if we couldn't parse the tables
-        if (federalTaxData.marriedFilingJointly.incomeTaxBrackets.length === 0) {
-            console.warn('Could not parse married filing jointly tax brackets, using fallback values');
-            federalTaxData.marriedFilingJointly.incomeTaxBrackets = [
-                { lowerBound: 0, upperBound: 23200, rate: 0.10 },
-                { lowerBound: 23201, upperBound: 94300, rate: 0.12 },
-                { lowerBound: 94301, upperBound: 201050, rate: 0.22 },
-                { lowerBound: 201051, upperBound: 383900, rate: 0.24 },
-                { lowerBound: 383901, upperBound: 487450, rate: 0.32 },
-                { lowerBound: 487451, upperBound: 731200, rate: 0.35 },
-                { lowerBound: 731201, upperBound: Infinity, rate: 0.37 }
-            ];
+/**
+ * Extract tax brackets from a given table for a specific filing status
+ * @param {Object} $ - Cheerio instance
+ * @param {Object} table - Table element to extract brackets from
+ * @returns {Array} Array of tax bracket objects
+ */
+function extractTaxBracketsFromTable($, table) {
+    const brackets = [];
+    
+    table.find('tbody tr').each((i, row) => {
+        const columns = $(row).find('td');
+        if (columns.length === 3) {
+            const rate = parseRateToDecimal($(columns[0]).text().trim());
+            const lowerBound = parseMoneyToNumber($(columns[1]).text().trim());
+            const upperBound = parseMoneyToNumber($(columns[2]).text().trim());
+
+            brackets.push({
+                lowerBound,
+                upperBound,
+                rate
+            });
         }
+    });
+    
+    return brackets;
+}
 
-        // Scrape standard deduction from IRS publication 17
-        // URL: https://www.irs.gov/publications/p17
-        const standardDeductionResponse = await axios.get('https://www.irs.gov/publications/p17');
-        $ = cheerio.load(standardDeductionResponse.data);
+/**
+ * Scrape income tax brackets from the IRS website
+ * @param {Object} federalTaxData - The federal tax data object to update
+ * @returns {Promise<Object>} Updated federal tax data with income tax brackets
+ */
+async function scrapeIncomeTaxBrackets(federalTaxData) {
+    console.log('Scraping income tax brackets');
+    
+    const incomeTaxResponse = await axios.get('https://www.irs.gov/filing/federal-income-tax-rates-and-brackets');
+    const $ = cheerio.load(incomeTaxResponse.data);
 
-        // === FIND STANDARD DEDUCTION TABLE ===
-        // Look for Table 10-1 which contains standard deduction information
-        let foundStandardDeductions = false;
+    // === FIND SINGLE TAXPAYER TABLE ===
+    const singleTable = $('h2:contains("single")').nextAll('table').first();
+    federalTaxData.single.incomeTaxBrackets = extractTaxBracketsFromTable($, singleTable);
+    if (federalTaxData.single.incomeTaxBrackets.length === 0) {
+        throw new Error('Failed to extract income tax brackets for single filers');
+    }
+
+    // === FIND MARRIED FILING JOINTLY TABLE ===
+    // TODO 
+    const marriedTable = $('#collapseCollapsible1727890096254_304535 table.table');
+    federalTaxData.marriedFilingJointly.incomeTaxBrackets = extractTaxBracketsFromTable($, marriedTable);
+    if (federalTaxData.marriedFilingJointly.incomeTaxBrackets.length === 0) {
+        throw new Error('Failed to extract income tax brackets for married filing jointly');
+    }
+    
+    return federalTaxData;
+}
+
+/**
+ * Scrape standard deduction amounts from the IRS website
+ * @param {Object} federalTaxData - The federal tax data object to update
+ * @returns {Promise<Object>} Updated federal tax data with standard deductions
+ */
+async function scrapeStandardDeductions(federalTaxData) {
+    console.log('Scraping standard deductions');
+    
+    const standardDeductionResponse = await axios.get('https://www.irs.gov/publications/p17');
+    const $ = cheerio.load(standardDeductionResponse.data);
+    
+    let foundStandardDeductions = false;
+    
+    // Look for Table 10-1 which contains standard deduction information
+    $('p.title:contains("Table 10-1")').each((i, elem) => {
+        // Find the table that's inside the div.table-contents after this title
+        const table = $(elem).next('div.table-contents').find('table');
         
-        // Look for the table title and get the following table
-        $('p.title:contains("Table 10-1")').each((i, elem) => {
-            // Find the table that's inside the div.table-contents after this title
-            const table = $(elem).next('div.table-contents').find('table');
+        if (table.length > 0) {
+            console.log('Found standard deduction Table 10-1');
             
-            if (table.length > 0) {
-                console.log('Found standard deduction Table 10-1');
+            // Process each row in the table
+            table.find('tbody tr').each((j, row) => {
+                const columns = $(row).find('td');
                 
-                // Process each row in the table
-                table.find('tbody tr').each((j, row) => {
-                    const columns = $(row).find('td');
+                if (columns.length >= 2) {
+                    const filingStatus = $(columns[0]).text().trim();
+                    const deductionAmount = $(columns[1]).text().trim();
                     
-                    if (columns.length >= 2) {
-                        const filingStatus = $(columns[0]).text().trim();
-                        const deductionAmount = $(columns[1]).text().trim();
-                        
-                        // Check for Single filing status
-                        if (filingStatus.includes('Single')) {
-                            federalTaxData.single.standardDeduction = parseMoneyToNumber(deductionAmount);
-                            foundStandardDeductions = true;
+                    // Check for Single filing status
+                    if (filingStatus.includes('Single')) {
+                        federalTaxData.single.standardDeduction = parseMoneyToNumber(deductionAmount);
+                        foundStandardDeductions = true;
+                    }
+                    
+                    // Check for Married filing jointly
+                    if (filingStatus.includes('Married filing jointly')) {
+                        federalTaxData.marriedFilingJointly.standardDeduction = parseMoneyToNumber(deductionAmount);
+                        foundStandardDeductions = true;
+                    }
+                }
+            });
+        }
+    });
+
+    if (!foundStandardDeductions || federalTaxData.single.standardDeduction === 0) {
+        throw new Error('Failed to extract standard deduction for single filers');
+    }
+
+    if (federalTaxData.marriedFilingJointly.standardDeduction === 0) {
+        throw new Error('Failed to extract standard deduction for married filing jointly');
+    }
+    
+    return federalTaxData;
+}
+
+/**
+ * Parse capital gains rates and thresholds from paragraphs and lists
+ * @param {Object} $ - Cheerio instance
+ * @returns {Object} Object containing rates and thresholds
+ */
+function parseCapitalGainsRatesAndThresholds($) {
+    const rates = [];
+    const thresholds = [];
+    
+    // Find all occurrences of the pattern "A capital gains rate of" and extract rates and thresholds
+    $('p').each((i, elem) => {
+        const text = $(elem).text().trim();
+        if (text.includes('A capital gains rate of')) {
+            // Extract the rate percentage
+            const rateMatch = text.match(/A capital gains rate of\s+(?:<[^>]+>)*\s*(\d+)%\s*(?:<[^>]+>)*/i);
+            if (rateMatch && rateMatch[1]) {
+                const rate = parseFloat(rateMatch[1]) / 100;
+                rates.push(rate);
+                
+                // Find the following <ul> element that contains thresholds
+                const thresholdsList = $(elem).next('ul');
+                const thresholdObj = {
+                    single: { lowerBound: 0, upperBound: 0 },
+                    marriedFilingJointly: { lowerBound: 0, upperBound: 0 }
+                };
+                
+                // Extract thresholds for different filing statuses
+                thresholdsList.find('li').each((j, item) => {
+                    const itemText = $(item).text().trim();
+                    
+                    // Extract single filer thresholds
+                    if (itemText.includes('single')) {
+                        const matches = itemText.match(/\$([0-9,]+)(?:.*?)(?:less than or equal to)?\s+\$?([0-9,]+)?/);
+                        if (matches) {
+                            thresholdObj.single.lowerBound = parseMoneyToNumber(matches[1]);
+                            thresholdObj.single.upperBound = matches[2] ? parseMoneyToNumber(matches[2]) : Infinity;
                         }
-                        
-                        // Check for Married filing jointly
-                        if (filingStatus.includes('Married filing jointly')) {
-                            federalTaxData.marriedFilingJointly.standardDeduction = parseMoneyToNumber(deductionAmount);
-                            foundStandardDeductions = true;
+                    }
+                    
+                    // Extract married filing jointly thresholds
+                    if (itemText.includes('married filing jointly')) {
+                        const matches = itemText.match(/\$([0-9,]+)(?:.*?)(?:less than or equal to)?\s+\$?([0-9,]+)?/);
+                        if (matches) {
+                            thresholdObj.marriedFilingJointly.lowerBound = parseMoneyToNumber(matches[1]);
+                            thresholdObj.marriedFilingJointly.upperBound = matches[2] ? parseMoneyToNumber(matches[2]) : Infinity;
                         }
                     }
                 });
-            }
-        });
-
-        // Fallback standard deduction values
-        if (federalTaxData.single.standardDeduction === 0) {
-            console.warn('Could not parse single standard deduction, using fallback value');
-            federalTaxData.single.standardDeduction = 14600;
-        }
-
-        if (federalTaxData.marriedFilingJointly.standardDeduction === 0) {
-            console.warn('Could not parse married filing jointly standard deduction, using fallback value');
-            federalTaxData.marriedFilingJointly.standardDeduction = 29200;
-        }
-
-        // Scrape capital gains tax rates from IRS website
-        // URL: https://www.irs.gov/taxtopics/tc409
-        const capitalGainsResponse = await axios.get('https://www.irs.gov/taxtopics/tc409');
-        $ = cheerio.load(capitalGainsResponse.data);
-
-        // Try to parse capital gains brackets from the page
-        // Look for the text patterns "A capital gains rate of X%" to find the brackets
-        const capitalGainsRates = [];
-        const capitalGainsThresholds = [];
-
-        // Find all occurrences of the pattern "A capital gains rate of" and extract rates and thresholds
-        $('p').each((i, elem) => {
-            const text = $(elem).text().trim();
-            if (text.includes('A capital gains rate of')) {
-                // Extract the rate percentage
-                const rateMatch = text.match(/A capital gains rate of\s+(?:<[^>]+>)*\s*(\d+)%\s*(?:<[^>]+>)*/i);
-                if (rateMatch && rateMatch[1]) {
-                    const rate = parseFloat(rateMatch[1]) / 100;
-                    capitalGainsRates.push(rate);
-                    
-                    // Find the following <ul> element that contains thresholds
-                    const thresholdsList = $(elem).next('ul');
-                    const thresholds = {
-                        single: { lowerBound: 0, upperBound: 0 },
-                        marriedFilingJointly: { lowerBound: 0, upperBound: 0 }
-                    };
-                    
-                    // Extract thresholds for different filing statuses
-                    thresholdsList.find('li').each((j, item) => {
-                        const itemText = $(item).text().trim();
-                        
-                        // Extract single filer thresholds
-                        if (itemText.includes('single')) {
-                            const matches = itemText.match(/\$([0-9,]+)(?:.*?)(?:less than or equal to)?\s+\$?([0-9,]+)?/);
-                            if (matches) {
-                                thresholds.single.lowerBound = parseMoneyToNumber(matches[1]);
-                                thresholds.single.upperBound = matches[2] ? parseMoneyToNumber(matches[2]) : Infinity;
-                            }
-                        }
-                        
-                        // Extract married filing jointly thresholds
-                        if (itemText.includes('married filing jointly')) {
-                            const matches = itemText.match(/\$([0-9,]+)(?:.*?)(?:less than or equal to)?\s+\$?([0-9,]+)?/);
-                            if (matches) {
-                                thresholds.marriedFilingJointly.lowerBound = parseMoneyToNumber(matches[1]);
-                                thresholds.marriedFilingJointly.upperBound = matches[2] ? parseMoneyToNumber(matches[2]) : Infinity;
-                            }
-                        }
-                    });
-                    
-                    capitalGainsThresholds.push(thresholds);
-                }
-            }
-        });
-
-        // Build capital gains brackets for single filers
-        federalTaxData.single.capitalGainsBrackets = [];
-        for (let i = 0; i < capitalGainsRates.length; i++) {
-            if (capitalGainsThresholds[i] && capitalGainsThresholds[i].single) {
-                federalTaxData.single.capitalGainsBrackets.push({
-                    lowerBound: capitalGainsThresholds[i].single.lowerBound,
-                    upperBound: capitalGainsThresholds[i].single.upperBound,
-                    rate: capitalGainsRates[i]
-                });
+                
+                thresholds.push(thresholdObj);
             }
         }
+    });
+    
+    return { rates, thresholds };
+}
 
-        // Build capital gains brackets for married filing jointly
-        federalTaxData.marriedFilingJointly.capitalGainsBrackets = [];
-        for (let i = 0; i < capitalGainsRates.length; i++) {
-            if (capitalGainsThresholds[i] && capitalGainsThresholds[i].marriedFilingJointly) {
-                federalTaxData.marriedFilingJointly.capitalGainsBrackets.push({
-                    lowerBound: capitalGainsThresholds[i].marriedFilingJointly.lowerBound,
-                    upperBound: capitalGainsThresholds[i].marriedFilingJointly.upperBound,
-                    rate: capitalGainsRates[i]
-                });
-            }
+/**
+ * Build capital gains brackets for a specific filing status
+ * @param {Array} rates - Array of capital gains rates
+ * @param {Array} thresholds - Array of threshold objects
+ * @param {string} filingStatus - Filing status (single or marriedFilingJointly)
+ * @returns {Array} Array of capital gains bracket objects
+ */
+function buildCapitalGainsBrackets(rates, thresholds, filingStatus) {
+    const brackets = [];
+    
+    for (let i = 0; i < rates.length; i++) {
+        if (thresholds[i] && thresholds[i][filingStatus]) {
+            brackets.push({
+                lowerBound: thresholds[i][filingStatus].lowerBound,
+                upperBound: thresholds[i][filingStatus].upperBound,
+                rate: rates[i]
+            });
         }
+    }
+    
+    // Sort the brackets by lowerBound
+    return brackets.sort((a, b) => a.lowerBound - b.lowerBound);
+}
 
-        // Sort the brackets by lowerBound
-        federalTaxData.single.capitalGainsBrackets.sort((a, b) => a.lowerBound - b.lowerBound);
-        federalTaxData.marriedFilingJointly.capitalGainsBrackets.sort((a, b) => a.lowerBound - b.lowerBound);
+/**
+ * Scrape capital gains tax brackets from the IRS website
+ * @param {Object} federalTaxData - The federal tax data object to update
+ * @returns {Promise<Object>} Updated federal tax data with capital gains brackets
+ */
+async function scrapeCapitalGainsBrackets(federalTaxData) {
+    console.log('Scraping capital gains brackets');
+    
+    const capitalGainsResponse = await axios.get('https://www.irs.gov/taxtopics/tc409');
+    const $ = cheerio.load(capitalGainsResponse.data);
+    
+    const { rates, thresholds } = parseCapitalGainsRatesAndThresholds($);
+    
+    if (rates.length === 0 || thresholds.length === 0) {
+        throw new Error('Failed to extract capital gains rates and thresholds');
+    }
+    
+    // Build capital gains brackets for single filers
+    federalTaxData.single.capitalGainsBrackets = buildCapitalGainsBrackets(
+        rates, thresholds, 'single'
+    );
+    
+    // Build capital gains brackets for married filing jointly
+    federalTaxData.marriedFilingJointly.capitalGainsBrackets = buildCapitalGainsBrackets(
+        rates, thresholds, 'marriedFilingJointly'
+    );
+    
+    if (federalTaxData.single.capitalGainsBrackets.length === 0) {
+        throw new Error('Failed to build capital gains brackets for single filers');
+    }
+    
+    if (federalTaxData.marriedFilingJointly.capitalGainsBrackets.length === 0) {
+        throw new Error('Failed to build capital gains brackets for married filing jointly');
+    }
+    
+    return federalTaxData;
+}
 
-        // Fallback values for capital gains taxes if scraping failed
-        if (federalTaxData.single.capitalGainsBrackets.length === 0) {
-            console.warn('Could not parse single capital gains brackets, using fallback values');
-            federalTaxData.single.capitalGainsBrackets = [
-                { lowerBound: 0, upperBound: 44625, rate: 0.0 },
-                { lowerBound: 44626, upperBound: 492300, rate: 0.15 },
-                { lowerBound: 492301, upperBound: Infinity, rate: 0.20 }
-            ];
-        }
+/**
+ * Scrape federal tax information from IRS websites for the current year
+ * @returns {Promise<Object>} The federal tax information
+ */
+async function scrapeFederalTax() {
+    try {
+        const year = new Date().getFullYear();
+        console.log(`Scraping federal tax information for year ${year}`);
 
-        // Fallback values for capital gains taxes
-        if (federalTaxData.marriedFilingJointly.capitalGainsBrackets.length === 0) {
-            console.warn('Could not parse married filing jointly capital gains brackets, using fallback values');
-            federalTaxData.marriedFilingJointly.capitalGainsBrackets = [
-                { lowerBound: 0, upperBound: 89250, rate: 0.0 },
-                { lowerBound: 89251, upperBound: 553850, rate: 0.15 },
-                { lowerBound: 553851, upperBound: Infinity, rate: 0.20 }
-            ];
-        }
-
+        // Initialize federal tax data object
+        let federalTaxData = initializeFederalTaxData(year);
+        
+        // Scrape income tax brackets
+        federalTaxData = await scrapeIncomeTaxBrackets(federalTaxData);
+        
+        // Scrape standard deductions
+        federalTaxData = await scrapeStandardDeductions(federalTaxData);
+        
+        // Scrape capital gains brackets
+        federalTaxData = await scrapeCapitalGainsBrackets(federalTaxData);
+        
         // Create and save the federal tax document
         const federalTax = new FederalTax(federalTaxData);
-        await federalTax.save();
 
         console.log(`Successfully saved federal tax information for year ${year}`);
         return federalTax;
@@ -455,17 +473,18 @@ async function getStateTax(stateCode) {
 
 /**
  * Get federal tax information for a given year
- * If not found in database, will attempt to scrape it from IRS website
+ * If not found in database, will attempt to scrape it from IRS website and save to MongoDB.
  * @param {number} year - The year to get tax information for
  * @returns {Promise<Object>} The federal tax information
  */
-async function getFederalTax(year) {
+async function getFederalTax(year = new Date().getFullYear()) {
     try {
         // Try to get from database first
         let federalTax = await FederalTax.findOne({ year });
 
         if (!federalTax) {
-            federalTax = await scrapeFederalTax(year);
+            federalTax = await scrapeFederalTax(); // Scrape federal tax document
+            await federalTax.save(); // Save to MongoDB
         }
 
         return federalTax;
