@@ -17,7 +17,7 @@ async function runSingleSimulation(scenario, simulationId, federalTax, stateTax,
         const userDeathYear = startYear + userLifeExpectancy;
         const spouseLifeExpectancy = sampleValueFromDistribution(scenario.spouseLifeExpectancy);
         const spouseDeathYear = startYear + spouseLifeExpectancy;
-        const endYear = Math.max(userDeathYear, spouseDeathYear);
+        const endYear = Math.max(userDeathYear, spouseDeathYear); // user
 
         // Handle inflation adjusted tax brackets
         // TODO: Should capital gains be inflation adjusted?

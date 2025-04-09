@@ -100,6 +100,7 @@ async function scrapeIncomeTaxBrackets(federalTaxData) {
     }
 
     // === FIND MARRIED FILING JOINTLY TABLE ===
+    // TODO 
     const marriedTable = $('#collapseCollapsible1727890096254_304535 table.table');
     federalTaxData.marriedFilingJointly.incomeTaxBrackets = extractTaxBracketsFromTable($, marriedTable);
     if (federalTaxData.marriedFilingJointly.incomeTaxBrackets.length === 0) {
