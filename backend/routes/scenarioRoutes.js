@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const scenarioController = require('../controllers/scenarioController');
+const scenarioShareController = require('../controllers/scenarioShareController');
 const authMiddleware = require('../middleware/authMiddleware');
 
 // All routes require authentication
@@ -59,7 +60,7 @@ router.delete('/:id', scenarioController.deleteScenario);
  * @body    {string} userId - ID of the user to share with
  * @returns {Object} Success message
  */
-router.post('/:id/share', scenarioController.shareScenario);
+router.post('/:id/share', scenarioShareController.shareScenario);
 
 /**
  * @route   DELETE /api/scenarios/:id/share/:userId
@@ -69,7 +70,7 @@ router.post('/:id/share', scenarioController.shareScenario);
  * @param   {string} userId - ID of the user to remove sharing for
  * @returns {Object} Success message
  */
-router.delete('/:id/share/:userId', scenarioController.removeShare);
+router.delete('/:id/share/:userId', scenarioShareController.removeShare);
 
 /**
  * @route   GET /api/scenarios/:id/share
@@ -78,6 +79,6 @@ router.delete('/:id/share/:userId', scenarioController.removeShare);
  * @param   {string} id - ID of the scenario
  * @returns {Array} Array of user objects
  */
-router.get('/:id/share', scenarioController.getSharedUsers);
+router.get('/:id/share', scenarioShareController.getSharedUsers);
 
 module.exports = router; 

@@ -2,24 +2,26 @@ const Scenario = require('../models/scenario').Scenario;
 const { Worker } = require('worker_threads');
 const path = require('path');
 const os = require('os');
-const { getStateTax, getFederalTax, getRMDTable } = require('../utils/scrapeUtils');
-const { convertYamlToStateTax } = require('../utils/yamlUtils');
-
-// Maximum number of simulations allowed per request
-const MAX_SIMULATIONS = 10000;
+const taxService = require('../services/taxService');
+const logService = require('../services/logService');
 
 // Maximum number of concurrent workers (adjust based on server capacity)
-const MAX_CONCURRENT_WORKERS = Math.max(1, Math.floor(os.cpus().length * 0.75)); // Use 75% of available CPU cores
+const MAX_CONCURRENT_WORKERS = Math.max(1, Math.floor(os.cpus().length * process.env.SIM_CPU_UTILIZATION_LIMIT || 0.5));
+const MAX_SIMS_PER_REQUEST = process.env.MAX_SIMS_PER_REQUEST || 10000; 
 
-/**
- * Run multiple simulations on a scenario in parallel
- * Both authenticated and guest users can run simulations
- */
+// TODO runSimulation does not feature support for Guest users to be able to run simulations.
+// I'm still not sure how we're going to set up persisence when it comes to guests (MongoDB expiration date on files sounded pretty good)
+// Two ideas for solution:
+// - Set a expiration date on files when saving to MongoDB
+// - Simply have Guest users send the scenario object itself in the request body
+
+// TODO Still have to convert uploaded .yaml file to StateTax (see below)
+
 exports.runSimulation = async (req, res) => {
     try {
         const { scenarioId } = req.params; // Get the scenario ID from the request
         let numSimulations = parseInt(req.body.numSimulations) || 50;  // Get the number of simulations from the request body
-        numSimulations = Math.min(numSimulations, MAX_SIMULATIONS); // Enforce maximum number of simulations
+        numSimulations = Math.min(numSimulations, MAX_SIMS_PER_REQUEST); // Enforce maximum number of simulations that can be run per request
         const scenario = await Scenario.findById(scenarioId); // Find the scenario
         
         if (!scenario) {
@@ -29,16 +31,13 @@ exports.runSimulation = async (req, res) => {
             });
         }
         
-        // If user is authenticated, check if they have access
+        // A simulation can only be run if the user is authenticated and has access to the scenario.
         if (req.user) {
             const isOwner = scenario.userId.toString() === req.user._id.toString();
-            
             if (!isOwner) {
-                // Check if scenario is shared with user
                 const sharedInfo = scenario.sharedWith.find(share => 
                     share.userId.toString() === req.user._id.toString()
                 );
-                
                 if (!sharedInfo) {
                     return res.status(403).json({
                         success: false,
@@ -48,44 +47,25 @@ exports.runSimulation = async (req, res) => {
             }
         }
 
-        // Get current year for tax data
-        const currentYear = new Date().getFullYear();
-        
-        // Get federal tax and RMD table data
-        const [federalTax, rmdTable] = await Promise.all([
-            getFederalTax(currentYear),
-            getRMDTable(currentYear)
-        ]);
+        // Get federal tax and RMD table
+        const federalTax = await taxService.getFederalTax();
+        const rmdTable = await taxService.getRMDTable();
 
-        // Handle state tax data if YAML file is provided, if not try to get the file from the server's yamls.
+        // Get state tax
         let stateTax = null;
-        if (req.file) {
-            try {
-                stateTax = await convertYamlToStateTax(req.file);
-            } catch (error) {
-                console.error('Error converting YAML to state tax:', error);
-                // Continue without state tax data
-            }
-        } else {
-            // Get state tax data based on users state of residence
-            try {
-                stateTax = await getStateTax(scenario.userStateOfResidence);
-            } catch (error) {
-                console.error('Error converting YAML to state tax:', error);
-                // Continue without state tax data
-            }
+        if (req.file) { // Check if user provided a YAML file for state tax
+            // TODO convert the uploaded YAML file to StateTax.
+            // there is a convertYamlToStateTax in yamlUtils but that requires a filepath, not the actual file itself, so idk
+            // maybe create a uploads folder? then store the file there (With a deletion timer) and pass the filepath?
+            stateTax = null; 
+        } else { // Otherwise try to get the state tax based on the users state of residence.
+            stateTax = await taxService.getStateTax(scenario.userStateOfResidence);
         }
         
-        // Run parallel simulations using worker threads
+        // Collect and format simulation result
         const results = await runParallelSimulations(scenario, numSimulations, federalTax, stateTax, rmdTable);
-
-        const resultsToLog = results[0]; // First results should be logged
-
-        // TODO: Save resultsToLog as a name_datetime.csv and name_datetime.log in backend/logs
-        // See examples.txt in logs for how to format each document.
-        // The simulation results data structure will probably be changed.
-        
-        // Process and format the results
+        const resultToLog = results[0]; // First simulation result should be logged
+        await logService.logSimulationResult(req.user.username, resultToLog);
         const formattedResults = formatSimulationResults(results, scenario);
         
         res.status(200).json({
@@ -136,7 +116,6 @@ async function runParallelSimulations(scenario, numSimulations, federalTax, stat
                 results.push(result);
                 activeWorkers--;
                 completedWorkers++;
-                
                 startWorker(); // Start a new worker
                 
                 // If all simulations are done, resolve the promise

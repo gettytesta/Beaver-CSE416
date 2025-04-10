@@ -1,6 +1,5 @@
 const FederalTax = require('../models/federalTax');
-const RMDTable = require('../models/RMDTable');
-const { convertYamlToStateTax } = require('./yamlUtils');
+const RMDTable = require('../models/rmdTable');
 const axios = require('axios');
 const cheerio = require('cheerio');
 
@@ -84,12 +83,13 @@ function extractTaxBracketsFromTable($, table) {
 /**
  * Scrape income tax brackets from the IRS website
  * @param {Object} federalTaxData - The federal tax data object to update
+ * @param {String} url - The url to scrape from.
  * @returns {Promise<Object>} Updated federal tax data with income tax brackets
  */
-async function scrapeIncomeTaxBrackets(federalTaxData) {
+async function scrapeIncomeTaxBrackets(federalTaxData, url) {
     console.log('Scraping income tax brackets');
     
-    const incomeTaxResponse = await axios.get('https://www.irs.gov/filing/federal-income-tax-rates-and-brackets');
+    const incomeTaxResponse = await axios.get(url);
     const $ = cheerio.load(incomeTaxResponse.data);
 
     // === FIND SINGLE TAXPAYER TABLE ===
@@ -100,8 +100,7 @@ async function scrapeIncomeTaxBrackets(federalTaxData) {
     }
 
     // === FIND MARRIED FILING JOINTLY TABLE ===
-    // TODO 
-    const marriedTable = $('#collapseCollapsible1727890096254_304535 table.table');
+    const marriedTable = $('h4:contains("Married filing jointly")').closest('.collapsible-item').find('table');
     federalTaxData.marriedFilingJointly.incomeTaxBrackets = extractTaxBracketsFromTable($, marriedTable);
     if (federalTaxData.marriedFilingJointly.incomeTaxBrackets.length === 0) {
         throw new Error('Failed to extract income tax brackets for married filing jointly');
@@ -113,12 +112,13 @@ async function scrapeIncomeTaxBrackets(federalTaxData) {
 /**
  * Scrape standard deduction amounts from the IRS website
  * @param {Object} federalTaxData - The federal tax data object to update
+ * @param {String} url - The url to scrape from.
  * @returns {Promise<Object>} Updated federal tax data with standard deductions
  */
-async function scrapeStandardDeductions(federalTaxData) {
+async function scrapeStandardDeductions(federalTaxData, url) {
     console.log('Scraping standard deductions');
     
-    const standardDeductionResponse = await axios.get('https://www.irs.gov/publications/p17');
+    const standardDeductionResponse = await axios.get(url);
     const $ = cheerio.load(standardDeductionResponse.data);
     
     let foundStandardDeductions = false;
@@ -175,10 +175,10 @@ function parseCapitalGainsRatesAndThresholds($) {
     const rates = [];
     const thresholds = [];
     
-    // Find all occurrences of the pattern "A capital gains rate of" and extract rates and thresholds
+    // Find all occurrences of the pattern "a capital gains rate of" and extract rates and thresholds
     $('p').each((i, elem) => {
-        const text = $(elem).text().trim();
-        if (text.includes('A capital gains rate of')) {
+        const text = $(elem).text().trim().toLowerCase();
+        if (text.includes('a capital gains rate of')) {
             // Extract the rate percentage
             const rateMatch = text.match(/A capital gains rate of\s+(?:<[^>]+>)*\s*(\d+)%\s*(?:<[^>]+>)*/i);
             if (rateMatch && rateMatch[1]) {
@@ -195,25 +195,46 @@ function parseCapitalGainsRatesAndThresholds($) {
                 // Extract thresholds for different filing statuses
                 thresholdsList.find('li').each((j, item) => {
                     const itemText = $(item).text().trim();
-                    
+
                     // Extract single filer thresholds
-                    if (itemText.includes('single')) {
-                        const matches = itemText.match(/\$([0-9,]+)(?:.*?)(?:less than or equal to)?\s+\$?([0-9,]+)?/);
+                    if (itemText.includes('single')) {      
+                        const matches = itemText.match(/\$([\d,]+)(?:.*?\$([\d,]+))?/);
                         if (matches) {
-                            thresholdObj.single.lowerBound = parseMoneyToNumber(matches[1]);
-                            thresholdObj.single.upperBound = matches[2] ? parseMoneyToNumber(matches[2]) : Infinity;
+                            if (rate === 0.0) {
+                                thresholdObj.single.lowerBound = 0.0;
+                                thresholdObj.single.upperBound = parseMoneyToNumber(matches[1]);
+                            } else {
+                                thresholdObj.single.lowerBound = parseMoneyToNumber(matches[1]);
+                                thresholdObj.single.upperBound = matches[2] ? parseMoneyToNumber(matches[2]) : Infinity;
+                            }
                         }
                     }
                     
                     // Extract married filing jointly thresholds
                     if (itemText.includes('married filing jointly')) {
-                        const matches = itemText.match(/\$([0-9,]+)(?:.*?)(?:less than or equal to)?\s+\$?([0-9,]+)?/);
+                        const matches = itemText.match(/\$([\d,]+)(?:.*?\$([\d,]+))?/);
                         if (matches) {
-                            thresholdObj.marriedFilingJointly.lowerBound = parseMoneyToNumber(matches[1]);
-                            thresholdObj.marriedFilingJointly.upperBound = matches[2] ? parseMoneyToNumber(matches[2]) : Infinity;
+                            if (rate === 0.0) {
+                                thresholdObj.marriedFilingJointly.lowerBound = 0.0;
+                                thresholdObj.marriedFilingJointly.upperBound = parseMoneyToNumber(matches[1]);
+                            } else {
+                                thresholdObj.marriedFilingJointly.lowerBound = parseMoneyToNumber(matches[1]);
+                                thresholdObj.marriedFilingJointly.upperBound = matches[2] ? parseMoneyToNumber(matches[2]) : Infinity;
+                            }
                         }
                     }
                 });
+
+                if (thresholdsList.length === 0) {
+                    // Special case: the last rate, we need to set the bounds based on the previous threshold.
+                    if (rate > 0.0) {
+                        // lowerBound should be the previous rate's upperBound
+                        thresholdObj.single.lowerBound = thresholds[thresholds.length - 1].single.upperBound;
+                        thresholdObj.single.upperBound = Infinity;
+                        thresholdObj.marriedFilingJointly.lowerBound = thresholds[thresholds.length - 1].marriedFilingJointly.upperBound;
+                        thresholdObj.marriedFilingJointly.upperBound = Infinity;
+                    }
+                }
                 
                 thresholds.push(thresholdObj);
             }
@@ -250,29 +271,21 @@ function buildCapitalGainsBrackets(rates, thresholds, filingStatus) {
 /**
  * Scrape capital gains tax brackets from the IRS website
  * @param {Object} federalTaxData - The federal tax data object to update
+ * @param {String} url - The url to scrape from.
  * @returns {Promise<Object>} Updated federal tax data with capital gains brackets
  */
-async function scrapeCapitalGainsBrackets(federalTaxData) {
+async function scrapeCapitalGainsBrackets(federalTaxData, url) {
     console.log('Scraping capital gains brackets');
-    
-    const capitalGainsResponse = await axios.get('https://www.irs.gov/taxtopics/tc409');
+    const capitalGainsResponse = await axios.get(url);
     const $ = cheerio.load(capitalGainsResponse.data);
-    
     const { rates, thresholds } = parseCapitalGainsRatesAndThresholds($);
     
     if (rates.length === 0 || thresholds.length === 0) {
         throw new Error('Failed to extract capital gains rates and thresholds');
     }
     
-    // Build capital gains brackets for single filers
-    federalTaxData.single.capitalGainsBrackets = buildCapitalGainsBrackets(
-        rates, thresholds, 'single'
-    );
-    
-    // Build capital gains brackets for married filing jointly
-    federalTaxData.marriedFilingJointly.capitalGainsBrackets = buildCapitalGainsBrackets(
-        rates, thresholds, 'marriedFilingJointly'
-    );
+    federalTaxData.single.capitalGainsBrackets = buildCapitalGainsBrackets(rates, thresholds, 'single');
+    federalTaxData.marriedFilingJointly.capitalGainsBrackets = buildCapitalGainsBrackets(rates, thresholds, 'marriedFilingJointly');
     
     if (federalTaxData.single.capitalGainsBrackets.length === 0) {
         throw new Error('Failed to build capital gains brackets for single filers');
@@ -289,27 +302,18 @@ async function scrapeCapitalGainsBrackets(federalTaxData) {
  * Scrape federal tax information from IRS websites for the current year
  * @returns {Promise<Object>} The federal tax information
  */
-async function scrapeFederalTax() {
+exports.scrapeFederalTax = async (incomeTaxUrl, standardDeductionsUrl, capitalGainsUrl) => {
     try {
-        const year = new Date().getFullYear();
-        console.log(`Scraping federal tax information for year ${year}`);
+        const currentYear = new Date().getFullYear();
+        console.log(`Scraping federal tax information for year ${currentYear}`);
 
-        // Initialize federal tax data object
-        let federalTaxData = initializeFederalTaxData(year);
-        
-        // Scrape income tax brackets
-        federalTaxData = await scrapeIncomeTaxBrackets(federalTaxData);
-        
-        // Scrape standard deductions
-        federalTaxData = await scrapeStandardDeductions(federalTaxData);
-        
-        // Scrape capital gains brackets
-        federalTaxData = await scrapeCapitalGainsBrackets(federalTaxData);
-        
-        // Create and save the federal tax document
-        const federalTax = new FederalTax(federalTaxData);
+        let federalTaxData = initializeFederalTaxData(currentYear); // Initialize federal tax data object
+        federalTaxData = await scrapeIncomeTaxBrackets(federalTaxData, incomeTaxUrl); // Scrape income tax brackets
+        federalTaxData = await scrapeStandardDeductions(federalTaxData, standardDeductionsUrl); // Scrape standard deductions
+        federalTaxData = await scrapeCapitalGainsBrackets(federalTaxData, capitalGainsUrl); // Scrape capital gains brackets
+        const federalTax = new FederalTax(federalTaxData);  // Create the federal tax document
 
-        console.log(`Successfully saved federal tax information for year ${year}`);
+        console.log(`Successfully scraped federal tax information for year ${currentYear}`);
         return federalTax;
     } catch (error) {
         console.error('Error scraping federal tax information:', error);
@@ -319,22 +323,22 @@ async function scrapeFederalTax() {
 
 /**
  * Scrape RMD table information from IRS publications
- * @param {number} year - The year to scrape RMD table for (defaults to current year)
+ * @param {String} url The url to scrape the RMD from.
  * @returns {Promise<Object>} The RMD table object
  */
-async function scrapeRMDTable(year = new Date().getFullYear()) {
+exports.scrapeRMDTable = async (url) => {
     try {
-        console.log(`Scraping RMD table for year ${year}`);
+        const currentYear = new Date().getFullYear();
+        console.log(`Scraping RMD table for year ${currentYear}`);
 
-        // Initialize RMD table data with the year
+        // Initialize RMD table data with the current year
         const rmdTableData = {
-            year,
+            year: currentYear,
             distributionPeriods: new Map()
         };
 
         // Scrape RMD table from IRS publication 590-B
-        // URL: https://www.irs.gov/publications/p590b
-        const rmdResponse = await axios.get('https://www.irs.gov/publications/p590b');
+        const rmdResponse = await axios.get(url);
         const $ = cheerio.load(rmdResponse.data);
 
         // Find the Uniform Lifetime Table
@@ -393,111 +397,13 @@ async function scrapeRMDTable(year = new Date().getFullYear()) {
 
         console.log(`Successfully extracted ${rmdTableData.distributionPeriods.size} distribution periods`);
 
-        // Create and save the RMD table document
+        // Create the RMD table document
         const rmdTable = new RMDTable(rmdTableData);
-        await rmdTable.save();
 
-        console.log(`Successfully saved RMD table for year ${year}`);
+        console.log(`Successfully scraped RMD table for year ${currentYear}`);
         return rmdTable;
     } catch (error) {
         console.error('Error scraping RMD table:', error);
         throw error;
     }
 }
-
-/**
- * Get RMD table for a given year
- * If not found in database, will attempt to scrape it from IRS website
- * @param {number} year - The year to get RMD table for
- * @returns {Promise<Object>} The RMD table
- */
-async function getRMDTable(year) {
-    try {
-        // Try to get from database first
-        let rmdTable = await RMDTable.findOne({ year });
-
-        if (!rmdTable) {
-            // Scrape from IRS website if not found in database
-            rmdTable = await scrapeRMDTable(year);
-        }
-
-        return rmdTable;
-    } catch (error) {
-        console.error('Error getting RMD table:', error);
-        throw error;
-    }
-}
-
-/**
- * Try to get state tax information stored in server yamls.
- * @param {string} stateCode - The state to get tax information for, ex: "NY"
- * @returns {Promise<Object>} The state tax information
- */
-async function getStateTax(stateCode) {
-    try {
-        // stateCode should be an upper case 2 letter string representing the state name
-        const fs = require('fs');
-        const path = require('path');
-        const yaml = require('js-yaml');
-        
-        // Ensure stateCode is uppercase
-        const formattedStateCode = stateCode.toUpperCase();
-        
-        // Build the path to the YAML file
-        const yamlPath = path.join(__dirname, '..', 'yamls', `${formattedStateCode}.yaml`);
-        
-        // Check if the file exists
-        if (!fs.existsSync(yamlPath)) {
-            throw new Error(`State tax file for ${formattedStateCode} not found`);
-        }
-        
-        // Read and parse the YAML file
-        const fileContent = fs.readFileSync(yamlPath, 'utf8');
-        const parsedYaml = yaml.load(fileContent);
-        
-        // Create a file-like object to match the expected input for convertYamlToStateTax
-        const fileObj = {
-            path: yamlPath,
-            buffer: Buffer.from(fileContent)
-        };
-        
-        // Convert YAML to StateTax object
-        const stateTax = await convertYamlToStateTax(fileObj);
-        
-        return stateTax;
-    } catch (error) {
-        console.error('Error getting state tax:', error);
-        throw error;
-    }
-}
-
-/**
- * Get federal tax information for a given year
- * If not found in database, will attempt to scrape it from IRS website and save to MongoDB.
- * @param {number} year - The year to get tax information for
- * @returns {Promise<Object>} The federal tax information
- */
-async function getFederalTax(year = new Date().getFullYear()) {
-    try {
-        // Try to get from database first
-        let federalTax = await FederalTax.findOne({ year });
-
-        if (!federalTax) {
-            federalTax = await scrapeFederalTax(); // Scrape federal tax document
-            await federalTax.save(); // Save to MongoDB
-        }
-
-        return federalTax;
-    } catch (error) {
-        console.error('Error getting federal tax:', error);
-        throw error;
-    }
-}
-
-module.exports = {
-    getStateTax,
-    getFederalTax,
-    getRMDTable,
-    scrapeRMDTable,
-    scrapeFederalTax
-};

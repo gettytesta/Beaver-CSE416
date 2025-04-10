@@ -3,27 +3,14 @@
  * 
  * Usage: 
  *   node tests/scrapeTest.js
+ *   you can also execute: npm run scrape
  * 
  * This script tests the scraping functionality directly without running full Jest tests.
  * It helps diagnose specific issues with scraping the IRS website.
  */
 
-// Set up MongoDB connection
 require('dotenv').config();
-const mongoose = require('mongoose');
-const { scrapeFederalTax, getFederalTax } = require('../utils/scrapeUtils');
-
-// Connect to MongoDB
-async function connectToDatabase() {
-    try {
-        console.log('Connecting to MongoDB...');
-        await mongoose.connect(process.env.MONGO_URI);
-        console.log('Connected to MongoDB successfully');
-    } catch (error) {
-        console.error('Error connecting to MongoDB:', error);
-        process.exit(1);
-    }
-}
+const scrapeUtils = require('../utils/scrapeUtils');
 
 // Helper to display the scraped data
 function displayTaxInfo(taxInfo) {
@@ -71,33 +58,43 @@ function displayTaxInfo(taxInfo) {
     console.log('\n=======================================\n');
 }
 
-// Main function to test scraping
+// Helper to display the RMD table data
+function displayRMDTable(rmdTable) {
+    console.log('\n========== RMD TABLE INFO ==========\n');
+    console.log(`Year: ${rmdTable.year}`);
+    
+    console.log('\nDistribution Periods:');
+    // Convert Map to array of entries and sort by age
+    const sortedEntries = Array.from(rmdTable.distributionPeriods.entries())
+        .sort((a, b) => parseInt(a[0]) - parseInt(b[0]));
+    
+    // Display in a table format
+    console.log('Age | Distribution Period');
+    console.log('----|-------------------');
+    sortedEntries.forEach(([age, period]) => {
+        console.log(`${age.padEnd(4)}| ${period.toFixed(2)}`);
+    });
+    
+    console.log('\n=======================================\n');
+}
+
 async function testScraping() {
     try {
-        await connectToDatabase();
-        
-        // Test option 1: Try to get existing data
-        console.log('Attempting to get federal tax data from database...');
-        const year = new Date().getFullYear();
-        let taxInfo = await getFederalTax(year);
-        
-        if (!taxInfo) {
-            // Test option 2: Scrape fresh data
-            console.log('No data found in database. Scraping new data...');
-            taxInfo = await scrapeFederalTax();
-        }
-        
-        // Display the results
-        displayTaxInfo(taxInfo);
+        const federalTax = await scrapeUtils.scrapeFederalTax(
+            process.env.SCRAPE_INCOME_TAX_BRACKETS_URL,
+            process.env.SCRAPE_STANDARD_DEDUCTIONS_URL,
+            process.env.SCRAPE_CAPITAL_GAINS_URL,
+        );
+        displayTaxInfo(federalTax); // Display the federal tax results
+
+        const rmdTable = await scrapeUtils.scrapeRMDTable(process.env.SCRAPE_RMD_TABLE_URL);
+        displayRMDTable(rmdTable); // Display the RMD table results
         
     } catch (error) {
         console.error('Error during scraping test:', error);
     } finally {
-        // Close the MongoDB connection
-        await mongoose.connection.close();
-        console.log('Disconnected from MongoDB');
+        console.log('Finished scrape test.');
     }
 }
 
-// Run the test
 testScraping(); 

@@ -1,6 +1,7 @@
 const mongoose = require('mongoose');
+const Schema = mongoose.Schema;
 
-const RMDTableSchema = new mongoose.Schema({
+const RMDTableSchema = new Schema({
     year: {
         type: Number,
         required: true,
@@ -12,23 +13,7 @@ const RMDTableSchema = new mongoose.Schema({
         of: Number,
         required: true,
         // The key is age (number), value is distribution period (number) in years
-    },
-    createdAt: {
-        type: Date,
-        default: Date.now
-    },
-    updatedAt: {
-        type: Date,
-        default: Date.now
     }
 });
 
-// Update the updatedAt timestamp before saving
-RMDTableSchema.pre('save', function(next) {
-    this.updatedAt = Date.now();
-    next();
-});
-
-const RMDTable = mongoose.model('RMDTable', RMDTableSchema);
-
-module.exports = RMDTable; 
+module.exports = mongoose.model('RMDTable', RMDTableSchema); 

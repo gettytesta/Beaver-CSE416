@@ -1,0 +1,91 @@
+stateCode: NY
+single:
+  incomeTaxBrackets:
+    - min: 0
+      max: 8500
+      rate: 0.04
+    - min: 8501
+      max: 11700
+      rate: 0.045
+    - min: 11701
+      max: 13900
+      rate: 0.0525
+    - min: 13901
+      max: 80650
+      rate: 0.0585
+    - min: 80651
+      max: 215400
+      rate: 0.0625
+    - min: 215401
+      max: 1077550
+      rate: 0.0685
+    - min: 1077551
+      max: null
+      rate: 0.0882
+  capitalGainsBrackets:
+    - min: 0
+      max: 8500
+      rate: 0.04
+    - min: 8501
+      max: 11700
+      rate: 0.045
+    - min: 11701
+      max: 13900
+      rate: 0.0525
+    - min: 13901
+      max: 80650
+      rate: 0.0585
+    - min: 80651
+      max: 215400
+      rate: 0.0625
+    - min: 215401
+      max: 1077550
+      rate: 0.0685
+    - min: 1077551
+      max: null
+      rate: 0.0882
+marriedFilingJointly:
+  incomeTaxBrackets:
+    - min: 0
+      max: 17150
+      rate: 0.04
+    - min: 17151
+      max: 23600
+      rate: 0.045
+    - min: 23601
+      max: 27900
+      rate: 0.0525
+    - min: 27901
+      max: 161550
+      rate: 0.0585
+    - min: 161551
+      max: 323200
+      rate: 0.0625
+    - min: 323201
+      max: 2155350
+      rate: 0.0685
+    - min: 2155351
+      max: null
+      rate: 0.0882
+  capitalGainsBrackets:
+    - min: 0
+      max: 17150
+      rate: 0.04
+    - min: 17151
+      max: 23600
+      rate: 0.045
+    - min: 23601
+      max: 27900
+      rate: 0.0525
+    - min: 27901
+      max: 161550
+      rate: 0.0585
+    - min: 161551
+      max: 323200
+      rate: 0.0625
+    - min: 323201
+      max: 2155350
+      rate: 0.0685
+    - min: 2155351
+      max: null
+      rate: 0.0882
