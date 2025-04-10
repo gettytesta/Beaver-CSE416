@@ -5,8 +5,7 @@ const Schema = mongoose.Schema;
 const DistributionTypes = Object.freeze({
   FIXED: "fixed",
   NORMAL: "normal",
-  UNIFORM: "uniform",
-  GBM: "gbm",
+  UNIFORM: "uniform"
 });
 
 //Embedded Distribution Schema
@@ -52,18 +51,6 @@ const DistributionSchema = new Schema({
       },
       message: 'Upper must be greater than lower.',
     },
-  },
-  mu: {
-    type: Number,
-    required: function() {
-      return this.type === DistributionTypes.GBM;
-    }
-  },
-  sigma: {
-    type: Number,
-    required: function() {
-      return this.type === DistributionTypes.GBM;
-    }
   }
 });
 

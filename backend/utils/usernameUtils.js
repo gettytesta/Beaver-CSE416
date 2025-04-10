@@ -7,7 +7,7 @@ const User = require('../models/user');
  * @param {string} email - The email of the user
  * @returns {string} - The unique username
  */
-async function generateUniqueUsername(displayName, email) {
+exports.generateUniqueUsername = async (displayName, email) => {
     // Start with base username from displayName (remove spaces, lowercase)
     let baseUsername = displayName.replace(/\s+/g, '').toLowerCase();
     
@@ -42,7 +42,3 @@ async function generateUniqueUsername(displayName, email) {
     
     return username;
 }
-
-module.exports = {
-    generateUniqueUsername
-}; 

@@ -17,7 +17,7 @@ async function runSingleSimulation(scenario, simulationId, federalTax, stateTax,
         const userDeathYear = startYear + userLifeExpectancy;
         const spouseLifeExpectancy = sampleValueFromDistribution(scenario.spouseLifeExpectancy);
         const spouseDeathYear = startYear + spouseLifeExpectancy;
-        const endYear = Math.max(userDeathYear, spouseDeathYear); // user
+        const endYear = userDeathYear;
 
         // Handle inflation adjusted tax brackets
         // TODO: Should capital gains be inflation adjusted?
@@ -40,19 +40,11 @@ async function runSingleSimulation(scenario, simulationId, federalTax, stateTax,
         let spouseRetireContributionLimit = 20000; // Inflation Adjusted
 
         let netWorth = scenario.initialLimit;
-        const cashInvestmentValue = 0;
 
         let currentYear = startYear;
-        const delta = 1; // Increment years by 1
         const simulationResults = {};
 
-        // Initial setup of investments and cash
-        let investments = scenario.investments.map(inv => ({
-            ...inv,
-            currentValue: inv.value
-        }));
-
-        // Main simulation loop here.
+        // Main simulation loop here
         while (currentYear < endYear) {
 
             // 1. Preliminaries
@@ -61,52 +53,22 @@ async function runSingleSimulation(scenario, simulationId, federalTax, stateTax,
             const inflationRate = sampleValueFromDistribution(scenario.inflationAssumption);
 
             // Apply inflationRate to each tax bracket
-            // TODO
 
-            // Apply inflationRate to annual limit on retirement account contributions
-            userRetireContributionLimit *= inflationRate;
-            spouseRetireContributionLimit *= inflationRate;
+            // TODO
 
             // 2. Run income events, adding the income to the cash investment.
 
-            let userCurYearIncome = 0; // Income from income events
-            let userCurYearSS = 0; // Income from social security benefits
-
-            // Run income events
-            for (const event of scenario.eventSeriesSet) {
-                if (event.type === "income" && event.startYear <= currentYear) {
-                    let eventIncome = calculateIncome(event, currentYear, inflationRate) * event.userFraction;
-                    if (event.isSocialSecurity) {
-                        userCurYearSS += eventIncome;
-                    } else {
-                        userCurYearIncome += eventIncome;
-                    }
-                }
-            }
-
-            cashInvestmentValue = cashInvestmentValue + userCurYearIncome + userCurYearSS;
+            // TODO
 
             // 3. Perform the RMD for the previous year, if the user’s age is at least 74 and at the end of the previous
             // year, there is at least one investment with tax status = “pre-tax” and with a positive value.
 
-            const preTaxInvestments = investments.filter(inv => 
-                inv.accountTaxStatus === 'pretaxretirement' && inv.currentValue > 0
-            );
-            if (currentYear - startYear >= 74 && preTaxInvestments.length > 0) {
-                const totalPreTaxValue = preTaxInvestments.reduce((sum, inv) => sum + inv.currentValue, 0);
-                const rmdAmount = calculateRMD(rmdTable, totalPreTaxValue, currentYear - scenario.userBirthYear);
-                
-                // Withdraw RMD and add to cash
-                cashInvestmentValue += rmdAmount;
-            }
+            // TODO
 
             // 4. Update the values of investments, reflecting expected annual return, reinvestment of generated
             // income, and subtraction of expenses.
 
-            investments.forEach(inv => {
-                const baseReturn = inv.type.expectedAnnualReturn;
-                inv.currentValue *= (1 + baseReturn - inflationRate);
-            });
+            // TODO
 
             // Calculate total net worth for the year
             // const totalNetWorth = investments.reduce((sum, inv) => sum + inv.currentValue, 0);
@@ -139,41 +101,8 @@ async function runSingleSimulation(scenario, simulationId, federalTax, stateTax,
 
             // TODO
 
-            // ===============================================
-            // Basic simulation algorithm for testing purposes
-            // ===============================================
-
-            // Income events
-            let _totalIncome = 0;
-            for (const event of scenario.eventSeriesSet) {
-                if (event.type === "income" && event.startYear <= currentYear) {
-                    _totalIncome += event.initialAmount * (event.isInflationAdjusted ? inflationRate : 1);
-                }
-            }
-
-            // Expense events
-            let _totalExpenses = 0;
-            for (const event of scenario.eventSeriesSet) {
-                if (event.type === "expense" && event.startYear <= currentYear) {
-                    _totalExpenses += event.initialAmount * (event.isInflationAdjusted ? inflationRate : 1);
-                }
-            }
-
-            // Investment growth
-            let _totalInvestments = 0;
-            for (const investmentId of scenario.investments) {
-                // Assume a basic return of 5% for now (to be refined later)
-                _totalInvestments += investmentId.value * 1.05;
-            }
-
-            // Net worth calculation
-            netWorth += _totalIncome - _totalExpenses + _totalInvestments;
-            simulationResults[currentYear] = netWorth;
-
-            // ================================================
-
             // Move on to the next year
-            currentYear += delta;
+            currentYear += 1;
         }
 
         return {

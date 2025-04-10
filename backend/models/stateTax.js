@@ -14,10 +14,6 @@ const StateTaxSchema = new Schema({
         uppercase: true,
         index: true
     },
-    year: {
-        type: Number,
-        required: true
-    },
     single: {
         incomeTaxBrackets: [TaxBracketSchema],
         capitalGainsBrackets: [CapitalGainsBracketSchema],
@@ -25,21 +21,7 @@ const StateTaxSchema = new Schema({
     marriedFilingJointly: {
         incomeTaxBrackets: [TaxBracketSchema],
         capitalGainsBrackets: [CapitalGainsBracketSchema],
-    },
-    createdAt: {
-        type: Date,
-        default: Date.now
-    },
-    updatedAt: {
-        type: Date,
-        default: Date.now
     }
-});
-
-// Update the updatedAt field on save
-StateTaxSchema.pre('save', function(next) {
-    this.updatedAt = Date.now();
-    next();
 });
 
 module.exports = mongoose.model('StateTax', StateTaxSchema); 
