@@ -2,10 +2,11 @@ const yaml = require('js-yaml');
 const fs = require('fs');
 const StateTax = require('../models/stateTax');
 const { DistributionTypes } = require('../models/distribution');
-const { AccountTaxStatus } = require('../models/investment');
+const { AccountTaxStatus, Investment } = require('../models/investment');
+const EventSeries = require('../models/eventseries');
 
 // Placeholder function for YAML to Scenario conversion
-exports.convertYamlToScenario = async (yamlData, userId) => {
+exports.convertYamlToScenario = (yamlData, userId) => {
     // This function would be implemented later to convert a parsed YAML 
     // object into a proper Scenario object structure
 
@@ -48,23 +49,89 @@ exports.convertYamlToScenario = async (yamlData, userId) => {
             ['after-tax']: AccountTaxStatus.POST_TAX_RETIREMENT,
         })[investment.taxStatus];
         investments.push(
-            {
+            new Investment({
                 _id: investment.id,
                 type: investmentType[investment.investmentType],
                 value: investment.value,
                 accountTaxStatus: ts,
-            }
+            })
         );
     }
 
-    data.investments = investments;
+    data.investments = investments.map(i => i.toObject());
 
     // event series set
     // TODO: finish this.... :(
     let eventSeriesSet = [];
     for (const event of yamlData.eventSeries)
     {
-
+        let series = {
+            name: event.name,
+            duration: convertYamlToDistribution(event.duration),
+            type: event.type,
+            start: event.start,
+        };
+        switch (series.type)
+        {
+            case 'income':
+                series.income = {
+                    initialAmount: event.initialAmount,
+                    changeAmtOrPct: event.changeAmtOrPct,
+                    changeDistribution: convertYamlToDistribution(event.changeDistribution),
+                    adjustForInflation: event.inflationAdjusted,
+                    isSocialSecurity: event.socialSecurity,
+                };
+                if (data.isMarriedCouple)
+                    series.income.userPct = event.userFraction;
+                break;
+            case 'expense':
+                series.expense = {
+                    initialAmount: event.initialAmount,
+                    changeAmtOrPct: event.changeAmtOrPct,
+                    changeDistribution: convertYamlToDistribution(event.changeDistribution),
+                    adjustForInflation: event.inflationAdjusted,
+                    discretionary: event.discretionary,
+                }
+                if (data.isMarriedCouple)
+                    series.expense.userPct = event.userFraction;
+                break;
+            case 'invest':
+                series.invest = {
+                    allocationType: event.glidePath? 'glide' : 'fixed',
+                    maxCash: event.maxCash,
+                }
+                series.invest.selectedInvestments = Object.keys(event.assetAllocation).map(k =>
+                    investments.find(i => i._id === k)?._id
+                );
+                series.invest.allocations = {};
+                if (event.glidePath)
+                    Object.keys(event.assetAllocation).forEach(k =>
+                        series.invest.allocations[k] = {
+                            initial: event.assetAllocation[k],
+                            final: event.assetAllocation2[k],
+                        }
+                    );
+                else
+                    Object.keys(event.assetAllocation).forEach(k =>
+                        series.invest.allocations[k] = { value: event.assetAllocation[k], }
+                    );
+                break;
+            case 'rebalance':
+                series.rebalance = {};
+                series.rebalance.allocationType = 'fixed';
+                series.rebalance.selectedInvestments = Object.keys(event.assetAllocation).map(k =>
+                    investments.find(i => i._id === k)?._id
+                );
+                series.rebalance.allocations = {};
+                Object.keys(event.assetAllocation).forEach(k => 
+                    series.rebalance.allocations[k] = { value: event.assetAllocation[k], }
+                );
+                break;
+            default:
+                throw new Error("Unidentifiable Event Series type");
+                break;
+        }
+        eventSeriesSet.push(series);
     }
 
     data.eventSeriesSet = eventSeriesSet;
@@ -93,7 +160,7 @@ exports.convertScenarioToYaml = async (scenario) => {
     // TODO: Implement the conversion
     
     // TODO: test this
-    return yaml.dump(scenario);
+    return yaml.dump(scenario.toObject());
 }
 
 /**

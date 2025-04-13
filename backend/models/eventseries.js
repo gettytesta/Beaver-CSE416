@@ -50,7 +50,7 @@ const EventStartSchema = new Schema({
   
     adjustForInflation: { type: Boolean, required: true }, // 3. Inflation
   
-    userPct: { type: Number, min: 0, max: 100 }, // 4. % for user (optional if not married)
+    userPct: { type: Number, min: 0, max: 1 }, // 4. % for user (optional if not married)
   
     isSocialSecurity: { type: Boolean, required: true }, // 5. Social Security flag
   });
@@ -71,7 +71,7 @@ const EventStartSchema = new Schema({
     },
   
     adjustForInflation: { type: Boolean, required: true },
-    userPct: { type: Number, required: true }, // used if isMarried
+    userPct: { type: Number, min: 0, max: 1 }, // used if isMarried
     discretionary: { type: Boolean, required: true },
   });
 
@@ -99,17 +99,17 @@ const EventStartSchema = new Schema({
           value: {
             type: Number,
             min: 0,
-            max: 100,
+            max: 1,
           },
           initial: {
             type: Number,
             min: 0,
-            max: 100,
+            max: 1,
           },
           final: {
             type: Number,
             min: 0,
-            max: 100,
+            max: 1,
           },
         },
         { _id: false }
@@ -126,7 +126,7 @@ const EventStartSchema = new Schema({
             return sum + (obj.value || 0);
           }, 0);
   
-          return Math.round(total) === 100;
+          return Math.round(total) === 1;
         },
         message:
           'Total allocation must sum to 100%. For glide, both initial and final totals should equal 100%.',
@@ -165,17 +165,17 @@ const EventStartSchema = new Schema({
           value: {
             type: Number,
             min: 0,
-            max: 100,
+            max: 1,
           },
           initial: {
             type: Number,
             min: 0,
-            max: 100,
+            max: 1,
           },
           final: {
             type: Number,
             min: 0,
-            max: 100,
+            max: 1,
           },
         },
         { _id: false }
@@ -192,7 +192,7 @@ const EventStartSchema = new Schema({
             return sum + (obj.value || 0);
           }, 0);
   
-          return Math.round(total) === 100;
+          return Math.round(total) === 1;
         },
         message:
           'Total allocation must sum to 100%. For glide, both initial and final totals should equal 100%.',
