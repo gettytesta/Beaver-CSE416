@@ -20,9 +20,7 @@ var ScenarioSchema = new Schema({
     spouseRetirementAge: { type: Number, required: function () { return this.isMarriedCouple; } },
     userLifeExpectancy: { type: DistributionSchema, required: true },
     spouseLifeExpectancy: { type: DistributionSchema, required: function () { return this.isMarriedCouple;} },
-    //investments
     investments: { type: [InvestmentSchema], default: [] },
-    //eventSeries 
     eventSeriesSet: { type: [EventSeriesSchema], default: [] },        //each scenario has its OWN eventSeries
 
     //Spending Strategy
@@ -37,6 +35,10 @@ var ScenarioSchema = new Schema({
 
     //inflation assumption
     inflationAssumption: { type: DistributionSchema, required: true },
+
+    // Retire contribution limits (TODO add input in frontend)
+    userRetireContributionLimit: { type: Number, required: true },
+    spouseRetireContributionLimit: { type: Number, required: function () { return this.isMarriedCouple;} },
 
     //roth conversion strategy 
     rothConversionOpt: { type: Boolean, default: false },

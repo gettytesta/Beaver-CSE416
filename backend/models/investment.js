@@ -12,7 +12,7 @@ const AccountTaxStatus = Object.freeze({
     POST_TAX_RETIREMENT: "posttaxretirement",
 });
 
-var InvestmentSchema = new Schema({
+const InvestmentSchema = new Schema({
     _id: {type: String, required: true},
     type: {type: InvestmentTypeSchema, required: true},
     value: {type: Number, required: true},
