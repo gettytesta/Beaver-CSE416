@@ -177,8 +177,9 @@ exports.convertScenarioToYaml = (scenario) => {
         RothConversionEnd: scenario.rothConversionEnd || undefined,
         financialGoal: scenario.financialGoal,
         residenceState: scenario.userStateOfResidence,
-        userRetireContributionLimit: scenario.userRetireContributionLimit,
-        spouseRetireContributionLimit: scenario.spouseRetireContributionLimit || undefined,
+        // unsure whether these contribution limits are included in YAML
+        // userRetireContributionLimit: scenario.userRetireContributionLimit,
+        // spouseRetireContributionLimit: scenario.spouseRetireContributionLimit || undefined,
     };
 
     let investmentTypes = {};

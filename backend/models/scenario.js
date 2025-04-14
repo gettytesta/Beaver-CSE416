@@ -70,6 +70,7 @@ var ScenarioSchema = new Schema({
         type: String,
         enum: ["used", "ignored", "none"],
         required: true,
+        default: "none",
     },
 
     createdAt: {
