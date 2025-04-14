@@ -1,4 +1,5 @@
 import React from "react";
+import { useEffect } from "react";
 
 export default function EventModal({
   filingStatus,
@@ -15,6 +16,7 @@ export default function EventModal({
 
   const isMarried = filingStatus === "married";
   const eventType = tempEvent.type;
+  
 
   const handleIncomeChange = (field, value) => {
     setTempEvent({
@@ -22,6 +24,59 @@ export default function EventModal({
       income: { ...tempEvent.income, [field]: value },
     });
   };
+
+
+
+  useEffect(() => {
+    // Log tempEvent structure when it changes
+  
+    // Make sure fixed distribution value is initialized for EXPENSE
+    if (tempEvent?.type === "expense") {
+      const dist = tempEvent.expense?.changeDistribution;
+  
+      if (dist?.type === "fixed" && dist.value === undefined) {
+        setTempEvent(prev => ({
+          ...prev,
+          expense: {
+            ...prev.expense,
+            changeDistribution: {
+              ...prev.expense.changeDistribution,
+              value: "",
+            },
+          },
+        }));
+      }
+    }
+  
+    // Make sure fixed distribution value is initialized for INCOME
+    if (tempEvent?.type === "income") {
+      const dist = tempEvent.income?.changeDistribution;
+  
+      if (dist?.type === "fixed" && dist.value === undefined) {
+        setTempEvent(prev => ({
+          ...prev,
+          income: {
+            ...prev.income,
+            changeDistribution: {
+              ...prev.income.changeDistribution,
+              value: "",
+            },
+          },
+        }));
+      }
+    }
+  }, [tempEvent?.type, tempEvent?.income?.changeDistribution?.type, tempEvent?.expense?.changeDistribution?.type]);
+
+
+
+
+
+  const availableSeriesNames = eventSeries
+    .filter((_, idx) => idx !== editingEventIndex)
+    .map((series) => series.name)
+    .filter(Boolean);
+
+  
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center">
@@ -118,15 +173,29 @@ export default function EventModal({
           )}
 
           {(tempEvent.start.type === "startWith" || tempEvent.start.type === "startAfter") && (
-            <input
-              type="text"
-              placeholder="Event Series Name"
-              className="w-full mt-2 border px-3 py-2 rounded"
-              value={tempEvent.start.value || ""}
-              onChange={(e) =>
-                setTempEvent({ ...tempEvent, start: { ...tempEvent.start, value: e.target.value } })
-              }
-            />
+            <div>
+              <label className="block text-sm font-medium mt-2">Event Series Name</label>
+              <select
+                className="w-full border px-3 py-2 rounded"
+                value={tempEvent.start?.eventSeries || ""}
+                onChange={(e) =>
+                  setTempEvent({
+                    ...tempEvent,
+                    start: {
+                      ...tempEvent.start,
+                      eventSeries: e.target.value,
+                    },
+                  })
+                }
+              >
+                <option value="">-- Select an Event Series --</option>
+                {availableSeriesNames.map((name, idx) => (
+                  <option key={idx} value={name}>
+                    {name}
+                  </option>
+                ))}
+              </select>
+            </div>
           )}
         </div>
 
@@ -204,19 +273,46 @@ export default function EventModal({
 
         {/* EVENT TYPE */}
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">Event Type</label>
-          <select
-            value={tempEvent.type || ""}
-            onChange={(e) => setTempEvent({ ...tempEvent, type: e.target.value })}
-            className="w-full border px-3 py-2 rounded"
-          >
-            <option value="">Select Type</option>
-            <option value="income">Income</option>
-            <option value="expense">Expense</option>
-            <option value="invest">Invest</option>
-            <option value="rebalance">Rebalance</option>
-          </select>
-        </div>
+  <label className="block text-sm font-medium text-gray-700 mb-1">Event Type</label>
+  <select
+    value={tempEvent.type || ""}
+    onChange={(e) => {
+      const selectedType = e.target.value;
+      let updatedEvent = { ...tempEvent, type: selectedType };
+
+      if (selectedType === "expense") {
+        updatedEvent.expense = {
+          initialAmount: "",
+          changeAmtOrPct: "amount",
+          changeDistribution: { type: "fixed", value: "" },
+          adjustForInflation: false,
+          discretionary: false,
+          userPct: "",
+        };
+      }
+
+      if (selectedType === "income") {
+        updatedEvent.income = {
+          initialAmount: "",
+          changeAmtOrPct: "amount",
+          changeDistribution: { type: "fixed", value: "" },
+          adjustForInflation: false,
+          isSocialSecurity: false,
+          userPct: "",
+        };
+      }
+
+      setTempEvent(updatedEvent);
+    }}
+    className="w-full border px-3 py-2 rounded"
+  >
+    <option value="">Select Type</option>
+    <option value="income">Income</option>
+    <option value="expense">Expense</option>
+    <option value="invest">Invest</option>
+    <option value="rebalance">Rebalance</option>
+  </select>
+</div>
 
         {/* INCOME LOGIC */}
         {eventType === "income" && (
@@ -239,7 +335,7 @@ export default function EventModal({
                 className="w-full border px-3 py-2 rounded"
               >
                 <option value="amount">Amount</option>
-                <option value="percentage">Percentage</option>
+                <option value="percent">Percentage</option>
               </select>
             </div>
 
@@ -408,23 +504,26 @@ export default function EventModal({
                 className="w-full border px-3 py-2 rounded"
               >
                 <option value="amount">Amount</option>
-                <option value="percentage">Percentage</option>
+                <option value="percent">Percentage</option>
               </select>
             </div>
 
             <div>
               <label className="block text-sm font-medium">Change Distribution</label>
               <select
-                value={tempEvent.expense?.changeDistribution?.type || "fixed"}
-                onChange={(e) =>
+                value={tempEvent.expense.changeDistribution?.type || "fixed"}
+                onChange={(e) => {
                   setTempEvent({
                     ...tempEvent,
                     expense: {
                       ...tempEvent.expense,
-                      changeDistribution: { type: e.target.value },
+                      changeDistribution: {
+                        ...tempEvent.expense.changeDistribution,
+                        type: e.target.value,
+                      },
                     },
-                  })
-                }
+                  });
+                }}
                 className="w-full border px-3 py-2 rounded"
               >
                 <option value="fixed">Fixed</option>
@@ -587,13 +686,13 @@ export default function EventModal({
               <input
                 type="checkbox"
                 className="mr-2"
-                checked={tempEvent.expense?.isDiscretionary || false}
+                checked={tempEvent.expense?.discretionary || false}
                 onChange={(e) =>
                   setTempEvent({
                     ...tempEvent,
                     expense: {
                       ...tempEvent.expense,
-                      isDiscretionary: e.target.checked,
+                      discretionary: e.target.checked,
                     },
                   })
                 }
@@ -607,66 +706,71 @@ export default function EventModal({
 
     {/* INVEST LOGIC */}
     {eventType === "invest" && (
-      <div className="space-y-4 mt-4">
-        {/* Allocation Type */}
-        <div>
-          <label className="block text-sm font-medium">Allocation Type</label>
-          <select
-            value={tempEvent.invest?.allocationType || "fixed"}
-            onChange={(e) =>
-              setTempEvent({
-                ...tempEvent,
-                invest: {
-                  ...tempEvent.invest,
-                  allocationType: e.target.value,
-                  selected: [],
-                  allocations: {},
-                },
-              })
-            }
-            className="w-full border px-3 py-2 rounded"
-          >
-            <option value="fixed">Fixed Allocation</option>
-            <option value="glide">Linear Glide Path</option>
-          </select>
-        </div>
+  <div className="space-y-4 mt-4">
+    {/* Allocation Type */}
+    <div>
+      <label className="block text-sm font-medium">Allocation Type</label>
+      <select
+        value={tempEvent.invest?.allocationType || "fixed"}
+        onChange={(e) =>
+          setTempEvent({
+            ...tempEvent,
+            invest: {
+              ...tempEvent.invest,
+              allocationType: e.target.value,
+              selected: [],
+              allocations: {},
+            },
+          })
+        }
+        className="w-full border px-3 py-2 rounded"
+      >
+        <option value="fixed">Fixed Allocation</option>
+        <option value="glide">Linear Glide Path</option>
+      </select>
+    </div>
 
-        {/* Investment Selection */}
-        <div>
-          <label className="block text-sm font-medium mb-1">Select Investments (non-pre-tax only)</label>
-          <div className="space-y-1">
-            {investments
-              .filter((inv) => inv.taxStatus !== "tax-deferred")
-              .map((inv, index) => {
-                const isChecked = tempEvent.invest?.selected?.includes(index) || false;
-                return (
-                  <label key={index} className="flex items-center">
-                    <input
-                      type="checkbox"
-                      className="mr-2"
-                      checked={isChecked}
-                      onChange={(e) => {
-                        const selected = new Set(tempEvent.invest?.selected || []);
-                        if (e.target.checked) {
-                          selected.add(index);
-                        } else {
-                          selected.delete(index);
-                        }
-                        setTempEvent({
-                          ...tempEvent,
-                          invest: {
-                            ...tempEvent.invest,
-                            selected: Array.from(selected),
-                          },
-                        });
-                      }}
-                    />
-                    {`Investment ${index + 1} (${inv.type || "Unnamed"})`}
-                  </label>
-                );
-              })}
-          </div>
-        </div>
+    {/* Investment Selection */}
+    <div>
+      <label className="block text-sm font-medium mb-1">Select Investments (non-pre-tax only)</label>
+      <div className="space-y-1">
+        {investments
+          .filter((inv) => inv.taxStatus !== "pretaxretirement") // ✅ Updated filter
+          .map((inv, index) => {
+            const isChecked = tempEvent.invest?.selected?.includes(index) || false;
+            return (
+              <label key={index} className="flex items-center">
+                <input
+                  type="checkbox"
+                  className="mr-2"
+                  checked={isChecked}
+                  onChange={(e) => {
+                    const selected = new Set(tempEvent.invest?.selected || []);
+                    const updatedAllocations = { ...tempEvent.invest.allocations };
+
+                    if (e.target.checked) {
+                      selected.add(index);
+                    } else {
+                      selected.delete(index);
+                      delete updatedAllocations[index]; // 🧼 Remove stale allocation entry
+                    }
+
+                    setTempEvent({
+                      ...tempEvent,
+                      invest: {
+                        ...tempEvent.invest,
+                        selected: Array.from(selected),
+                        allocations: updatedAllocations,
+                      },
+                    });
+                  }}
+                />
+                {`Investment ${index + 1} (${inv.type || "Unnamed"})`}
+              </label>
+            );
+          })}
+      </div>
+    </div>
 
         {/* Allocation Inputs */}
         {tempEvent.invest?.selected?.length > 0 && (
@@ -806,38 +910,72 @@ export default function EventModal({
 
     {/* Select Investments */}
     <div>
-      <label className="block text-sm font-medium mb-1">Select Investments (same tax status only)</label>
+      <label className="block text-sm font-medium mb-1">
+        Select Investments (same tax status only)
+      </label>
+
       <div className="space-y-1">
         {investments.map((inv, index) => {
-          const isChecked = tempEvent.rebalance?.selected?.includes(index) || false;
+          const selected = tempEvent.rebalance?.selected || [];
+          const isChecked = selected.includes(index);
+
+          // Get tax status of the first selected investment
+          const firstSelectedTaxStatus =
+            selected.length > 0 ? investments[selected[0]]?.taxStatus : null;
+
+          // Enforce same tax status
+          const isSelectable =
+            isChecked ||
+            selected.length === 0 ||
+            inv.taxStatus === firstSelectedTaxStatus;
+
           return (
-            <label key={index} className="flex items-center">
+            <label
+              key={index}
+              className="flex items-center text-sm text-gray-700"
+            >
               <input
                 type="checkbox"
                 className="mr-2"
                 checked={isChecked}
+                disabled={!isSelectable}
                 onChange={(e) => {
-                  const selected = new Set(tempEvent.rebalance?.selected || []);
+                  const updatedSelected = new Set(selected);
+                  const updatedAllocations = {
+                    ...tempEvent.rebalance.allocations,
+                  };
+
                   if (e.target.checked) {
-                    selected.add(index);
+                    updatedSelected.add(index);
                   } else {
-                    selected.delete(index);
+                    updatedSelected.delete(index);
+                    delete updatedAllocations[index]; // Clear stale allocation
                   }
+
                   setTempEvent({
                     ...tempEvent,
                     rebalance: {
                       ...tempEvent.rebalance,
-                      selected: Array.from(selected),
+                      selected: Array.from(updatedSelected),
+                      allocations: updatedAllocations,
                     },
                   });
                 }}
               />
-              {`Investment ${index + 1} (${inv.type || "Unnamed"} – ${inv.taxStatus || "Unknown"})`}
+              {`Investment ${index + 1} (${inv.type || "Unnamed"} – ${
+                inv.taxStatus || "Unknown"
+              })`}
+              {!isSelectable && (
+                <span className="text-red-500 ml-2">
+                  (Tax status mismatch)
+                </span>
+              )}
             </label>
           );
         })}
       </div>
     </div>
+
 
     {/* Allocation Inputs */}
     {tempEvent.rebalance?.selected?.length > 0 && (
@@ -937,13 +1075,40 @@ export default function EventModal({
           </button>
           <button
             onClick={() => {
-              const updated = [...eventSeries];
-              updated[editingEventIndex] = tempEvent;
-              setEventSeries(updated);
-              setShowEventModal(false);
-              setEditingEventIndex(null);
-              setTempEvent(null);
-            }}
+                const updated = [...eventSeries];
+
+                let updatedTemp = { ...tempEvent };
+
+                // Make sure subfields are initialized and structured correctly
+                if (updatedTemp.type === "income") {
+                  updatedTemp.income = {
+                    initialAmount: updatedTemp.income?.initialAmount ?? "",
+                    changeAmtOrPct: updatedTemp.income?.changeAmtOrPct ?? "amount",
+                    changeDistribution: updatedTemp.income?.changeDistribution ?? { type: "fixed", value: "" },
+                    adjustForInflation: updatedTemp.income?.adjustForInflation ?? false,
+                    isSocialSecurity: updatedTemp.income?.isSocialSecurity ?? false,
+                    userPct: updatedTemp.income?.userPct ?? "",
+                  };
+                }
+
+                if (updatedTemp.type === "expense") {
+                  updatedTemp.expense = {
+                    initialAmount: updatedTemp.expense?.initialAmount ?? "",
+                    changeAmtOrPct: updatedTemp.expense?.changeAmtOrPct ?? "amount",
+                    changeDistribution: updatedTemp.expense?.changeDistribution ?? { type: "fixed", value: "" },
+                    adjustForInflation: updatedTemp.expense?.adjustForInflation ?? false,
+                    discretionary: updatedTemp.expense?.discretionary ?? false,
+                    userPct: updatedTemp.expense?.userPct ?? "",
+                  };
+                }
+
+                updated[editingEventIndex] = updatedTemp;
+                setEventSeries(updated);
+
+                setShowEventModal(false);
+                setEditingEventIndex(null);
+                setTempEvent(null);
+              }}
             className="px-4 py-2 bg-indigo-500 text-white rounded hover:bg-indigo-600"
           >
             Save

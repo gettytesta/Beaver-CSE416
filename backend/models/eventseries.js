@@ -4,55 +4,55 @@ const Schema = mongoose.Schema;
 const { DistributionSchema } = require('./distribution');
 
 const EventStartSchema = new Schema({
-    type: {
-      type: String,
-      required: true,
-      enum: ['fixed', 'uniform', 'normal', 'startWith', 'startAfter'],
-    },
-    // For 'fixed'
-    value: { type: Number },
-  
-    // For 'uniform'
-    lower: { type: Number },
-    upper: {
-      type: Number,
-      validate: {
-        validator: function (v) {
-          return this.type !== 'uniform' || v > this.lower;
-        },
-        message: 'Upper must be greater than lower',
+  type: {
+    type: String,
+    required: true,
+    enum: ['fixed', 'uniform', 'normal', 'startWith', 'startAfter'],
+  },
+  // For 'fixed'
+  value: { type: Number },
+
+  // For 'uniform'
+  lower: { type: Number },
+  upper: {
+    type: Number,
+    validate: {
+      validator: function (v) {
+        return this.type !== 'uniform' || v > this.lower;
       },
+      message: 'Upper must be greater than lower',
     },
-  
-    // For 'normal'
-    mean: { type: Number },
-    stdev: { type: Number, min: 0 },
-  
-    // For startWith / startAfter (reference another event series by name)
-    eventSeries: { type: String },
-  });
+  },
+
+  // For 'normal'
+  mean: { type: Number },
+  stdev: { type: Number, min: 0 },
+
+  // For startWith / startAfter (reference another event series by name)
+  eventSeries: { type: String },
+});
 
 
   //NEED TO ADD VALIDATORS
   const IncomeSchema = new Schema({
-    initialAmount: { type: Number, required: true }, // 1. Initial $
+    initialAmount: { type: Number, required: true },
   
-    changeAmtOrPct: { // 2. Amount vs Percentage
+    changeAmtOrPct: {
       type: String,
       enum: ['amount', 'percent'],
       required: true,
     },
   
-    changeDistribution: { // 2. Fixed, Uniform, or Normal
+    changeDistribution: {
       type: DistributionSchema,
-      required: true
+      required: true,
     },
   
-    adjustForInflation: { type: Boolean, required: true }, // 3. Inflation
+    adjustForInflation: { type: Boolean, required: true },
   
-    userPct: { type: Number, min: 0, max: 1 }, // 4. % for user (optional if not married)
+    userPct: { type: Number, min: 0, max: 100 }, // ❌ remove required: true
   
-    isSocialSecurity: { type: Boolean, required: true }, // 5. Social Security flag
+    isSocialSecurity: { type: Boolean, required: true },
   });
 
 
@@ -71,7 +71,9 @@ const EventStartSchema = new Schema({
     },
   
     adjustForInflation: { type: Boolean, required: true },
-    userPct: { type: Number, min: 0, max: 1 }, // used if isMarried
+  
+    userPct: { type: Number, min: 0, max: 100 }, // ❌ remove required: true
+  
     discretionary: { type: Boolean, required: true },
   });
 
@@ -201,6 +203,10 @@ const EventStartSchema = new Schema({
   });
 
   const EventSeriesSchema = new Schema({
+    _id: {
+      type: String,         // <- Use String to support UUIDs
+      required: true,
+    },
     name: {
       type: String,
       required: true,
