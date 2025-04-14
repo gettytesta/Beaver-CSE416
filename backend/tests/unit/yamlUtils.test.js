@@ -36,9 +36,9 @@ describe('YAML Functions', () => {
 
     test('Downloading scenario.yaml', async () => {
         let origYaml = fs.readFileSync('./tests/unit/yamlConversionInputs/scenario.yaml', 'utf8');
-        let yamlString = yamlUtils.convertScenarioToYaml(scenario);
+        let yamlString = await yamlUtils.convertScenarioToYaml(scenario);
         let obj1 = yaml.load(origYaml);
         let obj2 = yaml.load(yamlString);
-        return expect(obj2).toBe(obj1); // comparing parsed objects rather than strings, as string syntax can be different
+        return expect(obj2).toEqual(obj1); // comparing parsed objects rather than strings, as string syntax can be different
     });
 });

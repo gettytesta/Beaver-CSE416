@@ -3,7 +3,7 @@ const fs = require('fs');
 const StateTax = require('../models/stateTax');
 const { DistributionTypes } = require('../models/distribution');
 const { AccountTaxStatus, Investment } = require('../models/investment');
-const EventSeries = require('../models/eventseries');
+const { EventSeries } = require('../models/eventseries');
 
 // Placeholder function for YAML to Scenario conversion
 exports.convertYamlToScenario = (yamlData, userId) => {
@@ -133,19 +133,20 @@ exports.convertYamlToScenario = (yamlData, userId) => {
                 throw new Error("Unidentifiable Event Series type");
                 break;
         }
-        eventSeriesSet.push(series);
+        eventSeriesSet.push(new EventSeries(series));
     }
 
     data.eventSeriesSet = eventSeriesSet;
-    data.spendingStrategy = eventSeriesSet.filter(e => e.name in yamlData.spendingStrategy);
+    data.spendingStrategy = eventSeriesSet.filter(e => yamlData.spendingStrategy.includes(e.name)).map(e => e._id);
 
-    data.expenseWithdrawalStrategy = investments.filter(i => i.id in yamlData.expenseWithdrawalStrategy);
+    data.expenseWithdrawalStrategy = investments.filter(i => yamlData.expenseWithdrawalStrategy.includes(i.id)).map(i => i._id);
 
     data.inflationAssumption = convertYamlToDistribution(yamlData.inflationAssumption);
     data.rothConversionOpt = yamlData.RothConversionOpt;
     data.rothConversionStart = yamlData.RothConversionStart;
     data.rothConversionEnd = yamlData.RothConversionEnd;
-    data.rothConversionStrategy = investments.filter(i => i.id in yamlData.RMDStrategy);
+    data.rothConversionStrategy = investments.filter(i => yamlData.RothConversionStrategy.includes(i.id)).map(i => i._id);
+    data.rmdStrategy = investments.filter(i => yamlData.RMDStrategy.includes(i.id)).map(i => i._id);
     data.afterTaxContributionLimit = yamlData.afterTaxContributionLimit;
     data.financialGoal = yamlData.financialGoal;
     data.userStateOfResidence = yamlData.residenceState;
@@ -155,14 +156,121 @@ exports.convertYamlToScenario = (yamlData, userId) => {
 }
 
 // Placeholder function for Scenario to YAML conversion
-exports.convertScenarioToYaml = async (scenario) => {
+exports.convertScenarioToYaml = (scenario) => {
     // This function would be implemented later to convert a Scenario
     // object into a properly formatted YAML string
-    
-    // TODO: Implement the conversion
-    
-    // TODO: test this
-    return yaml.dump(scenario.toObject());
+    let obj = {
+        name: scenario.name,
+        maritalStatus: scenario.isMarriedCouple? 'couple' : 'individual',
+        birthYears: scenario.isMarriedCouple? [ scenario.userBirthYear, scenario.spouseBirthYear, ]
+            : [ scenario.userBirthYear, ],
+        lifeExpectancy: scenario.isMarriedCouple?
+            [ convertDistributionToYaml(scenario.userLifeExpectancy), convertDistributionToYaml(scenario.spouseLifeExpectancy), ]
+            : [ convertDistributionToYaml(scenario.userLifeExpectancy), ],
+        inflationAssumption: convertDistributionToYaml(scenario.inflationAssumption),
+        afterTaxContributionLimit: scenario.afterTaxContributionLimit,
+        RothConversionOpt: scenario.rothConversionOpt,
+        RothConversionStart: scenario.rothConversionStart || undefined,
+        RothConversionEnd: scenario.rothConversionEnd || undefined,
+        financialGoal: scenario.financialGoal,
+        residenceState: scenario.userStateOfResidence,
+    };
+
+    let investmentTypes = {};
+    let investments = [];
+    let eventSeries = [];
+    scenario.investments.forEach(investment =>
+        investmentTypes[investment.type.name] = {
+            name: investment.type.name,
+            description: investment.type.description,
+            returnAmtOrPct: investment.type.returnAmtOrPct,
+            returnDistribution: convertDistributionToYaml(investment.type.expectedAnnualReturn),
+            expenseRatio: investment.type.expenseRatio,
+            incomeAmtOrPct: investment.type.incomeAmtOrPct,
+            incomeDistribution: convertDistributionToYaml(investment.type.expectedAnnualIncome),
+            taxability: investment.type.taxability,
+        }
+    );
+    scenario.investments.forEach(investment =>
+        investments.push({
+            investmentType: investment.type.name,
+            value: investment.value,
+            taxStatus: investment.accountTaxStatus,
+            id: investment.id,
+        })
+    );
+    scenario.eventSeriesSet.forEach(event => {
+        let d = {
+            name: event.name,
+            start: convertDistributionToYaml(event.start),
+            duration: convertDistributionToYaml(event.duration),
+            type: event.type,
+        };
+        switch (event.type)
+        {
+            case 'income':
+                d.initialAmount = event.income.initialAmount;
+                d.changeAmtOrPct = event.income.changeAmtOrPct;
+                d.changeDistribution = convertDistributionToYaml(event.income.changeDistribution);
+                d.inflationAdjusted = event.income.adjustForInflation;
+                d.userFraction = event.income.userPct || 1;
+                d.socialSecurity = event.income.isSocialSecurity;
+                break;
+            case 'expense':
+                d.initialAmount = event.expense.initialAmount;
+                d.changeAmtOrPct = event.expense.changeAmtOrPct;
+                d.changeDistribution = convertDistributionToYaml(event.expense.changeDistribution);
+                d.inflationAdjusted = event.expense.adjustForInflation;
+                d.userFraction = event.expense.userPct || 1;
+                d.discretionary = event.expense.discretionary;
+                break;
+            case 'invest':
+                d.glidePath = event.invest.allocationType === 'glide';
+                d.assetAllocation = {};
+                d.assetAllocation2 = {};
+                for (const [allocation, values] of event.invest.allocations)
+                {
+                    if (d.glidePath)
+                    {
+                        d.assetAllocation[allocation] = values.initial;
+                        d.assetAllocation2[allocation] = values.final;
+                    } else
+                        d.assetAllocation[allocatoin] = values.value;
+                }
+
+                d.maxCash = event.invest.maxCash;
+                break;
+            case 'rebalance':
+                d.assetAllocation = {};
+                for (const [allocation, values] of event.rebalance.allocations)
+                {
+                    d.assetAllocation[allocation] = values.value;
+                }
+                break;
+            default:
+                throw new Error('Unrecognized event type.');
+        }
+        eventSeries.push(d);
+    });
+
+    obj.investmentTypes = Object.values(investmentTypes);
+    obj.investments = investments;
+    obj.eventSeries = eventSeries;
+    console.log(scenario.rmdStrategy);
+    obj.spendingStrategy = scenario.spendingStrategy.map(e =>
+        scenario.eventSeriesSet.find(t => t._id.toString() === e.toString())?.name
+    );
+    obj.expenseWithdrawalStrategy = scenario.expenseWithdrawalStrategy.map(i =>
+        scenario.investments.find(t => t._id.toString() === i.toString())?.id
+    );
+    obj.RMDStrategy = scenario.rmdStrategy.map(i =>
+        scenario.investments.find(t => t._id.toString() === i.toString())?.id
+    );
+    obj.RothConversionStrategy = scenario.rothConversionStrategy.map(i =>
+        scenario.investments.find(t => t._id.toString() === i.toString())?.id
+    );
+
+    return yaml.dump(obj);
 }
 
 /**
@@ -224,4 +332,11 @@ function convertYamlToDistribution(yamlData)
             return new Error('Invalid type');
     }
     return { type, ...data };
+}
+
+function convertDistributionToYaml(distr)
+{
+    let y = { ... distr._doc };
+    delete y._id;
+    return y;
 }

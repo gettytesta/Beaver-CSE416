@@ -255,9 +255,12 @@ const EventStartSchema = new Schema({
       },
     },
   });
+
+  const EventSeries = mongoose.model('EventSeries', EventSeriesSchema);
   
 
 module.exports = {
+    EventSeries,
     EventSeriesSchema,
     IncomeSchema,
     ExpenseSchema,

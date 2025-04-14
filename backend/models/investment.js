@@ -7,9 +7,9 @@ const { InvestmentTypeSchema } = require('./investmentType');
 
 
 const AccountTaxStatus = Object.freeze({
-    NON_RETIREMENT: "nonretirement",
-    PRE_TAX_RETIREMENT: "pretaxretirement",
-    POST_TAX_RETIREMENT: "posttaxretirement",
+    NON_RETIREMENT: "non-retirement",
+    PRE_TAX_RETIREMENT: "pre-tax",
+    POST_TAX_RETIREMENT: "after-tax",
 });
 
 var InvestmentSchema = new Schema({

@@ -6,7 +6,7 @@ const DistributionTypes = Object.freeze({
   FIXED: "fixed",
   NORMAL: "normal",
   UNIFORM: "uniform",
-  GBM: "gbm",
+  GBM: "GBM",
 });
 
 //Embedded Distribution Schema
