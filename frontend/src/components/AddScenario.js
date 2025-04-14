@@ -45,7 +45,9 @@ import { useRouter } from "next/navigation";
 
 
 
-export default function AddScenario() {
+export default function AddScenario({ isEdit = false, scenarioId = null, prefilledScenario = null }) {
+
+  
 
   // ================== SCENARIO INFO SECTION ==================
   const {
@@ -76,9 +78,11 @@ export default function AddScenario() {
     showLifespanModal,
     setShowLifespanModal,
     ignoreStateTax,             
-    setIgnoreStateTax
+    setIgnoreStateTax,
+    supportedStates
   } = useScenarioInfo();
   //components/UseScenarioInfo.jsx to edit this
+  //get rid of supported states?
 
   // ================== INVESTMENTS SECTION ==================
   const {
@@ -115,6 +119,60 @@ export default function AddScenario() {
     removeEventSeries,
     openEventModal,
   } = useEventSeries();
+
+  useEffect(() => {
+    if (!isEdit || !prefilledScenario) return;
+  
+    console.log("🔁 Prefilling scenario:", prefilledScenario);
+  
+    // Scenario Info
+    setScenarioName(prefilledScenario.name || "");
+    setFilingStatus(prefilledScenario.isMarriedCouple ? "married" : "single");
+    setBirthYears([
+      prefilledScenario.userBirthYear || "",
+      prefilledScenario.spouseBirthYear || ""
+    ]);
+    setRetirementAges([
+      prefilledScenario.userRetirementAge || "",
+      prefilledScenario.spouseRetirementAge || ""
+    ]);
+    setLifespanValues([
+      prefilledScenario.userLifeExpectancy || {},
+      prefilledScenario.spouseLifeExpectancy || {}
+    ]);
+    setState(prefilledScenario.userStateOfResidence || "");
+    setFinancialGoal(prefilledScenario.financialGoal || "");
+    setIgnoreStateTax(prefilledScenario.stateTaxStatus === "ignored");
+  
+    // Investments
+    setInvestments(prefilledScenario.investments || []);
+    const types = (prefilledScenario.investments || []).map(inv => inv.type);
+    setInvestments(
+      (prefilledScenario.investments || []).map((inv) => ({
+        ...inv,
+        type: inv.type.name,               // flatten embedded type back to name
+        taxStatus: inv.accountTaxStatus,   // assign tax status for dropdown
+      }))
+    );
+  
+    // Event Series
+    setEventSeries(prefilledScenario.eventSeriesSet || []);
+  
+    // Inflation Assumption
+    setInflation(prefilledScenario.inflationAssumption || { type: "fixed", value: "" });
+  
+    // Strategies
+    setSpendingStrategy((prefilledScenario.spendingStrategy || []).map(id => ({ id, name: id })));
+    setWithdrawalStrategy((prefilledScenario.expenseWithdrawalStrategy || []).map(id => ({ id, name: id })));
+    setRmdStrategy((prefilledScenario.rmdStrategy || []).map(id => ({ id, name: id })));
+  
+    // Roth Conversion
+    setEnableRothConversion(prefilledScenario.rothConversionOpt || false);
+    setRothStartYear(prefilledScenario.rothConversionStart || "");
+    setRothEndYear(prefilledScenario.rothConversionEnd || "");
+    setRothConversionStrategy((prefilledScenario.rothConversionStrategy || []).map(id => ({ id, name: id })));
+  
+  }, [isEdit, prefilledScenario]);
   
   // ================== Spending Strategy SECTION ==================
   useEffect(() => {
@@ -321,7 +379,7 @@ const router = useRouter();
             };
           }
 
-           // ✅ Invest
+           //
           if (type === "invest") {
             payload.invest = {
               allocationType: series.invest.allocationType, // "fixed" or "glide"
@@ -353,7 +411,6 @@ const router = useRouter();
 
 
       };
-      // 🧠 Step 2: Add Roth Conversion Conditionally (AFTER)
       if (enableRothConversionRef.current) {
         scenarioInfoPayload.rothConversionOpt = true;
         scenarioInfoPayload.rothConversionStart = parseInt(rothStartYear);
@@ -361,7 +418,7 @@ const router = useRouter();
         scenarioInfoPayload.rothConversionStrategy = rothConversionStrategy.map((item) => item.id);
       }
 
-       // 🧠 Add your debug logs here:
+    /*
       console.log("SCENARIO NAME:", scenarioName);
       console.log("FILING STATUS:", filingStatus);
       console.log("USER BIRTH YEAR:", birthYears[0]);
@@ -370,21 +427,19 @@ const router = useRouter();
       console.log("SPOUSE LIFE EXPECTANCY:", filingStatus === "married" ? lifespanValues[1] : "N/A");
       console.log("STATE OF RESIDENCE:", state);
       console.log("FINANCIAL GOAL:", financialGoal);
-      //TODO: Before finalizing, re-enable the POST request and ensure YAML state tax availability is checked properly. (it's not correctly done in the backend )
-      //Inside useScenarioInfo
       console.log("INVESTMENTS:", investments);
 
       console.log("EVENTSERIES :", scenarioInfoPayload.eventSeriesSet);
 
       console.log("SpendingStrategy :", spendingStrategy);
-      console.log("🧾 spendingStrategy payload:", spendingStrategy.map((item) => item.id))
+      console.log("spendingStrategy payload:", spendingStrategy.map((item) => item.id))
 
-      console.log("🧠 Withdrawal Strategy Mapping:", withdrawalStrategy);
-      console.log("🧠 Mapped Expense Strategy:", withdrawalStrategy.map((item) => item.id));
+      console.log("Withdrawal Strategy Mapping:", withdrawalStrategy);
+      console.log("Mapped Expense Strategy:", withdrawalStrategy.map((item) => item.id));
 
       console.log("Inflation Assumption Payload:", inflationAssumption);
 
-      //console.log("🔍 Roth Strategy Mapping:", rothConversionStrategy)
+      //console.log("Roth Strategy Mapping:", rothConversionStrategy)*/
 
 
 
@@ -392,11 +447,17 @@ const router = useRouter();
 
       console.log("Sending Scenario Info:", scenarioInfoPayload); // TEMP debug
 
-      const res = await axios.post(
-        `${process.env.NEXT_PUBLIC_BACKEND_URL}/api/scenarios`,
-        scenarioInfoPayload,
-        { withCredentials: true }
-      );
+      const res = isEdit
+        ? await axios.put(
+            `${process.env.NEXT_PUBLIC_BACKEND_URL}/api/scenarios/${scenarioId}`,
+            scenarioInfoPayload,
+            { withCredentials: true }
+          )
+        : await axios.post(
+            `${process.env.NEXT_PUBLIC_BACKEND_URL}/api/scenarios`,
+            scenarioInfoPayload,
+            { withCredentials: true }
+          );
 
       if (res.data?.success) {
         router.push("/scenarios?showSuccessPopup=true");

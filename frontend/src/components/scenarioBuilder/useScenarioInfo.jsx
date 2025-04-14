@@ -296,6 +296,7 @@ export default function useScenarioInfo() {
     renderRetirementAge,
     renderLifespanModal,
     ignoreStateTax,             
-    setIgnoreStateTax
+    setIgnoreStateTax,
+    supportedStates
   };
 }

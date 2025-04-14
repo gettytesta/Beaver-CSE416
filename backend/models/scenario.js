@@ -40,6 +40,10 @@ var ScenarioSchema = new Schema({
     //inflation assumption this is required 
     inflationAssumption: { type: DistributionSchema, required: false }, 
 
+    // Retire contribution limits (TODO add input in frontend)
+    userRetireContributionLimit: { type: Number, required: true },
+    spouseRetireContributionLimit: { type: Number, required: function () { return this.isMarriedCouple;} },
+
     //roth conversion strategy 
     rothConversionOpt: { type: Boolean, default: false },
     rothConversionStart: { type: Number },
