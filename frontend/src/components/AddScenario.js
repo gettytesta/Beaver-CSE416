@@ -299,7 +299,6 @@ export default function AddScenario() {
     {/* Save button*/}
     <div className="w-full mt-8 mb-8 flex justify-center">
       <button
-        //onClick={handleSaveScenario}
         onClick={() => {
           // Logic to save the scenario can go here
           // TODO - CREATE THE SCENARIO OBJECT
@@ -314,6 +313,7 @@ export default function AddScenario() {
           } else {
             // If the user is not a guest, save the scenario to the database
             // TODO - SAVE THE SCENARIO TO THE DATABASE
+            // handleSaveScenario();
           }
           alert("Scenario saved!");
         }}

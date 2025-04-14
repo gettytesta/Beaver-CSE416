@@ -1,4 +1,4 @@
-// Used Claude AI to generate these tests.
+// TP - Claude AI was used to generate these tests.
 // Prompt: Can you write a auth.test.js (Jest) script for testing the attached functionalities? <attached_files>
 
 const express = require('express');
