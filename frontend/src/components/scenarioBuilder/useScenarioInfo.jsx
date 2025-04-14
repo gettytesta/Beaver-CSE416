@@ -1,9 +1,10 @@
 import { useState, useRef, useEffect } from "react";
 import axios from "axios"; 
+import { useMemo } from "react";
 
 export default function useScenarioInfo() {
   const [filingStatus, setFilingStatus] = useState("single");
-  const [state, setState] = useState("New York");
+  const [state, setState] = useState("NONE");
   const [scenarioName, setScenarioName] = useState("");
   const [retirementAges, setRetirementAges] = useState([""]);
   const [financialGoal, setFinancialGoal] = useState("");
@@ -71,15 +72,63 @@ export default function useScenarioInfo() {
     { name: "Wyoming", code: "WY" }
   ];
 
-  const unavailableStates = ["WY", "AK"];
-  const stateRequiresUpload = unavailableStates.includes(state);
+  const [supportedStates, setSupportedStates] = useState([]);
 
-  const handleYamlUpload = (e) => {
+  useEffect(() => {
+    const fetchAvailableStates = async () => {
+      try {
+        const res = await axios.get(`${process.env.NEXT_PUBLIC_BACKEND_URL}/api/yaml/statetax/available`);
+        if (res.data.success) {
+          setSupportedStates(res.data.data); // array like ["NY", "NJ", "CT"]
+        }
+      } catch (err) {
+        console.error("Failed to fetch supported state tax files:", err);
+      }
+    };
+
+    fetchAvailableStates();
+  }, []);
+
+  const stateRequiresUpload = useMemo(() => {
+    return state !== "NONE" && !supportedStates.includes(state);
+  }, [state, supportedStates]); //NO STATE TAXES DOESNT SHOW MESSAGE TO IGNORE
+
+
+  const handleYamlUpload = async (e) => {
     const file = e.target.files[0];
-    if (file) {
-      console.log("Selected YAML file:", file.name);
+    if (!file) return;
+  
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+      formData.append('selectedStateCode', state); // <- Required for backend validation
+  
+      const res = await axios.post(
+        `${process.env.NEXT_PUBLIC_BACKEND_URL}/api/yaml/statetax/upload`,
+        formData,
+        { withCredentials: true, headers: { 'Content-Type': 'multipart/form-data' } }
+      );
+  
+      if (res.data.success) {
+        alert(`YAML file for ${state} uploaded successfully.`);
+  
+        // ✅ Re-fetch supported states
+        const refresh = await axios.get(`${process.env.NEXT_PUBLIC_BACKEND_URL}/api/yaml/statetax/available`);
+        if (refresh.data.success) {
+          setSupportedStates(refresh.data.data);
+        }
+  
+        //Reset ignore flag if user had clicked "Ignore"
+        setIgnoreStateTax(false);
+      } else {
+        alert(`Upload failed: ${res.data.message}`);
+      }
+    } catch (err) {
+      console.error("YAML Upload Error:", err.response?.data || err.message);
+      alert("❌ Error uploading YAML file.");
     }
   };
+  
 
   const handleBirthYearChange = (index, value) => {
     const updated = [...birthYears];

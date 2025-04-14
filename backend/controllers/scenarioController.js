@@ -127,35 +127,59 @@ exports.getScenario = async (req, res) => {
  */
 exports.createScenario = async (req, res) => {
     try {
-        if (!req.user) {
-            return res.status(401).json({
-                success: false,
-                message: 'Not authenticated'
+      if (!req.user) {
+        return res.status(401).json({
+          success: false,
+          message: 'Not authenticated'
+        });
+      }
+  
+      // Add userId to scenario data
+      const scenarioData = {
+        ...req.body,
+        userId: req.user._id
+      };
+  
+      const isMarried = scenarioData.isMarriedCouple === true;
+  
+      // ✅ Custom validation for eventSeriesSet
+      for (const event of scenarioData.eventSeriesSet || []) {
+        if (event.type === "income") {
+          if (isMarried && (event.income?.userPct === undefined || event.income?.userPct === "")) {
+            return res.status(400).json({
+              success: false,
+              message: "Validation error: income.userPct is required for married scenarios"
             });
+          }
         }
-
-        // Add userId to scenario data
-        const scenarioData = {
-            ...req.body,
-            userId: req.user._id
-        };
-
-        // Create new scenario
-        const scenario = new Scenario(scenarioData);
-        await scenario.save();
-
-        res.status(201).json({
-            success: true,
-            data: scenario
-        });
+  
+        if (event.type === "expense") {
+          if (isMarried && (event.expense?.userPct === undefined || event.expense?.userPct === "")) {
+            return res.status(400).json({
+              success: false,
+              message: "Validation error: expense.userPct is required for married scenarios"
+            });
+          }
+        }
+      }
+  
+      // Create new scenario
+      const scenario = new Scenario(scenarioData);
+      await scenario.save();
+  
+      res.status(201).json({
+        success: true,
+        data: scenario
+      });
+  
     } catch (error) {
-        res.status(400).json({
-            success: false,
-            message: 'Error creating scenario',
-            error: error.message
-        });
+      res.status(400).json({
+        success: false,
+        message: 'Error creating scenario',
+        error: error.message
+      });
     }
-};
+  };
 
 /**
  * Update a scenario

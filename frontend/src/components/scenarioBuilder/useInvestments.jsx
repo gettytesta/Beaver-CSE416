@@ -1,8 +1,12 @@
 import { useState } from "react";
+import { v4 as uuidv4 } from 'uuid';
 
 export default function useInvestments() {
   // ================== INVESTMENTS INFO SECTION ==================
-  const [investments, setInvestments] = useState([{ value: "", taxStatus: "", type: "" }]);
+
+  const [investments, setInvestments] = useState([
+    { _id: uuidv4(), value: "", taxStatus: "", type: "" }
+  ]);
   const [investmentTypes, setInvestmentTypes] = useState([]);
   const [showInvestmentTypeModal, setShowInvestmentTypeModal] = useState(false);
   const [editIndex, setEditIndex] = useState(null); 
@@ -26,7 +30,7 @@ export default function useInvestments() {
   };
 
   const addInvestment = () => {
-    setInvestments([...investments, { value: "", taxStatus: "", type: "" }]);
+    setInvestments([...investments, { _id: uuidv4(), value: "", taxStatus: "", type: "" }]);
   };
 
   const removeInvestment = () => {

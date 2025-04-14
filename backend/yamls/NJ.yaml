@@ -1,0 +1,97 @@
+stateCode: NJ
+single:
+  incomeTaxBrackets:
+    - min: 1
+      max: 20000
+      rate: 0.014
+    - min: 20001
+      max: 35000
+      rate: 0.0175
+    - min: 35001
+      max: 40000
+      rate: 0.035
+    - min: 40001
+      max: 75000
+      rate: 0.0553
+    - min: 75001
+      max: 500000
+      rate: 0.0637
+    - min: 500001
+      max: 1000000
+      rate: 0.0897
+    - min: 1000001
+      max: null
+      rate: 0.1075
+  capitalGainsBrackets:
+    - min: 1
+      max: 20000
+      rate: 0.014
+    - min: 20001
+      max: 35000
+      rate: 0.0175
+    - min: 35001
+      max: 40000
+      rate: 0.035
+    - min: 40001
+      max: 75000
+      rate: 0.0553
+    - min: 75001
+      max: 500000
+      rate: 0.0637
+    - min: 500001
+      max: 1000000
+      rate: 0.0897
+    - min: 1000001
+      max: null
+      rate: 0.1075
+marriedFilingJointly:
+  incomeTaxBrackets:
+    - min: 1
+      max: 20000
+      rate: 0.014
+    - min: 20001
+      max: 50000
+      rate: 0.0175
+    - min: 50001
+      max: 70000
+      rate: 0.0245
+    - min: 70001
+      max: 80000
+      rate: 0.035
+    - min: 80001
+      max: 150000
+      rate: 0.0553
+    - min: 150001
+      max: 500000
+      rate: 0.0637
+    - min: 500001
+      max: 1000000
+      rate: 0.0897
+    - min: 1000001
+      max: null
+      rate: 0.1075
+  capitalGainsBrackets:
+    - min: 1
+      max: 20000
+      rate: 0.014
+    - min: 20001
+      max: 50000
+      rate: 0.0175
+    - min: 50001
+      max: 70000
+      rate: 0.0245
+    - min: 70001
+      max: 80000
+      rate: 0.035
+    - min: 80001
+      max: 150000
+      rate: 0.0553
+    - min: 150001
+      max: 500000
+      rate: 0.0637
+    - min: 500001
+      max: 1000000
+      rate: 0.0897
+    - min: 1000001
+      max: null
+      rate: 0.1075

@@ -28,8 +28,8 @@ import {
     const handleDragEnd = (event) => {
       const { active, over } = event;
       if (active.id !== over?.id) {
-        const oldIndex = rothConversionStrategy.findIndex((i) => i === active.id);
-        const newIndex = rothConversionStrategy.findIndex((i) => i === over?.id);
+        const oldIndex = rothConversionStrategy.findIndex((i) => i.id === active.id);
+        const newIndex = rothConversionStrategy.findIndex((i) => i.id === over?.id);
         setRothConversionStrategy((items) => arrayMove(items, oldIndex, newIndex));
       }
     };
@@ -113,8 +113,8 @@ import {
                     strategy={verticalListSortingStrategy}
                   >
                     <div className="space-y-2">
-                      {rothConversionStrategy.map((item, index) => (
-                        <SortableItem key={item} id={item} name={item} index={index} />
+                    {rothConversionStrategy.map((item, index) => (
+                        <SortableItem key={item.id} id={item.id} name={item.name} index={index} />
                       ))}
                     </div>
                   </SortableContext>
