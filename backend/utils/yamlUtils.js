@@ -18,11 +18,14 @@ exports.convertYamlToScenario = (yamlData, userId) => {
     data.userBirthYear = yamlData.birthYears[0];
     data.userLifeExpectancy = convertYamlToDistribution(yamlData.lifeExpectancy[0]);
     data.userRetirementAge = 65; // hard-coded, can't be found in scenario.yaml
+    data.userRetireContributionLimit = yamlData.userRetireContributionLimit || 0;
+
     if (data.isMarriedCouple)
     {
         data.spouseBirthYear = yamlData.birthYears[1];
         data.spouseLifeExpectancy = convertYamlToDistribution(yamlData.lifeExpectancy[1]);
         data.spouseRetirementAge = 65; // also hard-coded
+        data.spouseRetireContributionLimit = yamlData.spouseRetireContributionLimit || 0;
     }
 
     // set up investment types
@@ -174,6 +177,8 @@ exports.convertScenarioToYaml = (scenario) => {
         RothConversionEnd: scenario.rothConversionEnd || undefined,
         financialGoal: scenario.financialGoal,
         residenceState: scenario.userStateOfResidence,
+        userRetireContributionLimit: scenario.userRetireContributionLimit,
+        spouseRetireContributionLimit: scenario.spouseRetireContributionLimit || undefined,
     };
 
     let investmentTypes = {};
@@ -256,7 +261,6 @@ exports.convertScenarioToYaml = (scenario) => {
     obj.investmentTypes = Object.values(investmentTypes);
     obj.investments = investments;
     obj.eventSeries = eventSeries;
-    console.log(scenario.rmdStrategy);
     obj.spendingStrategy = scenario.spendingStrategy.map(e =>
         scenario.eventSeriesSet.find(t => t._id.toString() === e.toString())?.name
     );
