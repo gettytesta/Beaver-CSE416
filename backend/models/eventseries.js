@@ -33,234 +33,237 @@ const EventStartSchema = new Schema({
 });
 
 
-//NEED TO ADD VALIDATORS
-const IncomeSchema = new Schema({
-  initialAmount: { type: Number, required: true }, // 1. Initial $
-
-  changeAmtOrPct: { // 2. Amount vs Percentage
-    type: String,
-    enum: ['amount', 'percent'],
-    required: true,
-  },
-
-  changeDistribution: { // 2. Fixed, Uniform, or Normal
-    type: DistributionSchema,
-    required: true
-  },
-
-  adjustForInflation: { type: Boolean, required: true }, // 3. Inflation
-
-  userPct: { type: Number, min: 0, max: 100 }, // 4. % for user (optional if not married)
-
-  isSocialSecurity: { type: Boolean, required: true }, // 5. Social Security flag
-});
-
-
-const ExpenseSchema = new Schema({
-  initialAmount: { type: Number, required: true },
-
-  changeAmtOrPct: {
-    type: String,
-    enum: ["amount", "percent"],
-    required: true,
-  },
-
-  changeDistribution: {
-    type: DistributionSchema,
-    required: true,
-  },
-
-  adjustForInflation: { type: Boolean, required: true },
-  userPct: { type: Number, required: true }, // used if isMarried
-  discretionary: { type: Boolean, required: true },
-});
-
-
-const InvestSchema = new Schema({
-  allocationType: {
-    type: String,
-    enum: ['fixed', 'glide'],
-    default: 'fixed',
-    required: true,
-  },
-
-  selectedInvestments: [
-    {
-      type: Schema.Types.ObjectId,
-      ref: 'Investment',
+  //NEED TO ADD VALIDATORS
+  const IncomeSchema = new Schema({
+    initialAmount: { type: Number, required: true }, // 1. Initial $
+  
+    changeAmtOrPct: { // 2. Amount vs Percentage
+      type: String,
+      enum: ['amount', 'percent'],
       required: true,
     },
-  ],
-
-  allocations: {
-    type: Map,
-    of: new Schema(
-      {
-        value: {
-          type: Number,
-          min: 0,
-          max: 100,
-        },
-        initial: {
-          type: Number,
-          min: 0,
-          max: 100,
-        },
-        final: {
-          type: Number,
-          min: 0,
-          max: 100,
-        },
-      },
-      { _id: false }
-    ),
-    required: true,
-    validate: {
-      validator: function (allocations) {
-        const isGlide = this.allocationType === 'glide';
-
-        const total = Array.from(allocations.values()).reduce((sum, obj) => {
-          if (isGlide) {
-            return sum + ((obj.initial || 0) + (obj.final || 0)) / 2;
-          }
-          return sum + (obj.value || 0);
-        }, 0);
-
-        return Math.round(total) === 100;
-      },
-      message:
-        'Total allocation must sum to 100%. For glide, both initial and final totals should equal 100%.',
+  
+    changeDistribution: { // 2. Fixed, Uniform, or Normal
+      type: DistributionSchema,
+      required: true
     },
-  },
+  
+    adjustForInflation: { type: Boolean, required: true }, // 3. Inflation
+  
+    userPct: { type: Number, min: 0, max: 1 }, // 4. % for user (optional if not married)
+  
+    isSocialSecurity: { type: Boolean, required: true }, // 5. Social Security flag
+  });
 
-  // maxCash addition
-  maxCash: {
-    type: Number,
-    min: 0,
-    default: 0,
-    required: true,
-  },
-});
 
-const RebalanceSchema = new Schema({
-  allocationType: {
-    type: String,
-    enum: ['fixed', 'glide'],
-    default: 'fixed',
-    required: true,
-  },
-
-  selectedInvestments: [
-    {
-      type: Schema.Types.ObjectId,
-      ref: 'Investment',
+  const ExpenseSchema = new Schema({
+    initialAmount: { type: Number, required: true },
+  
+    changeAmtOrPct: {
+      type: String,
+      enum: ["amount", "percent"],
       required: true,
     },
-  ],
+  
+    changeDistribution: {
+      type: DistributionSchema,
+      required: true,
+    },
+  
+    adjustForInflation: { type: Boolean, required: true },
+    userPct: { type: Number, min: 0, max: 1 }, // used if isMarried
+    discretionary: { type: Boolean, required: true },
+  });
 
-  allocations: {
-    type: Map,
-    of: new Schema(
+
+  const InvestSchema = new Schema({
+    allocationType: {
+      type: String,
+      enum: ['fixed', 'glide'],
+      default: 'fixed',
+      required: true,
+    },
+  
+    selectedInvestments: [
       {
-        value: {
-          type: Number,
-          min: 0,
-          max: 100,
-        },
-        initial: {
-          type: Number,
-          min: 0,
-          max: 100,
-        },
-        final: {
-          type: Number,
-          min: 0,
-          max: 100,
-        },
+        type: Schema.Types.ObjectId,
+        ref: 'Investment',
+        required: true,
       },
-      { _id: false }
-    ),
-    required: true,
-    validate: {
-      validator: function (allocations) {
-        const isGlide = this.allocationType === 'glide';
-
-        const total = Array.from(allocations.values()).reduce((sum, obj) => {
-          if (isGlide) {
-            return sum + ((obj.initial || 0) + (obj.final || 0)) / 2;
-          }
-          return sum + (obj.value || 0);
-        }, 0);
-
-        return Math.round(total) === 100;
+    ],
+  
+    allocations: {
+      type: Map,
+      of: new Schema(
+        {
+          value: {
+            type: Number,
+            min: 0,
+            max: 1,
+          },
+          initial: {
+            type: Number,
+            min: 0,
+            max: 1,
+          },
+          final: {
+            type: Number,
+            min: 0,
+            max: 1,
+          },
+        },
+        { _id: false }
+      ),
+      required: true,
+      validate: {
+        validator: function (allocations) {
+          const isGlide = this.allocationType === 'glide';
+  
+          const total = Array.from(allocations.values()).reduce((sum, obj) => {
+            if (isGlide) {
+              return sum + ((obj.initial || 0) + (obj.final || 0)) / 2;
+            }
+            return sum + (obj.value || 0);
+          }, 0);
+  
+          return Math.round(total) === 1;
+        },
+        message:
+          'Total allocation must sum to 100%. For glide, both initial and final totals should equal 100%.',
       },
-      message:
-        'Total allocation must sum to 100%. For glide, both initial and final totals should equal 100%.',
     },
-  },
-});
-
-const EventSeriesSchema = new Schema({
-  name: {
-    type: String,
-    required: true,
-  },
-
-  description: {
-    type: String,
-    default: "", // Optional
-  },
-
-  start: {
-    type: EventStartSchema,
-    required: true,
-  },
-
-  duration: {
-    type: DistributionSchema,
-    required: true,
-  },
-
-  type: {
-    type: String,
-    enum: ['income', 'expense', 'invest', 'rebalance'],
-    required: true,
-  },
-
-  income: {
-    type: IncomeSchema,
-    required: function () {
-      return this.type === 'income';
+  
+    // maxCash addition
+    maxCash: {
+      type: Number,
+      min: 0,
+      default: 0,
+      required: true,
     },
-  },
+  });
 
-  expense: {
-    type: ExpenseSchema,
-    required: function () {
-      return this.type === 'expense';
+  const RebalanceSchema = new Schema({
+    allocationType: {
+      type: String,
+      enum: ['fixed', 'glide'],
+      default: 'fixed',
+      required: true,
     },
-  },
-
-  invest: {
-    type: InvestSchema,
-    required: function () {
-      return this.type === 'invest';
+  
+    selectedInvestments: [
+      {
+        type: Schema.Types.ObjectId,
+        ref: 'Investment',
+        required: true,
+      },
+    ],
+  
+    allocations: {
+      type: Map,
+      of: new Schema(
+        {
+          value: {
+            type: Number,
+            min: 0,
+            max: 1,
+          },
+          initial: {
+            type: Number,
+            min: 0,
+            max: 1,
+          },
+          final: {
+            type: Number,
+            min: 0,
+            max: 1,
+          },
+        },
+        { _id: false }
+      ),
+      required: true,
+      validate: {
+        validator: function (allocations) {
+          const isGlide = this.allocationType === 'glide';
+  
+          const total = Array.from(allocations.values()).reduce((sum, obj) => {
+            if (isGlide) {
+              return sum + ((obj.initial || 0) + (obj.final || 0)) / 2;
+            }
+            return sum + (obj.value || 0);
+          }, 0);
+  
+          return Math.round(total) === 1;
+        },
+        message:
+          'Total allocation must sum to 100%. For glide, both initial and final totals should equal 100%.',
+      },
     },
-  },
+  });
 
-  rebalance: {
-    type: RebalanceSchema,
-    required: function () {
-      return this.type === 'rebalance';
+  const EventSeriesSchema = new Schema({
+    name: {
+      type: String,
+      required: true,
     },
-  },
-});
+  
+    description: {
+      type: String,
+      default: "", // Optional
+    },
+  
+    start: {
+      type: EventStartSchema,
+      required: true,
+    },
+  
+    duration: {
+      type: DistributionSchema,
+      required: true,
+    },
+  
+    type: {
+      type: String,
+      enum: ['income', 'expense', 'invest', 'rebalance'],
+      required: true,
+    },
+  
+    income: {
+      type: IncomeSchema,
+      required: function () {
+        return this.type === 'income';
+      },
+    },
+  
+    expense: {
+      type: ExpenseSchema,
+      required: function () {
+        return this.type === 'expense';
+      },
+    },
+  
+    invest: {
+      type: InvestSchema,
+      required: function () {
+        return this.type === 'invest';
+      },
+    },
+  
+    rebalance: {
+      type: RebalanceSchema,
+      required: function () {
+        return this.type === 'rebalance';
+      },
+    },
+  });
 
+  const EventSeries = mongoose.model('EventSeries', EventSeriesSchema);
+  
 
 module.exports = {
-  EventSeriesSchema,
-  IncomeSchema,
-  ExpenseSchema,
-  InvestSchema,
-  RebalanceSchema,
-};
+    EventSeries,
+    EventSeriesSchema,
+    IncomeSchema,
+    ExpenseSchema,
+    InvestSchema,
+    RebalanceSchema,
+  };

@@ -7,13 +7,13 @@ const { InvestmentTypeSchema } = require('./investmentType');
 
 
 const AccountTaxStatus = Object.freeze({
-    NON_RETIREMENT: "nonretirement",
-    PRE_TAX_RETIREMENT: "pretaxretirement",
-    POST_TAX_RETIREMENT: "posttaxretirement",
+    NON_RETIREMENT: "non-retirement",
+    PRE_TAX_RETIREMENT: "pre-tax",
+    POST_TAX_RETIREMENT: "after-tax",
 });
 
-const InvestmentSchema = new Schema({
-    _id: {type: String, required: true},
+var InvestmentSchema = new Schema({
+    id: {type: String, required: true},
     type: {type: InvestmentTypeSchema, required: true},
     value: {type: Number, required: true},
     accountTaxStatus: {
