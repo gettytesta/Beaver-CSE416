@@ -17,10 +17,12 @@ exports.convertYamlToScenario = (yamlData, userId) => {
     data.isMarriedCouple = yamlData.maritalStatus === 'couple';
     data.userBirthYear = yamlData.birthYears[0];
     data.userLifeExpectancy = convertYamlToDistribution(yamlData.lifeExpectancy[0]);
+    data.userRetirementAge = 65; // hard-coded, can't be found in scenario.yaml
     if (data.isMarriedCouple)
     {
         data.spouseBirthYear = yamlData.birthYears[1];
         data.spouseLifeExpectancy = convertYamlToDistribution(yamlData.lifeExpectancy[1]);
+        data.spouseRetirementAge = 65; // also hard-coded
     }
 
     // set up investment types
@@ -50,7 +52,7 @@ exports.convertYamlToScenario = (yamlData, userId) => {
         })[investment.taxStatus];
         investments.push(
             new Investment({
-                _id: investment.id,
+                id: investment.id,
                 type: investmentType[investment.investmentType],
                 value: investment.value,
                 accountTaxStatus: ts,
@@ -101,7 +103,7 @@ exports.convertYamlToScenario = (yamlData, userId) => {
                     maxCash: event.maxCash,
                 }
                 series.invest.selectedInvestments = Object.keys(event.assetAllocation).map(k =>
-                    investments.find(i => i._id === k)?._id
+                    investments.find(i => i.id === k)?._id
                 );
                 series.invest.allocations = {};
                 if (event.glidePath)
@@ -120,7 +122,7 @@ exports.convertYamlToScenario = (yamlData, userId) => {
                 series.rebalance = {};
                 series.rebalance.allocationType = 'fixed';
                 series.rebalance.selectedInvestments = Object.keys(event.assetAllocation).map(k =>
-                    investments.find(i => i._id === k)?._id
+                    investments.find(i => i.id === k)?._id
                 );
                 series.rebalance.allocations = {};
                 Object.keys(event.assetAllocation).forEach(k => 
@@ -137,13 +139,13 @@ exports.convertYamlToScenario = (yamlData, userId) => {
     data.eventSeriesSet = eventSeriesSet;
     data.spendingStrategy = eventSeriesSet.filter(e => e.name in yamlData.spendingStrategy);
 
-    data.expenseWithdrawalStrategy = investments.filter(i => i._id in yamlData.expenseWithdrawalStrategy);
+    data.expenseWithdrawalStrategy = investments.filter(i => i.id in yamlData.expenseWithdrawalStrategy);
 
     data.inflationAssumption = convertYamlToDistribution(yamlData.inflationAssumption);
     data.rothConversionOpt = yamlData.RothConversionOpt;
     data.rothConversionStart = yamlData.RothConversionStart;
     data.rothConversionEnd = yamlData.RothConversionEnd;
-    data.rothConversionStrategy = investments.filter(i => i._id in yamlData.RMDStrategy);
+    data.rothConversionStrategy = investments.filter(i => i.id in yamlData.RMDStrategy);
     data.afterTaxContributionLimit = yamlData.afterTaxContributionLimit;
     data.financialGoal = yamlData.financialGoal;
     data.userStateOfResidence = yamlData.residenceState;
@@ -197,9 +199,10 @@ function convertYamlToDistribution(yamlData)
     let type = ({
         ['fixed']: DistributionTypes.FIXED,
         ['normal']: DistributionTypes.NORMAL,
-        ['uniform']: DistributionTypes.UNIFORM
+        ['uniform']: DistributionTypes.UNIFORM,
+        ['GBM']: DistributionTypes.GBM,
     })[yamlData.type];
-    let data = {}
+    let data = {};
     switch (type)
     {
         case DistributionTypes.FIXED:
@@ -212,6 +215,10 @@ function convertYamlToDistribution(yamlData)
         case DistributionTypes.UNIFORM:
             data.lower = yamlData.lower;
             data.upper = yamlData.upper;
+            break;
+        case DistributionTypes.GBM:
+            data.mu = yamlData.mu;
+            data.sigma = yamlData.sigma;
             break;
         default: // unrecognized type
             return new Error('Invalid type');

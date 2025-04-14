@@ -13,7 +13,7 @@ const AccountTaxStatus = Object.freeze({
 });
 
 var InvestmentSchema = new Schema({
-    _id: {type: String, required: true},
+    id: {type: String, required: true},
     type: {type: InvestmentTypeSchema, required: true},
     value: {type: Number, required: true},
     accountTaxStatus: {
