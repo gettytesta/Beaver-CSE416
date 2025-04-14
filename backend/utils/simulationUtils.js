@@ -1,23 +1,12 @@
-/**
- * Generates a random value from a normal distribution
- * @param {number} mean - The mean of the distribution
- * @param {number} stdev - The standard deviation of the distribution
- * @returns {number} A random value from the distribution
- */
-function generateNormalRandom(mean, stdev) {
+
+exports.generateNormalRandom = (mean, stdev) => {
     const u1 = Math.random();
     const u2 = Math.random();
     const z0 = Math.sqrt(-2.0 * Math.log(u1)) * Math.cos(2.0 * Math.PI * u2);
     return z0 * stdev + mean;
 }
 
-/**
- * Samples a value from a distribution object
- * @param {Object} distObj - The distribution object
- * @param {string} distObj.type - The type of distribution ('fixed', 'normal', 'uniform')
- * @returns {number} A sampled value from the distribution
- */
-function sampleValueFromDistribution(distObj) {
+exports.sampleValueFromDistribution = (distObj) => {
     if (!distObj || !distObj.type) {
         return 0; // Avoid throwing errors.
     }
@@ -27,7 +16,7 @@ function sampleValueFromDistribution(distObj) {
             return distObj.value;
 
         case 'normal':
-            return generateNormalRandom(distObj.mean, distObj.stdev);
+            return this.generateNormalRandom(distObj.mean, distObj.stdev);
 
         case 'uniform':
             return distObj.lower + Math.random() * (distObj.upper - distObj.lower);
@@ -37,33 +26,33 @@ function sampleValueFromDistribution(distObj) {
     }
 }
 
-function adjustNumber (num, inflationRate) {
+exports.adjustNumber = (num, inflationRate) => {
     return Math.round(num * (1 + inflationRate));
 }
 
-function adjustTaxBrackets (taxBrackets, inflationRate) {
+exports.adjustTaxBrackets = (taxBrackets, inflationRate) => {
     function adjustBracket(bracket) {
         return {
-            lowerBound: adjustNumber(bracket.lowerBound), 
-            upperBound: adjustNumber(bracket.upperBound),
-            rate: adjustNumber(bracket.rate)
+            lowerBound: this.adjustNumber(bracket.lowerBound, inflationRate), 
+            upperBound: this.adjustNumber(bracket.upperBound, inflationRate),
+            rate: this.adjustNumber(bracket.rate, inflationRate)
         };
     }
 
     return {
-        standardDeduction: adjustNumber(taxBrackets.standardDeduction),
+        standardDeduction: this.adjustNumber(taxBrackets.standardDeduction, inflationRate),
         incomeTaxBrackets: taxBrackets.incomeTaxBrackets.map(adjustBracket),
         capitalGainsBrackets: taxBrackets.capitalGainsBrackets.map(adjustBracket)
     };
 }
 
-function initializeEvents (eventSeriesSet) {
+exports.initializeEvents = (eventSeriesSet) => {
     return eventSeriesSet
     .filter(eventSeries => eventSeries.type === 'income' || eventSeries.type === 'expense' || eventSeries.type === 'invest' || eventSeries.type === 'rebalance')
     .map(eventSeries => {
       // Sample and set start and duration
-      eventSeries.start = sampleValueFromDistribution(eventSeries.start);
-      eventSeries.duration = sampleValueFromDistribution(eventSeries.duration);
+      eventSeries.start = this.sampleValueFromDistribution(eventSeries.start);
+      eventSeries.duration = this.sampleValueFromDistribution(eventSeries.duration);
 
       // "unpack" the values for this type by spreading type-specific properties to the root level
       if (eventSeries.type === 'income' && eventSeries.income) {
@@ -86,50 +75,4 @@ function initializeEvents (eventSeriesSet) {
 
       return eventSeries;
     });
-}
-
-function calculateRMD(rmdTable, iraAccountBalance, age) {
-    const distributionPeriodNumber = rmdTable[age];
-    return iraAccountBalance / distributionPeriodNumber;
-}
-
-// Helper function to calculate income (simplified)
-function calculateIncome(incomeEvent, yearIndex, inflationRate) {
-    const baseAmount = incomeEvent.initialAmount;
-    
-    // Apply inflation adjustment if needed
-    if (incomeEvent.isInflationAdjusted) {
-        baseAmount *= Math.pow(1 + inflationRate, yearIndex);
-    }
-
-    // Apply change (either percent or absolute)
-    const changeValue = incomeEvent.isPercentChange 
-        ? baseAmount * sampleValueFromDistribution(incomeEvent.changeDistribution)
-        : sampleValueFromDistribution(incomeEvent.changeDistribution);
-
-    return baseAmount + changeValue;
-}
-
-// Helper function to calculate expenses (simplified)
-function calculateExpense(expenseEvent, yearIndex, inflationRate) {
-    const baseAmount = expenseEvent.initialAmount;
-    
-    // Apply inflation adjustment if needed
-    if (expenseEvent.isInflationAdjusted) {
-        baseAmount *= Math.pow(1 + inflationRate, yearIndex);
-    }
-
-    // Apply change (either percent or absolute)
-    const changeValue = expenseEvent.isPercentChange 
-        ? baseAmount * sampleValueFromDistribution(expenseEvent.changeDistribution)
-        : sampleValueFromDistribution(expenseEvent.changeDistribution);
-
-    return baseAmount + changeValue;
-}
-
-module.exports = {
-    sampleValueFromDistribution,
-    calculateRMD,
-    calculateIncome,
-    calculateExpense
 }

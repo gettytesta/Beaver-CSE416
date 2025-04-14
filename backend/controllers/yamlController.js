@@ -173,3 +173,69 @@ exports.getAvailableStateTaxFiles = async (req, res) => {
         });
     }
 };
+
+//Upload StateTaxYAML
+/**
+ * Upload a state tax YAML file and validate its contents
+ */
+exports.uploadStateTaxYaml = async (req, res) => {
+    try {
+        if (!req.file) {
+            return res.status(400).json({ success: false, message: 'No YAML file uploaded' });
+        }
+
+        const fileContent = fs.readFileSync(req.file.path, 'utf8');
+        let parsedYaml;
+
+        try {
+            parsedYaml = yaml.load(fileContent);
+        } catch (err) {
+            fs.unlinkSync(req.file.path);
+            return res.status(400).json({
+                success: false,
+                message: 'Invalid YAML syntax',
+                error: err.message,
+            });
+        }
+
+        const yamlStateCode = parsedYaml?.stateCode?.toUpperCase?.();
+        const selectedStateCode = req.body.selectedStateCode?.toUpperCase?.();
+
+        if (!yamlStateCode || !/^[A-Z]{2}$/.test(yamlStateCode)) {
+            fs.unlinkSync(req.file.path);
+            return res.status(400).json({
+                success: false,
+                message: 'YAML file must contain a valid 2-letter stateCode',
+            });
+        }
+
+        //Check match
+        if (yamlStateCode !== selectedStateCode) {
+            fs.unlinkSync(req.file.path);
+            return res.status(400).json({
+                success: false,
+                message: `Mismatch: YAML is for ${yamlStateCode}, but you selected ${selectedStateCode}.`,
+            });
+        }
+
+        const targetPath = path.join(__dirname, '..', 'yamls', `${yamlStateCode}.yaml`);
+        fs.renameSync(req.file.path, targetPath);
+
+        return res.status(200).json({
+            success: true,
+            message: `YAML file for ${yamlStateCode} uploaded successfully.`,
+        });
+    } catch (err) {
+        if (req.file && fs.existsSync(req.file.path)) {
+            fs.unlinkSync(req.file.path);
+        }
+
+        return res.status(500).json({
+            success: false,
+            message: 'Error uploading YAML file',
+            error: err.message,
+        });
+    }
+};
+
+  

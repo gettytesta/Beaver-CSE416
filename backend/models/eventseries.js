@@ -35,24 +35,24 @@ const EventStartSchema = new Schema({
 
   //NEED TO ADD VALIDATORS
   const IncomeSchema = new Schema({
-    initialAmount: { type: Number, required: true }, // 1. Initial $
+    initialAmount: { type: Number, required: true },
   
-    changeAmtOrPct: { // 2. Amount vs Percentage
+    changeAmtOrPct: {
       type: String,
       enum: ['amount', 'percent'],
       required: true,
     },
   
-    changeDistribution: { // 2. Fixed, Uniform, or Normal
+    changeDistribution: {
       type: DistributionSchema,
-      required: true
+      required: true,
     },
   
-    adjustForInflation: { type: Boolean, required: true }, // 3. Inflation
+    adjustForInflation: { type: Boolean, required: true },
   
-    userPct: { type: Number, min: 0, max: 1 }, // 4. % for user (optional if not married)
+    userPct: { type: Number, min: 0, max: 100 }, // ❌ remove required: true
   
-    isSocialSecurity: { type: Boolean, required: true }, // 5. Social Security flag
+    isSocialSecurity: { type: Boolean, required: true },
   });
 
 
@@ -71,7 +71,9 @@ const EventStartSchema = new Schema({
     },
   
     adjustForInflation: { type: Boolean, required: true },
-    userPct: { type: Number, min: 0, max: 1 }, // used if isMarried
+  
+    userPct: { type: Number, min: 0, max: 100 }, // ❌ remove required: true
+  
     discretionary: { type: Boolean, required: true },
   });
 
@@ -201,6 +203,10 @@ const EventStartSchema = new Schema({
   });
 
   const EventSeriesSchema = new Schema({
+    _id: {
+      type: String,         // <- Use String to support UUIDs
+      required: true,
+    },
     name: {
       type: String,
       required: true,
