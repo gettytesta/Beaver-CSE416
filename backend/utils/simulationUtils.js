@@ -37,6 +37,57 @@ function sampleValueFromDistribution(distObj) {
     }
 }
 
+function adjustNumber (num, inflationRate) {
+    return Math.round(num * (1 + inflationRate));
+}
+
+function adjustTaxBrackets (taxBrackets, inflationRate) {
+    function adjustBracket(bracket) {
+        return {
+            lowerBound: adjustNumber(bracket.lowerBound), 
+            upperBound: adjustNumber(bracket.upperBound),
+            rate: adjustNumber(bracket.rate)
+        };
+    }
+
+    return {
+        standardDeduction: adjustNumber(taxBrackets.standardDeduction),
+        incomeTaxBrackets: taxBrackets.incomeTaxBrackets.map(adjustBracket),
+        capitalGainsBrackets: taxBrackets.capitalGainsBrackets.map(adjustBracket)
+    };
+}
+
+function initializeEvents (eventSeriesSet) {
+    return eventSeriesSet
+    .filter(eventSeries => eventSeries.type === 'income' || eventSeries.type === 'expense' || eventSeries.type === 'invest' || eventSeries.type === 'rebalance')
+    .map(eventSeries => {
+      // Sample and set start and duration
+      eventSeries.start = sampleValueFromDistribution(eventSeries.start);
+      eventSeries.duration = sampleValueFromDistribution(eventSeries.duration);
+
+      // "unpack" the values for this type by spreading type-specific properties to the root level
+      if (eventSeries.type === 'income' && eventSeries.income) {
+        Object.assign(eventSeries, eventSeries.income);
+
+        // Initialize any new variables for this income event
+        eventSeries.currAmount = eventSeries.initialAmount;
+
+        delete eventSeries.income;
+      } else if (eventSeries.type === 'expense' && eventSeries.expense) {
+        Object.assign(eventSeries, eventSeries.expense);
+        delete eventSeries.expense;
+      } else if (eventSeries.type === 'invest' && eventSeries.invest) {
+        Object.assign(eventSeries, eventSeries.invest);
+        delete eventSeries.invest;
+      } else if (eventSeries.type === 'rebalance' && eventSeries.rebalance) {
+        Object.assign(eventSeries, eventSeries.rebalance);
+        delete eventSeries.rebalance;
+      }
+
+      return eventSeries;
+    });
+}
+
 function calculateRMD(rmdTable, iraAccountBalance, age) {
     const distributionPeriodNumber = rmdTable[age];
     return iraAccountBalance / distributionPeriodNumber;
