@@ -259,7 +259,13 @@ useEffect(() => {
   
 /////////////////////////SAVE SCENARIO////////////////////////////////////
 const router = useRouter();
-
+// TP: ChatGPT. Prompt: "Help me debug a large save function for a scenario builder form. Where should I put console.logs? How can I inspect nested state?"
+// 
+// This function sends the scenario data to the backend. I used ChatGPT extensively to debug this logic,
+// especially in figuring out how to inspect and format complex nested state like event series, strategies, and investment mappings.
+// GPT helped me decide where to place `console.log` statements both here and across multiple components (like Investments, ScenarioInfo, etc.)
+// to verify section-specific state and troubleshoot issues with form data and conditional rendering (e.g., for married vs single).
+// It also guided the formatting of tricky fields like inflation assumptions, investment types, and UUID-based strategies.
 
   const handleSaveScenario = async () => {
     try {   
