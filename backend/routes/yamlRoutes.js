@@ -42,4 +42,12 @@ router.get('/scenario/:id', auth, yamlController.exportScenarioYaml);
  */
 router.get('/statetax/available', yamlController.getAvailableStateTaxFiles);
 
+
+//UPLOAD STATE TAX YAML when creating scenario
+router.post(
+    '/statetax/upload',
+    upload.single('file'),
+    yamlController.uploadStateTaxYaml 
+  );
+
 module.exports = router; 

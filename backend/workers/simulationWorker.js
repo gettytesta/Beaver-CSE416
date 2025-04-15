@@ -1,5 +1,5 @@
 const { parentPort, workerData } = require('worker_threads');
-const { sampleValueFromDistribution, calculateRMD, calculateIncome, calculateExpense } = require('../utils/simulationUtils');
+const SimulationUtils = require('../utils/simulationUtils');
 
 /**
  * Runs a single simulation with the provided tax data
@@ -12,174 +12,181 @@ const { sampleValueFromDistribution, calculateRMD, calculateIncome, calculateExp
  */
 async function runSingleSimulation(scenario, simulationId, federalTax, stateTax, rmdTable) {
     try {
+
+        // ====================
+        // SIMULATION CONSTANTS
+        // ====================
+
         const startYear = new Date().getFullYear();
-        const userLifeExpectancy = sampleValueFromDistribution(scenario.userLifeExpectancy);
-        const userDeathYear = startYear + userLifeExpectancy;
-        const spouseLifeExpectancy = sampleValueFromDistribution(scenario.spouseLifeExpectancy);
-        const spouseDeathYear = startYear + spouseLifeExpectancy;
-        const endYear = Math.max(userDeathYear, spouseDeathYear);
+        const userLifeExpectancy = SimulationUtils.sampleValueFromDistribution(scenario.userLifeExpectancy);
+        const userDeathYear = scenario.userBirthYear + userLifeExpectancy;
+        const spouseLifeExpectancy = SimulationUtils.sampleValueFromDistribution(scenario.spouseLifeExpectancy);
+        const spouseDeathYear = scenario.spouseBirthYear + spouseLifeExpectancy;
+        const endYear = userDeathYear;
+        
+        // ====================
+        // SIMULATION VARIABLES
+        // ====================
 
-        // Handle inflation adjusted tax brackets
-        // TODO: Should capital gains be inflation adjusted?
-        let federalIncomeTaxBrackets; // Inflation Adjusted
-        let stateIncomeTaxBrackets; // Inflation Adjusted
-        if (scenario.isMarriedCouple) {
-            // System assumes filing status is Married filing jointly
-            federalIncomeTaxBrackets = federalTax.marriedFilingJointly.incomeTaxBrackets;
-            stateIncomeTaxBrackets = stateTax.marriedFilingJointly.incomeTaxBrackets;
-        } else {
-            // System assumes filing status is Single
-            federalIncomeTaxBrackets = federalTax.single.incomeTaxBrackets;
-            stateIncomeTaxBrackets = stateTax.single.incomeTaxBrackets;
-        }
+        let currYear = startYear;
 
-        // Handle inflation adjusted annual limits on retirement account contributions
-        // TODO: Find out where to get this value, for now just assume 20000.
-        // Idea: Implement new retirement account model, scrape IRS website for this information.
-        let userRetireContributionLimit = 20000; // Inflation Adjusted
-        let spouseRetireContributionLimit = 20000; // Inflation Adjusted
+        // Save tax brackets, they are inflation adjusted every year.
+        // System assumes filing status is Married filing jointly if the scenario is of a married couple, otherwise single.
+        let currFederalIncomeTaxBrackets = scenario.isMarriedCouple ? federalTax.marriedFilingJointly.incomeTaxBrackets : federalTax.single.incomeTaxBrackets;
+        let currStateIncomeTaxBrackets = scenario.isMarriedCouple ? stateTax.marriedFilingJointly.incomeTaxBrackets : stateTax.single.incomeTaxBrackets;
 
-        let netWorth = scenario.initialLimit;
-        const cashInvestmentValue = 0;
+        // Save annual limits on retirement account contributions, they are inflation adjusted every year.
+        let currUserRetireContributionLimit = scenario.userRetireContributionLimit;
+        let currSpouseRetireContributionLimit = scenario.spouseRetireContributionLimit;
 
-        let currentYear = startYear;
-        const delta = 1; // Increment years by 1
-        const simulationResults = {};
+        // Save active events
+        const allEvents = SimulationUtils.initializeEvents (scenario.eventSeriesSet);
+        let incomeEvents = allEvents.filter(event => event.type === 'income');
+        let expenseEvents = allEvents.filter(event => event.type === 'expense');
+        let investEvents = allEvents.filter(event => event.type === 'invest');
+        let rebalanceEvents = allEvents.filter(event => event.type === 'rebalance');
+        
+        // Cash investment
+        let cashInvestment = scenario.investments.find(investment => {investment.type.name === 'cash'});
 
-        // Initial setup of investments and cash
-        let investments = scenario.investments.map(inv => ({
-            ...inv,
-            currentValue: inv.value
-        }));
+        // Helper functions
+        const isUserDead = () => currYear >= userDeathYear;
+        const isSpouseDead = () => currYear >= spouseDeathYear;
+        const getUserAge = () => currYear - scenario.userBirthYear;
+        const shouldRunEvent = (event) => currYear >= event.start && currYear <= event.start + event.duration;
 
-        // Main simulation loop here.
-        while (currentYear < endYear) {
+        // ====================
+        // MAIN SIMULATION LOOP
+        // ====================
 
+        while (currYear < endYear) {
+
+            // ================
             // 1. Preliminaries
+            // ================
 
-            // Get inflation rate
-            const inflationRate = sampleValueFromDistribution(scenario.inflationAssumption);
+            // a. Get current year's inflation rate.
+            const currInflationRate = SimulationUtils.sampleValueFromDistribution(scenario.inflationAssumption);
 
-            // Apply inflationRate to each tax bracket
-            // TODO
+            // b. Compute and store inflation-adjusted tax brackets for the current year.
+            currFederalIncomeTaxBrackets = SimulationUtils.adjustTaxBrackets(currFederalIncomeTaxBrackets, currInflationRate);
+            currStateIncomeTaxBrackets = SimulationUtils.adjustTaxBrackets(currStateIncomeTaxBrackets, currInflationRate);
 
-            // Apply inflationRate to annual limit on retirement account contributions
-            userRetireContributionLimit *= inflationRate;
-            spouseRetireContributionLimit *= inflationRate;
+            // c. Compute and store inflation-adjusted annual limits on retirement account contributions.
+            currUserRetireContributionLimit = SimulationUtils.adjustNumber(currUserRetireContributionLimit, currInflationRate);
+            currSpouseRetireContributionLimit = SimulationUtils.adjustNumber(currSpouseRetireContributionLimit, currInflationRate);
 
+            // ===============================================================
             // 2. Run income events, adding the income to the cash investment.
+            // ===============================================================
 
-            let userCurYearIncome = 0; // Income from income events
-            let userCurYearSS = 0; // Income from social security benefits
+            let curYearIncome = 0;
+            let curYearSS = 0;
 
-            // Run income events
-            for (const event of scenario.eventSeriesSet) {
-                if (event.type === "income" && event.startYear <= currentYear) {
-                    let eventIncome = calculateIncome(event, currentYear, inflationRate) * event.userFraction;
-                    if (event.isSocialSecurity) {
-                        userCurYearSS += eventIncome;
-                    } else {
-                        userCurYearIncome += eventIncome;
-                    }
-                }
-            }
-
-            cashInvestmentValue = cashInvestmentValue + userCurYearIncome + userCurYearSS;
-
-            // 3. Perform the RMD for the previous year, if the user’s age is at least 74 and at the end of the previous
-            // year, there is at least one investment with tax status = “pre-tax” and with a positive value.
-
-            const preTaxInvestments = investments.filter(inv => 
-                inv.accountTaxStatus === 'pretaxretirement' && inv.currentValue > 0
-            );
-            if (currentYear - startYear >= 74 && preTaxInvestments.length > 0) {
-                const totalPreTaxValue = preTaxInvestments.reduce((sum, inv) => sum + inv.currentValue, 0);
-                const rmdAmount = calculateRMD(rmdTable, totalPreTaxValue, currentYear - scenario.userBirthYear);
+            incomeEvents.forEach(event => {
+                if (!shouldRunEvent(event)) return;
                 
-                // Withdraw RMD and add to cash
-                cashInvestmentValue += rmdAmount;
-            }
+                // a. Update and store the amount based on annual change.
+                let expectedAnnualChange = SimulationUtils.sampleValueFromDistribution(event.changeDistribution);
+                event.currAmount = event.changeAmtOrPct === 'amount' 
+                    ? expectedAnnualChange + event.currAmount 
+                    : (1 + expectedAnnualChange) * event.currAmount;
+                
+                // b. If the inflation-adjustment flag is set, adjust for inflation.
+                if (event.adjustForInflation) {
+                    event.currAmount = SimulationUtils.adjustNumber(event.currAmount, currInflationRate);
+                }
 
-            // 4. Update the values of investments, reflecting expected annual return, reinvestment of generated
-            // income, and subtraction of expenses.
+                // c. If user or their spouse is dead, omit their percentage of the amount.
+                // The system removes the dead person's amount and transfers all ownership to the survivor.
+                if (isUserDead() && event.userPct > 0) {
+                    event.currAmount -= (event.currAmount * event.userPct);
+                    event.userPct = 0;
+                }
+                if (isSpouseDead() && event.userPct < 100) {
+                    event.currAmount -= (event.currAmount * (100 - event.userPct));
+                    event.userPct = 100;
+                }
 
-            investments.forEach(inv => {
-                const baseReturn = inv.type.expectedAnnualReturn;
-                inv.currentValue *= (1 + baseReturn - inflationRate);
+                // d. Add the income to the cash investment.
+                cashInvestment.value += event.currAmount;
+                
+                // e. Update running total curYearIncome.
+                curYearIncome += event.currAmount;
+
+                // f. Update running total curYearSS of social security benefits if income type = social security
+                if (event.isSocialSecurity) {
+                    curYearSS += event.currAmount;
+                }
             });
 
-            // Calculate total net worth for the year
-            // const totalNetWorth = investments.reduce((sum, inv) => sum + inv.currentValue, 0);
-            // simulationResults[currentYear] = totalNetWorth;
+            // =========================================================================================================
+            // 3. Perform the RMD for the previous year, if the user’s age is at least 74 and at the end of the previous
+            // year, there is at least one investment with tax status = “pre-tax” and with a positive value.
+            // =========================================================================================================
 
-            // 5. Run the Roth conversion (RC) optimizer, if it is enabled.
+            // a. The first RMD is for the year in which the user turns 73, and is paid in the year in which the user turns 74.
+            if (getUserAge() >= 74) {
+
+            }
+
+            // =================================================================================================
+            // 4. Update the values of investments, reflecting expected annual return, reinvestment of generated
+            // income, and subtraction of expenses.
+            // =================================================================================================
 
             // TODO
 
+            // ============================================================
+            // 5. Run the Roth conversion (RC) optimizer, if it is enabled.
+            // ============================================================
+
+            // TODO
+
+            // ==================================================================================================
             // 6. Pay non-discretionary expenses and the previous year’s taxes, i.e., subtract them from the cash
             // investment. Perform additional withdrawals if needed to pay them.
+            // ==================================================================================================
 
             // TODO
 
+            // =====================================================================================================
             // 7. Pay discretionary expenses in the order given by the spending strategy, except stop if continuing
             // would reduce the user’s total assets below the financial goal. The last discretionary expense to be
             // paid can be partially paid, if incurring the entire expense would violate the financial goal. Perform
             // additional withdrawals if needed to pay them.
+            // =====================================================================================================
 
             // TODO
 
+            // =======================================================================================================
             // 8. Run the invest event scheduled for the current year, if any, by using excess cash to buy investments
             // included in the asset allocation in the invest event, apportioning the excess cash according to that
             // asset allocation.
+            // =======================================================================================================
 
             // TODO
 
+            // ======================================================================================================
             // 9. Run rebalance events scheduled for the current year, by selling and buying the investments included
             // in the specified asset allocation to achieve the specified ratios between their values.
+            // ======================================================================================================
 
             // TODO
 
-            // ===============================================
-            // Basic simulation algorithm for testing purposes
-            // ===============================================
-
-            // Income events
-            let _totalIncome = 0;
-            for (const event of scenario.eventSeriesSet) {
-                if (event.type === "income" && event.startYear <= currentYear) {
-                    _totalIncome += event.initialAmount * (event.isInflationAdjusted ? inflationRate : 1);
-                }
-            }
-
-            // Expense events
-            let _totalExpenses = 0;
-            for (const event of scenario.eventSeriesSet) {
-                if (event.type === "expense" && event.startYear <= currentYear) {
-                    _totalExpenses += event.initialAmount * (event.isInflationAdjusted ? inflationRate : 1);
-                }
-            }
-
-            // Investment growth
-            let _totalInvestments = 0;
-            for (const investmentId of scenario.investments) {
-                // Assume a basic return of 5% for now (to be refined later)
-                _totalInvestments += investmentId.value * 1.05;
-            }
-
-            // Net worth calculation
-            netWorth += _totalIncome - _totalExpenses + _totalInvestments;
-            simulationResults[currentYear] = netWorth;
-
-            // ================================================
-
             // Move on to the next year
-            currentYear += delta;
+            currYear += 1;
         }
+
+        // =================
+        // END OF SIMULATION
+        // =================
 
         return {
             simulationId,
             result: simulationResults
         };
+
     } catch (error) {
         console.error('Error in simulation:', error);
         throw error;

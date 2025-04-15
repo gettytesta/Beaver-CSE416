@@ -10,46 +10,54 @@ const { InvestmentSchema } = require('./investment');
 const { EventSeriesSchema } = require('./eventseries');
 
 var ScenarioSchema = new Schema({
-    name: { type: String, required: true },
-    userId: { type: Schema.Types.ObjectId, ref: 'User', required: true },
+    name: { type: String, required: true }, 
+    userId: { type: Schema.Types.ObjectId, ref: 'User', required: true }, 
     sharedWith: [SharedUserSchema],
-    isMarriedCouple: { type: Boolean, required: true },
-    userBirthYear: { type: Number, required: true },
-    spouseBirthYear: { type: Number, required: function () { return this.isMarriedCouple;} },
-    userRetirementAge: { type: Number, required: true },
-    spouseRetirementAge: { type: Number, required: function () { return this.isMarriedCouple; } },
-    userLifeExpectancy: { type: DistributionSchema, required: true },
-    spouseLifeExpectancy: { type: DistributionSchema, required: function () { return this.isMarriedCouple;} },
+    isMarriedCouple: { type: Boolean, required: true }, 
+    userBirthYear: { type: Number, required: true }, 
+    spouseBirthYear: { type: Number, required: function () { return this.isMarriedCouple;} }, 
+    userRetirementAge: { type: Number, required: true }, 
+    spouseRetirementAge: { type: Number, required: function () { return this.isMarriedCouple; } }, 
+    userLifeExpectancy: { type: DistributionSchema, required: true }, 
+    spouseLifeExpectancy: { type: DistributionSchema, required: function () { return this.isMarriedCouple;} }, 
     //investments
-    investments: { type: [InvestmentSchema], default: [] },
-    //eventSeries 
-    eventSeriesSet: { type: [EventSeriesSchema], default: [] },        //each scenario has its OWN eventSeries
+    investments: { type: [InvestmentSchema], default: [] }, 
+    //eventSeries
+    eventSeriesSet: { type: [EventSeriesSchema], default: [] },
 
-    //Spending Strategy
     spendingStrategy: {
-        type: [Schema.Types.ObjectId], //references to EventSeries (not just names)
-        ref: 'EventSeries', // reference to the EventSeries model
+        type: [String], // Just store the _id (UUID string) of the selected event series
         default: [],
     },
 
-    //Expense Strategy
-    expenseWithdrawalStrategy: { type: [Schema.Types.ObjectId], ref: 'Investment', default: [] },
 
-    //inflation assumption
-    inflationAssumption: { type: DistributionSchema, required: true },
+    //Expense Strategy
+    expenseWithdrawalStrategy: {
+        type: [String], // not [ObjectId] if using UUIDs
+        default: [],
+    },
+
+    //inflation assumption this is required 
+    inflationAssumption: { type: DistributionSchema, required: false }, 
+
+    // Retire contribution limits (TODO add input in frontend)
+    userRetireContributionLimit: { type: Number, required: true },
+    spouseRetireContributionLimit: { type: Number, required: function () { return this.isMarriedCouple;} },
 
     //roth conversion strategy 
     rothConversionOpt: { type: Boolean, default: false },
     rothConversionStart: { type: Number },
     rothConversionEnd: { type: Number },
-    rothConversionStrategy: { type: [Schema.Types.ObjectId], ref: 'Investment', default: [] },
+    rothConversionStrategy: { type: [String], default: [] }, // UUIDs instead of ObjectIds
+
 
     //not in frontend (not needed)
-    afterTaxContributionLimit: { type: Number, required: true },
+    afterTaxContributionLimit: { type: Number, required: false }, 
     
-    rmdStrategy: { type: [Schema.Types.ObjectId], ref: 'Investment', default: [] },
+    rmdStrategy: { type: [String], default: [] }, // UUID strings of selected investments
 
-    financialGoal: { type: Number, required: true },
+    financialGoal: { type: Number, required: true }, 
+    
     userStateOfResidence: {
         type: String, required: true,
         validate: {
@@ -57,6 +65,14 @@ var ScenarioSchema = new Schema({
             message: 'Invalid US state abbreviation'
         }
     },
+    //State Tax available yes or no 
+    stateTaxStatus: {
+        type: String,
+        enum: ["used", "ignored", "none"],
+        required: true,
+        default: "none",
+    },
+
     createdAt: {
         type: Date,
         default: Date.now

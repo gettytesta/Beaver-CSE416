@@ -24,7 +24,7 @@ import {
   verticalListSortingStrategy,
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 // Check if the user is a guest or not
 import ScenarioInfo from "./scenarioBuilder/ScenarioInfo";
 import useScenarioInfo from "./scenarioBuilder/useScenarioInfo";
@@ -38,9 +38,16 @@ import ExpenseWithdrawalStrategy from './scenarioBuilder/ExpenseWithdrawalStrate
 import InflationAssumption from "./scenarioBuilder/InflationAssumption";
 import RothConversionOptimizer from './scenarioBuilder/RothConversionOptimizer';
 import RmdStrategy from "./scenarioBuilder/RmdStrategy";
+import axios from "axios";
+import { useRouter } from "next/navigation";
 
 
-export default function AddScenario() {
+
+
+
+export default function AddScenario({ isEdit = false, scenarioId = null, prefilledScenario = null }) {
+
+  
 
   // ================== SCENARIO INFO SECTION ==================
   const {
@@ -71,9 +78,11 @@ export default function AddScenario() {
     showLifespanModal,
     setShowLifespanModal,
     ignoreStateTax,             
-    setIgnoreStateTax
+    setIgnoreStateTax,
+    supportedStates
   } = useScenarioInfo();
   //components/UseScenarioInfo.jsx to edit this
+  //get rid of supported states?
 
   // ================== INVESTMENTS SECTION ==================
   const {
@@ -110,17 +119,94 @@ export default function AddScenario() {
     removeEventSeries,
     openEventModal,
   } = useEventSeries();
+
+  useEffect(() => {
+    if (!isEdit || !prefilledScenario) return;
+  
+    console.log("🔁 Prefilling scenario:", prefilledScenario);
+  
+    // Scenario Info
+    setScenarioName(prefilledScenario.name || "");
+    setFilingStatus(prefilledScenario.isMarriedCouple ? "married" : "single");
+    setBirthYears([
+      prefilledScenario.userBirthYear || "",
+      prefilledScenario.spouseBirthYear || ""
+    ]);
+    setRetirementAges([
+      prefilledScenario.userRetirementAge || "",
+      prefilledScenario.spouseRetirementAge || ""
+    ]);
+    setLifespanValues([
+      prefilledScenario.userLifeExpectancy || {},
+      prefilledScenario.spouseLifeExpectancy || {}
+    ]);
+    setState(prefilledScenario.userStateOfResidence || "");
+    setFinancialGoal(prefilledScenario.financialGoal || "");
+    setIgnoreStateTax(prefilledScenario.stateTaxStatus === "ignored");
+  
+    // Investments
+    setInvestments(prefilledScenario.investments || []);
+    const types = (prefilledScenario.investments || []).map(inv => inv.type);
+    setInvestments(
+      (prefilledScenario.investments || []).map((inv) => ({
+        ...inv,
+        type: inv.type.name,               // flatten embedded type back to name
+        taxStatus: inv.accountTaxStatus,   // assign tax status for dropdown
+      }))
+    );
+  
+    // Event Series
+    setEventSeries(prefilledScenario.eventSeriesSet || []);
+  
+    // Inflation Assumption
+    setInflation(prefilledScenario.inflationAssumption || { type: "fixed", value: "" });
+  
+    // Strategies
+    setSpendingStrategy((prefilledScenario.spendingStrategy || []).map(id => ({ id, name: id })));
+    setWithdrawalStrategy((prefilledScenario.expenseWithdrawalStrategy || []).map(id => ({ id, name: id })));
+    setRmdStrategy((prefilledScenario.rmdStrategy || []).map(id => ({ id, name: id })));
+  
+    // Roth Conversion
+    setEnableRothConversion(prefilledScenario.rothConversionOpt || false);
+    setRothStartYear(prefilledScenario.rothConversionStart || "");
+    setRothEndYear(prefilledScenario.rothConversionEnd || "");
+    setRothConversionStrategy((prefilledScenario.rothConversionStrategy || []).map(id => ({ id, name: id })));
+  
+  }, [isEdit, prefilledScenario]);
   
   // ================== Spending Strategy SECTION ==================
- //TEMP DUMMY DATA
-  const [spendingStrategy, setSpendingStrategy] = useState([
-    { id: "expense-a", name: "Discretionary Expense A" },
-    { id: "expense-b", name: "Discretionary Expense B" },
-  ]);
+  useEffect(() => {
+    const discretionaryExpenses = eventSeries
+      .filter(
+        (event) =>
+          event.type === "expense" &&
+          (event.expense?.discretionary ?? event.expense?.isDiscretionary)
+      )
+      .map((event, index) => ({
+        id: event._id, // ✅ Already a UUID string
+        name: event.name || `Unnamed Expense ${index + 1}`,
+      }));
+  
+    console.log("💸 Discretionary expenses found:", discretionaryExpenses);
+  
+    setSpendingStrategy(discretionaryExpenses);
+  }, [eventSeries]);
+  
+
+ const [spendingStrategy, setSpendingStrategy] = useState([]);
+
   
   // ================== Expense withdrawal strategy  SECTION ==================
   const [withdrawalStrategy, setWithdrawalStrategy] = useState([]);
-  const dummyInvestmentNames = ["Investment X", "Investment Y", "Investment Z"];
+
+  useEffect(() => {
+    const orderedInvestments = investments.map((inv) => ({
+      id: inv._id, // use actual unique _id
+      name: `${inv.type} ${inv.taxStatus}`, // Format: InvestmentType + TaxStatus
+    }));
+    setWithdrawalStrategy(orderedInvestments);
+  }, [investments]);
+  
 
   // ================== Inflation Assumption  SECTION ==================
   const [inflation, setInflation] = useState({
@@ -129,28 +215,77 @@ export default function AddScenario() {
   });
 
   // ================== Roth Conversion Optimizer  SECTION ==================
-  //TEMP DUMMY DATA ONCE AGAIN
+  
+
   const [enableRothConversion, setEnableRothConversion] = useState(false);
+
+const enableRothConversionRef = useRef(enableRothConversion);
+
+useEffect(() => {
+  enableRothConversionRef.current = enableRothConversion;
+}, [enableRothConversion]);
+  
   const [rothStartYear, setRothStartYear] = useState("");
   const [rothEndYear, setRothEndYear] = useState("");
-  const [rothConversionStrategy, setRothConversionStrategy] = useState([
-    "Traditional 401k",
-    "IRA",
-    "Pre-Tax Mutual Fund"
-  ]);
+  const [rothConversionStrategy, setRothConversionStrategy] = useState([]);
+  useEffect(() => {
+    if (enableRothConversion) {
+      const pretaxInvestments = investments
+        .filter((inv) => inv.taxStatus === "pretaxretirement")
+        .map((inv, index) => ({
+          id: inv._id, // for payload
+          name: `${inv.type} ${inv.taxStatus}`,
+        }));
+      setRothConversionStrategy(pretaxInvestments);
+    }
+  }, [enableRothConversion, investments]);
+  
+
 
 // ================== RMD STRATEGY  SECTION =================
   const [rmdStrategy, setRmdStrategy] = useState([]);
+
+  useEffect(() => {
+    //Filter pre-tax retirement investments and set them for RMD strategy
+    const preTaxInvestments = investments
+      .filter((inv) => inv.taxStatus === "pretaxretirement")
+      .map((inv) => ({
+        id: inv._id,  
+        name: `${inv.type} – ${inv.taxStatus}`,  // Format: InvestmentType + TaxStatus
+      }));
+  
+    setRmdStrategy(preTaxInvestments); // Set the filtered list to the state
+  }, [investments]); // Run the effect when `investments` change
   
 /////////////////////////SAVE SCENARIO////////////////////////////////////
-///I FORGOT TO ADD USERCONTEXT!!
+const router = useRouter();
+
 
   const handleSaveScenario = async () => {
     try {   
 
+      //does backend have Statetax? if yes = used, if yes but ignored = ignored, if no state tax = none
+      let stateTaxStatus = "used";
+      if (state === "NONE") {
+        stateTaxStatus = "none";
+      } else if (ignoreStateTax) {
+        stateTaxStatus = "ignored";
+      }
+
+      let inflationAssumption = { type: inflation.type };
+        if (inflation.type === "fixed") {
+          inflationAssumption.value = parseFloat(inflation.value);
+        } else if (inflation.type === "normal") {
+          inflationAssumption.mean = parseFloat(inflation.mean);
+          inflationAssumption.stdev = parseFloat(inflation.stdev);
+        } else if (inflation.type === "uniform") {
+          inflationAssumption.lower = parseFloat(inflation.lower);
+          inflationAssumption.upper = parseFloat(inflation.upper);
+        }
       //Build payload
       const scenarioInfoPayload = {
         name: scenarioName,
+        //userId: user?._id,
         isMarriedCouple: filingStatus === "married",
         userBirthYear: birthYears[0],
         spouseBirthYear: filingStatus === "married" ? birthYears[1] : undefined,
@@ -159,11 +294,131 @@ export default function AddScenario() {
         userLifeExpectancy: lifespanValues[0],
         spouseLifeExpectancy: filingStatus === "married" ? lifespanValues[1] : undefined,
         userStateOfResidence: state,
-        ignoreStateTax,
         financialGoal: financialGoal,
+        stateTaxStatus,
         //investments next
+        investments: investments.map((inv) => {
+          const invType = investmentTypes.find((type) => type.name === inv.type);
+            return {
+              _id: inv._id, 
+              type: {
+                name: invType.name,
+                description: invType.description,
+                returnAmtOrPct: invType.returnAmtOrPct,
+                expectedAnnualReturn: invType.returnDistribution,
+                expenseRatio: parseFloat(invType.expenseRatio),
+                incomeAmtOrPct: invType.incomeAmtOrPct,
+                expectedAnnualIncome: invType.incomeDistribution,
+                taxability: invType.taxability,
+              },
+              value: parseFloat(inv.value),
+              accountTaxStatus: inv.taxStatus,
+            };
+          }),
+
+
+        //event series: 
+        eventSeriesSet: eventSeries.map((series) => {
+          const { name, description, start, duration, type } = series;
+
+          const cleanedStart = { type: start.type };
+          if (start.type === "fixed") {
+            cleanedStart.value = parseInt(start.value);
+          } else if (start.type === "uniform") {
+            cleanedStart.lower = parseInt(start.lower);
+            cleanedStart.upper = parseInt(start.upper);
+          } else if (start.type === "normal") {
+            cleanedStart.mean = parseInt(start.mean);
+            cleanedStart.stdev = parseInt(start.stdev);
+          } else if (start.type === "startWith" || start.type === "startAfter") {
+            cleanedStart.eventSeries = start.eventSeries;
+          }
+
+          const cleanedDuration = { type: duration.type };
+          if (duration.type === "fixed") {
+            cleanedDuration.value = parseInt(duration.value);
+          } else if (duration.type === "uniform") {
+            cleanedDuration.lower = parseInt(duration.lower);
+            cleanedDuration.upper = parseInt(duration.upper);
+          } else if (duration.type === "normal") {
+            cleanedDuration.mean = parseInt(duration.mean);
+            cleanedDuration.stdev = parseInt(duration.stdev);
+          }
+
+          const payload = {
+            _id: series._id,
+            name,
+            description: description || "",
+            start: cleanedStart,
+            duration: cleanedDuration,
+            type
+          };
+
+          //Add income type-specific fields
+          if (type === "income") {
+            payload.income = {
+              initialAmount: parseFloat(series.income.initialAmount),
+              changeAmtOrPct: series.income.changeAmtOrPct,
+              changeDistribution: series.income.changeDistribution,
+              adjustForInflation: !!series.income.adjustForInflation,
+              userPct: filingStatus === "married" ? parseFloat(series.income.userPct) : undefined,
+              isSocialSecurity: !!series.income.isSocialSecurity,
+            };
+          }
+
+          if (type === "expense") {
+            payload.expense = {
+              initialAmount: parseFloat(series.expense.initialAmount),
+              changeAmtOrPct: series.expense.changeAmtOrPct,
+              changeDistribution: series.expense.changeDistribution,
+              adjustForInflation: !!series.expense.adjustForInflation,
+              discretionary: series.expense?.discretionary ?? false, // Default to false if not provided
+              ...(filingStatus === "married" && {
+                userPct: series.expense?.userPct ? parseFloat(series.expense.userPct) : 0,
+              }),
+            };
+          }
+
+           //
+          if (type === "invest") {
+            payload.invest = {
+              allocationType: series.invest.allocationType, // "fixed" or "glide"
+              selectedInvestments: series.invest.selected,  //assume already array of ObjectIds or names
+              allocations: series.invest.allocations,       //{ investmentId: { value / initial+final } }
+              maxCash: parseFloat(series.invest.maxCash || 0),
+            };
+          }
+
+          if (type === "rebalance") {
+            payload.rebalance = {
+              allocationType: series.rebalance.allocationType, // "fixed" or "glide"
+              selectedInvestments: series.rebalance.selected,  
+              allocations: series.rebalance.allocations,
+            };
+          }
+
+          return payload;
+        }),
+
+
+        spendingStrategy: spendingStrategy.map(item => item.id),
+
+        expenseWithdrawalStrategy: withdrawalStrategy.length > 0 ? withdrawalStrategy.map((item) => item.id) : [],
+
+        inflationAssumption: inflationAssumption,
+
+        rmdStrategy: rmdStrategy.map(item => item.id),
+
+
       };
-       // 🧠 Add your debug logs here:
+      if (enableRothConversionRef.current) {
+        scenarioInfoPayload.rothConversionOpt = true;
+        scenarioInfoPayload.rothConversionStart = parseInt(rothStartYear);
+        scenarioInfoPayload.rothConversionEnd = parseInt(rothEndYear);
+        scenarioInfoPayload.rothConversionStrategy = rothConversionStrategy.map((item) => item.id);
+      }
+
+    /*
       console.log("SCENARIO NAME:", scenarioName);
       console.log("FILING STATUS:", filingStatus);
       console.log("USER BIRTH YEAR:", birthYears[0]);
@@ -172,20 +427,40 @@ export default function AddScenario() {
       console.log("SPOUSE LIFE EXPECTANCY:", filingStatus === "married" ? lifespanValues[1] : "N/A");
       console.log("STATE OF RESIDENCE:", state);
       console.log("FINANCIAL GOAL:", financialGoal);
-      //TODO: Before finalizing, re-enable the POST request and ensure YAML state tax availability is checked properly. (it's not correctly done in the backend )
-      //Inside useScenarioInfo
+      console.log("INVESTMENTS:", investments);
 
-      console.log("IGNORE STATE TAX:", ignoreStateTax);
+      console.log("EVENTSERIES :", scenarioInfoPayload.eventSeriesSet);
+
+      console.log("SpendingStrategy :", spendingStrategy);
+      console.log("spendingStrategy payload:", spendingStrategy.map((item) => item.id))
+
+      console.log("Withdrawal Strategy Mapping:", withdrawalStrategy);
+      console.log("Mapped Expense Strategy:", withdrawalStrategy.map((item) => item.id));
+
+      console.log("Inflation Assumption Payload:", inflationAssumption);
+
+      //console.log("Roth Strategy Mapping:", rothConversionStrategy)*/
+
+
+
+      
+
       console.log("Sending Scenario Info:", scenarioInfoPayload); // TEMP debug
 
-      /*const res = await axios.post(
-        `${process.env.NEXT_PUBLIC_BACKEND_URL}/api/scenarios`,
-        scenarioInfoPayload,
-        { withCredentials: true }
-      );*/
+      const res = isEdit
+        ? await axios.put(
+            `${process.env.NEXT_PUBLIC_BACKEND_URL}/api/scenarios/${scenarioId}`,
+            scenarioInfoPayload,
+            { withCredentials: true }
+          )
+        : await axios.post(
+            `${process.env.NEXT_PUBLIC_BACKEND_URL}/api/scenarios`,
+            scenarioInfoPayload,
+            { withCredentials: true }
+          );
 
       if (res.data?.success) {
-        alert("✅ Scenario saved successfully!");
+        router.push("/scenarios?showSuccessPopup=true");
       } else {
         alert("❌ Failed to save scenario.");
       }
@@ -270,7 +545,7 @@ export default function AddScenario() {
 
       {/* Expense Withdrawal Strategy Section */}
       <ExpenseWithdrawalStrategy
-        dummyInvestmentNames={dummyInvestmentNames}
+        investments={investments}
         withdrawalStrategy={withdrawalStrategy}
         setWithdrawalStrategy={setWithdrawalStrategy}
       />
@@ -299,24 +574,7 @@ export default function AddScenario() {
     {/* Save button*/}
     <div className="w-full mt-8 mb-8 flex justify-center">
       <button
-        onClick={() => {
-          // Logic to save the scenario can go here
-          // TODO - CREATE THE SCENARIO OBJECT
-          
-          // Checks if the user is a guest or not
-          // Checks if a local session exists for a guest
-          if (guestSession && guestSession.isGuest) {
-            // If the user is a guest, save the scenario to the guest session
-            // TODO - SAVE THE SCENARIO TO THE GUEST SESSION
-            guestSession.scenarioName = scenarioName;
-            sessionStorage.setItem("guestSession", JSON.stringify(guestSession));
-          } else {
-            // If the user is not a guest, save the scenario to the database
-            // TODO - SAVE THE SCENARIO TO THE DATABASE
-            // handleSaveScenario();
-          }
-          alert("Scenario saved!");
-        }}
+        onClick={handleSaveScenario}
         className="px-6 py-2 bg-indigo-600 text-white rounded hover:bg-indigo-700"
       >
         Save Scenario

@@ -7,6 +7,9 @@ const session = require('express-session');
 const app = express();
 require('dotenv').config();
 
+// For tax and rmd table updates
+const taxService = require('./services/taxService');
+
 // Middleware
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
@@ -35,7 +38,17 @@ require('./config/passport-setup');
 
 // Connect to MongoDB
 mongoose.connect(process.env.MONGO_URI)
-    .then(() => console.log('Connected to MongoDB'))
+    .then(async () => {
+        console.log('Connected to MongoDB');
+
+        // Update tax and RMD table data
+        try {
+            await taxService.updateData();
+            console.log('Tax and RMD data update completed');
+        } catch (err) {
+            console.error('Error updating tax data:', err);
+        }
+    })
     .catch(err => console.error('MongoDB connection error:', err));
 
 // Routes
