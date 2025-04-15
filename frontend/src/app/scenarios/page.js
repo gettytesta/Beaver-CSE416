@@ -104,11 +104,22 @@ export default function ScenarioDashboard() {
               <Plus className="w-5 h-5 ml-1.5" />
             </button>
           </Link>
-
-          <button className="px-5 py-3 bg-blue-800 text-white rounded-md flex items-center justify-center text-lg font-medium hover:bg-blue-900">
-            <Upload className="w-5 h-5 mr-2" />
-            Import
-          </button>
+          <form className="px-5 py-3 bg-blue-800 text-white rounded-md flex items-center justify-center text-lg font-medium hover:bg-blue-900"
+            onSubmit={async e => {
+              let fd = new FormData();
+              fd.append('file', e.target.file.files[0]);
+              await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/api/yaml/scenario`, {
+                method: 'POST',
+                credentials: 'include',
+                body: fd,
+              });
+            }}>
+            <input type="file"
+            name="file"
+            placeholder="Import scenario"
+            accept=".yaml"/>
+            <button type="submit">Upload Scenario</button>
+          </form>
 
           <button className="px-5 py-3 bg-gray-600 text-white rounded-md text-lg">
             Share

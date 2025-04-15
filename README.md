@@ -15,7 +15,9 @@ This project is built using the MERN stack. This requires Nodejs and NPM to run.
 
 2. Create Environment Variables
     1. Create a .env file, place it in the backend directory.
-    2. It should include all the fields specified in example_env.txt.   
+    2. It should include all the fields specified in example_env.txt.
+    3. Create a .env.local file, place it in frontend directory.
+    4. It should include all the fields specified in example_local_env.txt.
 
 3. Start backend
     1. Open command prompt.

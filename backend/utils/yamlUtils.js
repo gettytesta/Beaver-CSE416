@@ -4,6 +4,7 @@ const StateTax = require('../models/stateTax');
 const { DistributionTypes } = require('../models/distribution');
 const { AccountTaxStatus, Investment } = require('../models/investment');
 const { EventSeries } = require('../models/eventseries');
+const { v4: uuidv4 } = require('uuid');
 
 // Placeholder function for YAML to Scenario conversion
 exports.convertYamlToScenario = (yamlData, userId) => {
@@ -18,11 +19,14 @@ exports.convertYamlToScenario = (yamlData, userId) => {
     data.userBirthYear = yamlData.birthYears[0];
     data.userLifeExpectancy = convertYamlToDistribution(yamlData.lifeExpectancy[0]);
     data.userRetirementAge = 65; // hard-coded, can't be found in scenario.yaml
+    data.userRetireContributionLimit = yamlData.userRetireContributionLimit || 0;
+
     if (data.isMarriedCouple)
     {
         data.spouseBirthYear = yamlData.birthYears[1];
         data.spouseLifeExpectancy = convertYamlToDistribution(yamlData.lifeExpectancy[1]);
         data.spouseRetirementAge = 65; // also hard-coded
+        data.spouseRetireContributionLimit = yamlData.spouseRetireContributionLimit || 0;
     }
 
     // set up investment types
@@ -52,6 +56,7 @@ exports.convertYamlToScenario = (yamlData, userId) => {
         })[investment.taxStatus];
         investments.push(
             new Investment({
+                _id: uuidv4(),
                 id: investment.id,
                 type: investmentType[investment.investmentType],
                 value: investment.value,
@@ -68,6 +73,7 @@ exports.convertYamlToScenario = (yamlData, userId) => {
     for (const event of yamlData.eventSeries)
     {
         let series = {
+            _id: uuidv4(),
             name: event.name,
             duration: convertYamlToDistribution(event.duration),
             type: event.type,
@@ -174,6 +180,9 @@ exports.convertScenarioToYaml = (scenario) => {
         RothConversionEnd: scenario.rothConversionEnd || undefined,
         financialGoal: scenario.financialGoal,
         residenceState: scenario.userStateOfResidence,
+        // unsure whether these contribution limits are included in YAML
+        // userRetireContributionLimit: scenario.userRetireContributionLimit,
+        // spouseRetireContributionLimit: scenario.spouseRetireContributionLimit || undefined,
     };
 
     let investmentTypes = {};
@@ -256,7 +265,6 @@ exports.convertScenarioToYaml = (scenario) => {
     obj.investmentTypes = Object.values(investmentTypes);
     obj.investments = investments;
     obj.eventSeries = eventSeries;
-    console.log(scenario.rmdStrategy);
     obj.spendingStrategy = scenario.spendingStrategy.map(e =>
         scenario.eventSeriesSet.find(t => t._id.toString() === e.toString())?.name
     );
