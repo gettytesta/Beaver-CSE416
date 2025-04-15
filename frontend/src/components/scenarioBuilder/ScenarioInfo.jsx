@@ -21,7 +21,11 @@ export default function ScenarioInfo({
   renderYearDropdown,
   renderRetirementAge,
   ignoreStateTax,
-  setIgnoreStateTax
+  setIgnoreStateTax,
+  userRetireContributionLimit,
+  setUserRetireContributionLimit,
+  spouseRetireContributionLimit,
+  setSpouseRetireContributionLimit
 }) {
   const stateName = states.find((s) => s.code === state)?.name || state;
 
@@ -78,6 +82,37 @@ export default function ScenarioInfo({
             </div>
           </div>
         </div>
+
+        {/* Contribution Limits - Side by Side */}
+        <div className="flex items-center">
+          <label className="w-48 font-medium text-gray-700">Contribution Limit</label>
+          <div className="flex gap-4">
+            <div className="flex flex-col">
+              <label className="text-sm text-gray-600 mb-1 ml-1">User</label>
+              <input
+                type="number"
+                placeholder="e.g. 22000"
+                className="border border-gray-300 rounded-md px-3 py-2 w-[180px] focus:outline-none focus:ring-2 focus:ring-indigo-400"
+                value={userRetireContributionLimit}
+                onChange={(e) => setUserRetireContributionLimit(e.target.value)}
+              />
+            </div>
+
+            {filingStatus === "married" && (
+              <div className="flex flex-col">
+                <label className="text-sm text-gray-600 mb-1 ml-1">Spouse</label>
+                <input
+                  type="number"
+                  placeholder="e.g. 22000"
+                  className="border border-gray-300 rounded-md px-3 py-2 w-[180px] focus:outline-none focus:ring-2 focus:ring-indigo-400"
+                  value={spouseRetireContributionLimit}
+                  onChange={(e) => setSpouseRetireContributionLimit(e.target.value)}
+                />
+              </div>
+            )}
+          </div>
+        </div>
+
 
         {/* State Selector + YAML Upload */}
         <div className="flex items-start">

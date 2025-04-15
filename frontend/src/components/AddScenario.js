@@ -79,7 +79,11 @@ export default function AddScenario({ isEdit = false, scenarioId = null, prefill
     setShowLifespanModal,
     ignoreStateTax,             
     setIgnoreStateTax,
-    supportedStates
+    supportedStates,
+    userRetireContributionLimit,
+    setUserRetireContributionLimit,
+    spouseRetireContributionLimit,
+    setSpouseRetireContributionLimit,
   } = useScenarioInfo();
   //components/UseScenarioInfo.jsx to edit this
   //get rid of supported states?
@@ -231,7 +235,7 @@ useEffect(() => {
   useEffect(() => {
     if (enableRothConversion) {
       const pretaxInvestments = investments
-        .filter((inv) => inv.taxStatus === "pretaxretirement")
+        .filter((inv) => inv.taxStatus === "pre-tax")
         .map((inv, index) => ({
           id: inv._id, // for payload
           name: `${inv.type} ${inv.taxStatus}`,
@@ -248,7 +252,7 @@ useEffect(() => {
   useEffect(() => {
     //Filter pre-tax retirement investments and set them for RMD strategy
     const preTaxInvestments = investments
-      .filter((inv) => inv.taxStatus === "pretaxretirement")
+      .filter((inv) => inv.taxStatus === "pre-tax")
       .map((inv) => ({
         id: inv._id,  
         name: `${inv.type} – ${inv.taxStatus}`,  // Format: InvestmentType + TaxStatus
@@ -302,6 +306,10 @@ const router = useRouter();
         userStateOfResidence: state,
         financialGoal: financialGoal,
         stateTaxStatus,
+        userRetireContributionLimit: Number(userRetireContributionLimit),
+        spouseRetireContributionLimit: filingStatus === "married"
+          ? Number(spouseRetireContributionLimit)
+          : undefined,
         //investments next
         investments: investments.map((inv) => {
           const invType = investmentTypes.find((type) => type.name === inv.type);
@@ -512,6 +520,10 @@ const router = useRouter();
         renderRetirementAge={renderRetirementAge}
         ignoreStateTax={ignoreStateTax}
         setIgnoreStateTax={setIgnoreStateTax}
+        userRetireContributionLimit={userRetireContributionLimit}
+        setUserRetireContributionLimit={setUserRetireContributionLimit}
+        spouseRetireContributionLimit={spouseRetireContributionLimit}
+        setSpouseRetireContributionLimit={setSpouseRetireContributionLimit}
       />
 
       {/* Investments Section */}

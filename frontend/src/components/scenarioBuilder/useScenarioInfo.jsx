@@ -12,6 +12,8 @@ export default function useScenarioInfo() {
   const [showLifespanModal, setShowLifespanModal] = useState(false);
   const [lifespanValues, setLifespanValues] = useState([{ type: "fixed", value: "" }]);
   const [ignoreStateTax, setIgnoreStateTax] = useState(false);
+  const [userRetireContributionLimit, setUserRetireContributionLimit] = useState("");
+  const [spouseRetireContributionLimit, setSpouseRetireContributionLimit] = useState("");
 
   const fileInputRef = useRef(null);
   const currentYear = new Date().getFullYear();
@@ -297,6 +299,10 @@ export default function useScenarioInfo() {
     renderLifespanModal,
     ignoreStateTax,             
     setIgnoreStateTax,
-    supportedStates
+    supportedStates,
+    userRetireContributionLimit,
+    setUserRetireContributionLimit,
+    spouseRetireContributionLimit,
+    setSpouseRetireContributionLimit,
   };
 }
