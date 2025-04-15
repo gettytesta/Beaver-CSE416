@@ -231,7 +231,7 @@ useEffect(() => {
   useEffect(() => {
     if (enableRothConversion) {
       const pretaxInvestments = investments
-        .filter((inv) => inv.taxStatus === "pretaxretirement")
+        .filter((inv) => inv.taxStatus === "pre-tax")
         .map((inv, index) => ({
           id: inv._id, // for payload
           name: `${inv.type} ${inv.taxStatus}`,
@@ -248,7 +248,7 @@ useEffect(() => {
   useEffect(() => {
     //Filter pre-tax retirement investments and set them for RMD strategy
     const preTaxInvestments = investments
-      .filter((inv) => inv.taxStatus === "pretaxretirement")
+      .filter((inv) => inv.taxStatus === "pre-tax")
       .map((inv) => ({
         id: inv._id,  
         name: `${inv.type} – ${inv.taxStatus}`,  // Format: InvestmentType + TaxStatus
@@ -299,6 +299,8 @@ const router = useRouter();
         spouseRetirementAge: filingStatus === "married" ? retirementAges[1] : undefined,
         userLifeExpectancy: lifespanValues[0],
         spouseLifeExpectancy: filingStatus === "married" ? lifespanValues[1] : undefined,
+        userRetireContributionLimit: 0,
+        spouseRetireContributionLimit: filingStatus === "married" ? 0 : undefined,
         userStateOfResidence: state,
         financialGoal: financialGoal,
         stateTaxStatus,
@@ -306,7 +308,7 @@ const router = useRouter();
         investments: investments.map((inv) => {
           const invType = investmentTypes.find((type) => type.name === inv.type);
             return {
-              _id: inv._id, 
+              id: inv._id, 
               type: {
                 name: invType.name,
                 description: invType.description,
@@ -407,7 +409,7 @@ const router = useRouter();
         }),
 
 
-        spendingStrategy: spendingStrategy.map(item => item.id),
+        spendingStrategy: spendingStrategy.map(item => item.name),
 
         expenseWithdrawalStrategy: withdrawalStrategy.length > 0 ? withdrawalStrategy.map((item) => item.id) : [],
 
