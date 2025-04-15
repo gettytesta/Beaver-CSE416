@@ -73,7 +73,7 @@ exports.convertYamlToScenario = (yamlData, userId) => {
     for (const event of yamlData.eventSeries)
     {
         let series = {
-            _id: uuidv4(),
+            id: uuidv4(),
             name: event.name,
             duration: convertYamlToDistribution(event.duration),
             type: event.type,
