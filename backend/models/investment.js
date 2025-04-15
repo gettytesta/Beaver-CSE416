@@ -9,13 +9,13 @@ const { InvestmentTypeSchema } = require('./investmentType');
 
 
 const AccountTaxStatus = Object.freeze({
-    NON_RETIREMENT: "nonretirement", ////////CHANGE THIS LATER
-    PRE_TAX_RETIREMENT: "pretaxretirement", /////////THIS
-    POST_TAX_RETIREMENT: "posttaxretirement", //////THIS
+    NON_RETIREMENT: "non-retirement", ////////CHANGE THIS LATER
+    PRE_TAX_RETIREMENT: "pre-tax", /////////THIS
+    POST_TAX_RETIREMENT: "post-tax", //////THIS
 });
 
 var InvestmentSchema = new Schema({
-    _id: {type: String, required: true}, //THIS
+    _id: {type: String, required: true, default: uuidv4, }, //THIS
     type: {type: InvestmentTypeSchema, required: true},
     value: {type: Number, required: true},
     accountTaxStatus: {
