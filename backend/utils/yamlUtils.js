@@ -56,7 +56,6 @@ exports.convertYamlToScenario = (yamlData, userId) => {
         })[investment.taxStatus];
         investments.push(
             new Investment({
-                _id: uuidv4(),
                 id: investment.id,
                 type: investmentType[investment.investmentType],
                 value: investment.value,
