@@ -3,6 +3,8 @@
 var mongoose = require('mongoose')
 var Schema = mongoose.Schema
 
+const { v4: uuidv4, } = require('uuid');
+
 const { InvestmentTypeSchema } = require('./investmentType');
 
 
@@ -13,7 +15,7 @@ const AccountTaxStatus = Object.freeze({
 });
 
 var InvestmentSchema = new Schema({
-    _id: {type: String, required: true}, // uuid for frontend
+    _id: {type: String, required: true, default: uuidv4,}, // uuid for frontend
     id: {type: String, required: true}, // id given by user
     type: {type: InvestmentTypeSchema, required: true},
     value: {type: Number, required: true},

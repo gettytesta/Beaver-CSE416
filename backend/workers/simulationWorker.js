@@ -505,7 +505,7 @@ async function runSingleSimulation(scenario, simulationId, federalTax, stateTax,
             // =====================================================================================================
 
             for (const eventSeriesId of scenario.spendingStrategy) {
-                const event = allEvents.find(ev => ev.id === eventSeriesId);
+                const event = allEvents.find(ev => ev.name === eventSeriesId);
                 
                 if (!shouldRunEvent(event)) {
                     continue;

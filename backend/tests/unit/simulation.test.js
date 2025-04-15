@@ -44,7 +44,7 @@ const mockScenario = {
     ],
     eventSeriesSet: [
         {
-            id: 'salary',
+            name: 'salary',
             type: 'income',
             start: { type: 'fixed', value: 2023 },
             duration: { type: 'fixed', value: 20 },
@@ -58,7 +58,7 @@ const mockScenario = {
             }
         },
         {
-            id: 'food',
+            name: 'food',
             type: 'expense',
             start: { type: 'fixed', value: 2023 },
             duration: { type: 'fixed', value: 30 },
@@ -71,7 +71,7 @@ const mockScenario = {
             }
         },
         {
-            id: 'vacation',
+            name: 'vacation',
             type: 'expense',
             start: { type: 'fixed', value: 2023 },
             duration: { type: 'fixed', value: 30 },

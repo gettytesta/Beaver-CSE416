@@ -1,6 +1,8 @@
 const mongoose = require("mongoose");
 const Schema = mongoose.Schema;
 
+const { v4: uuidv4 } = require('uuid');
+
 const { DistributionSchema } = require('./distribution');
 
 const EventStartSchema = new Schema({
@@ -197,9 +199,10 @@ const EventStartSchema = new Schema({
   });
 
   const EventSeriesSchema = new Schema({
-    id: {
+    _id: {
       type: String,         // <- Use String to support UUIDs
       required: true,
+      default: uuidv4,
     },
     name: {
       type: String,
