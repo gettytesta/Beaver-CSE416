@@ -38,7 +38,7 @@ export default function Dashboard() {
             You're using Lifetime Financial Planner as a <strong>guest</strong>.
           </p>
           <p className="mt-2 text-sm text-gray-500">
-            Scenarios will not be saved after you leave or refresh the page.
+            Scenarios will not be saved after you leave the page.
           </p>
         </>
       ) : (

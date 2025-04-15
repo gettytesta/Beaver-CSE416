@@ -1,6 +1,8 @@
 const mongoose = require("mongoose");
 const Schema = mongoose.Schema;
 
+const { v4: uuidv4 } = require('uuid');
+
 const { DistributionSchema } = require('./distribution');
 
 const EventStartSchema = new Schema({
@@ -86,13 +88,10 @@ const EventStartSchema = new Schema({
       required: true,
     },
   
-    selectedInvestments: [
-      {
-        type: Schema.Types.ObjectId,
-        ref: 'Investment',
-        required: true,
-      },
-    ],
+    selectedInvestments: {
+      type: [String], // Just store the _id (UUID string) of the selected event series
+      default: [],
+    },
   
     allocations: {
       type: Map,
@@ -152,13 +151,10 @@ const EventStartSchema = new Schema({
       required: true,
     },
   
-    selectedInvestments: [
-      {
-        type: Schema.Types.ObjectId,
-        ref: 'Investment',
-        required: true,
-      },
-    ],
+    selectedInvestments: {
+      type: [String], // Just store the _id (UUID string) of the selected event series
+      default: [],
+    },
   
     allocations: {
       type: Map,
@@ -206,6 +202,7 @@ const EventStartSchema = new Schema({
     _id: {
       type: String,         // <- Use String to support UUIDs
       required: true,
+      default: uuidv4,
     },
     name: {
       type: String,
