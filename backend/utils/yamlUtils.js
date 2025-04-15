@@ -4,6 +4,7 @@ const StateTax = require('../models/stateTax');
 const { DistributionTypes } = require('../models/distribution');
 const { AccountTaxStatus, Investment } = require('../models/investment');
 const { EventSeries } = require('../models/eventseries');
+const { v4: uuidv4 } = require('uuid');
 
 // Placeholder function for YAML to Scenario conversion
 exports.convertYamlToScenario = (yamlData, userId) => {
@@ -55,6 +56,7 @@ exports.convertYamlToScenario = (yamlData, userId) => {
         })[investment.taxStatus];
         investments.push(
             new Investment({
+                _id: uuidv4(),
                 id: investment.id,
                 type: investmentType[investment.investmentType],
                 value: investment.value,
@@ -71,6 +73,7 @@ exports.convertYamlToScenario = (yamlData, userId) => {
     for (const event of yamlData.eventSeries)
     {
         let series = {
+            _id: uuidv4(),
             name: event.name,
             duration: convertYamlToDistribution(event.duration),
             type: event.type,
