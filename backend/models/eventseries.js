@@ -86,13 +86,10 @@ const EventStartSchema = new Schema({
       required: true,
     },
   
-    selectedInvestments: [
-      {
-        type: Schema.Types.ObjectId,
-        ref: 'Investment',
-        required: true,
-      },
-    ],
+    selectedInvestments: {
+      type: [String], // Just store the _id (UUID string) of the selected event series
+      default: [],
+    },
   
     allocations: {
       type: Map,
@@ -152,13 +149,10 @@ const EventStartSchema = new Schema({
       required: true,
     },
   
-    selectedInvestments: [
-      {
-        type: Schema.Types.ObjectId,
-        ref: 'Investment',
-        required: true,
-      },
-    ],
+    selectedInvestments: {
+      type: [String], // Just store the _id (UUID string) of the selected event series
+      default: [],
+    },
   
     allocations: {
       type: Map,
@@ -203,7 +197,7 @@ const EventStartSchema = new Schema({
   });
 
   const EventSeriesSchema = new Schema({
-    _id: {
+    id: {
       type: String,         // <- Use String to support UUIDs
       required: true,
     },
