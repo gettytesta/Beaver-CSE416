@@ -6,6 +6,14 @@ import { render, screen, fireEvent } from "@testing-library/react";
 import "@testing-library/jest-dom";
 import AddScenario from "../../src/components/AddScenario";
 
+// Mock the Next.js router
+jest.mock("next/navigation", () => ({
+  useRouter: jest.fn().mockReturnValue({
+    push: jest.fn(), // Mock the push function
+    pathname: "/add-scenario", // Mock the current path
+  }),
+}));
+
 // Mock the components from the ScenarioBuilder folder
 jest.mock("../../src/components/scenarioBuilder/ScenarioInfo", () => (props) => (
   <div>
@@ -16,6 +24,13 @@ jest.mock("../../src/components/scenarioBuilder/ScenarioInfo", () => (props) => 
       value={props.scenarioName}
       onChange={(e) => props.setScenarioName(e.target.value)}
     />
+    <select
+      value={props.state}
+      onChange={(e) => props.setState(e.target.value)}
+    >
+      <option value="NONE">No State Taxes</option>
+      <option value="CA">California</option>
+    </select>
   </div>
 ));
 jest.mock("../../src/components/scenarioBuilder/Investments", () => () => (
@@ -66,7 +81,7 @@ describe("AddScenario Component", () => {
     expect(screen.getByText("Mocked RmdStrategy Component")).toBeInTheDocument();
   });
 
-  test("allows the user to enter a scenario name", () => {
+  test("allows the user to enter a scenario name and select a state", () => {
     render(<AddScenario />);
 
     // Find the input field for the scenario name
@@ -77,5 +92,14 @@ describe("AddScenario Component", () => {
 
     // Verify that the input value has been updated
     expect(scenarioNameInput.value).toBe("My Test Scenario");
+
+    // Find the state dropdown
+    const stateDropdown = screen.getByDisplayValue("No State Taxes");
+
+    // Simulate selecting a state
+    fireEvent.change(stateDropdown, { target: { value: "CA" } });
+
+    // Verify that the state value has been updated
+    expect(stateDropdown.value).toBe("CA");
   });
 });
