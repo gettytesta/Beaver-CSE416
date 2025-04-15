@@ -24,6 +24,10 @@ export default function LandingPage() {
       console.log("Guest login response:", data);
 
       if (res.ok && data.success) {
+        // TP - Github Copilot: "Store guest data, so that it can be stored
+        //      locally and goes away after the tab is closed." Minor work
+        //      was required to fix the code to use sessionStorage instead of 
+        //      localStorage.
         // Store guest session data in sessionStorage
         sessionStorage.setItem("guestSession", JSON.stringify(data.user));
 

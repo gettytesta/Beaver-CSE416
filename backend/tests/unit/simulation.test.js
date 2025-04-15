@@ -1,5 +1,5 @@
-// Used Claude AI to generate these tests.
-// Prompt: Can you write a simulation.test.js (Jest) script for testing simulationWorker.js?
+// TP - Claude AI was used to generate these tests.
+// Prompt: Can you write a simulation.test.js (Jest) script for testing the attached functionalities? <attached_files>
 
 const { Worker } = require('worker_threads');
 const path = require('path');
