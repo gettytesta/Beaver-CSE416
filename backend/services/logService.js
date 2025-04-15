@@ -44,12 +44,10 @@ exports.logSimulationResult = async (name, result) => {
     yearlyData.forEach(yearData => {
         if (yearData.investments && Array.isArray(yearData.investments)) {
             yearData.investments.forEach(investment => {
-                console.log(investment);
                 if (investment && investment.type) {
                     investmentTypes.add(investment.type);
                 }
             });
-            console.log("==========================================================");
         }
     });
     

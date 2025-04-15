@@ -201,7 +201,7 @@ async function runSingleSimulation(scenario, simulationId, federalTax, stateTax,
                     
                     // Ensure investment.value is a valid number
                     if (typeof investment.value !== 'number' || isNaN(investment.value)) {
-                        console.warn(`Invalid investment value for investment ${investment.id}: ${investment.value}`);
+                        // console.warn(`Invalid investment value for investment ${investment.id}: ${investment.value}`);
                         investment.value = 0;
                         continue;
                     }
@@ -302,7 +302,7 @@ async function runSingleSimulation(scenario, simulationId, federalTax, stateTax,
                     
                     // Ensure investment.value is a valid number
                     if (typeof investment.value !== 'number' || isNaN(investment.value)) {
-                        console.warn(`Invalid investment value for investment ${investment.id}: ${investment.value}`);
+                        // console.warn(`Invalid investment value for investment ${investment.id}: ${investment.value}`);
                         investment.value = 0;
                         continue;
                     }
@@ -451,7 +451,7 @@ async function runSingleSimulation(scenario, simulationId, federalTax, stateTax,
                 
                 // Ensure investment.value is a valid number
                 if (typeof investment.value !== 'number' || isNaN(investment.value)) {
-                    console.warn(`Invalid investment value for investment ${investment.id}: ${investment.value}`);
+                    // console.warn(`Invalid investment value for investment ${investment.id}: ${investment.value}`);
                     investment.value = 0;
                     continue;
                 }
