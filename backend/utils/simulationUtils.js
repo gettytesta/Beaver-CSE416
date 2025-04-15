@@ -1,4 +1,3 @@
-
 exports.generateNormalRandom = (mean, stdev) => {
     const u1 = Math.random();
     const u2 = Math.random();
@@ -16,7 +15,7 @@ exports.sampleValueFromDistribution = (distObj) => {
             return distObj.value;
 
         case 'normal':
-            return this.generateNormalRandom(distObj.mean, distObj.stdev);
+            return exports.generateNormalRandom(distObj.mean, distObj.stdev);
 
         case 'uniform':
             return distObj.lower + Math.random() * (distObj.upper - distObj.lower);
@@ -31,28 +30,52 @@ exports.adjustNumber = (num, inflationRate) => {
 }
 
 exports.adjustTaxBrackets = (taxBrackets, inflationRate) => {
-    function adjustBracket(bracket) {
+    const adjustBracket = (bracket) => {
         return {
-            lowerBound: this.adjustNumber(bracket.lowerBound, inflationRate), 
-            upperBound: this.adjustNumber(bracket.upperBound, inflationRate),
-            rate: this.adjustNumber(bracket.rate, inflationRate)
+            lowerBound: exports.adjustNumber(bracket.lowerBound, inflationRate), 
+            upperBound: exports.adjustNumber(bracket.upperBound, inflationRate),
+            rate: exports.adjustNumber(bracket.rate, inflationRate)
         };
     }
 
+    // Check if taxBrackets is an array (direct incomeTaxBrackets or capitalGainsBrackets)
+    if (Array.isArray(taxBrackets)) {
+        return taxBrackets.map(adjustBracket);
+    }
+    
+    // Otherwise, it's the full tax brackets object
     return {
-        standardDeduction: this.adjustNumber(taxBrackets.standardDeduction, inflationRate),
+        standardDeduction: exports.adjustNumber(taxBrackets.standardDeduction, inflationRate),
         incomeTaxBrackets: taxBrackets.incomeTaxBrackets.map(adjustBracket),
         capitalGainsBrackets: taxBrackets.capitalGainsBrackets.map(adjustBracket)
     };
 }
 
+exports.initializeInvestments = (investments) => {
+    if (!investments) {
+        return [];
+    }
+
+    return investments.map(investment => {
+        // Initialize new variables for the sim to use
+        investment.initialValue = investment.value; // init value, constant
+        investment.purchasePrice = investment.value; // cost to purchase this investment, will be updated after each purchase
+        return investment; // Return the modified investment object
+    });
+}
+
 exports.initializeEvents = (eventSeriesSet) => {
+    // Return empty array if eventSeriesSet is undefined or null
+    if (!eventSeriesSet) {
+        return [];
+    }
+    
     return eventSeriesSet
     .filter(eventSeries => eventSeries.type === 'income' || eventSeries.type === 'expense' || eventSeries.type === 'invest' || eventSeries.type === 'rebalance')
     .map(eventSeries => {
       // Sample and set start and duration
-      eventSeries.start = this.sampleValueFromDistribution(eventSeries.start);
-      eventSeries.duration = this.sampleValueFromDistribution(eventSeries.duration);
+      eventSeries.start = exports.sampleValueFromDistribution(eventSeries.start);
+      eventSeries.duration = exports.sampleValueFromDistribution(eventSeries.duration);
 
       // "unpack" the values for this type by spreading type-specific properties to the root level
       if (eventSeries.type === 'income' && eventSeries.income) {
@@ -64,6 +87,10 @@ exports.initializeEvents = (eventSeriesSet) => {
         delete eventSeries.income;
       } else if (eventSeries.type === 'expense' && eventSeries.expense) {
         Object.assign(eventSeries, eventSeries.expense);
+
+        // Initialize any new variables for this expense event
+        eventSeries.currAmount = eventSeries.initialAmount;
+
         delete eventSeries.expense;
       } else if (eventSeries.type === 'invest' && eventSeries.invest) {
         Object.assign(eventSeries, eventSeries.invest);
@@ -75,4 +102,40 @@ exports.initializeEvents = (eventSeriesSet) => {
 
       return eventSeries;
     });
+}
+
+exports.lookUpTaxBracket = (taxBrackets, value) => {
+    // Find the bracket where the value falls within the lower and upper bounds
+    for (const bracket of taxBrackets) {
+        if (value >= bracket.lowerBound && value <= bracket.upperBound) {
+            return bracket;
+        }
+    }
+    
+    // If no bracket is found (shouldn't happen with proper tax brackets that include Infinity)
+    // Return the highest bracket as a fallback
+    return taxBrackets[taxBrackets.length - 1];
+}
+
+exports.calculateTaxFromBrackets = (value, taxBrackets) => {
+    if (!value || value <= 0 || !taxBrackets || !Array.isArray(taxBrackets) || taxBrackets.length === 0) {
+        return 0;
+    }
+
+    let totalTax = 0;
+    let remainingValue = value;
+
+    for (const bracket of taxBrackets) {
+        if (remainingValue <= 0) break;
+        
+        let taxableInThisBracket = Math.min(
+            remainingValue,
+            bracket.upperBound - bracket.lowerBound + 1
+        );
+        
+        totalTax += taxableInThisBracket * bracket.rate;
+        remainingValue -= taxableInThisBracket;
+    }
+
+    return totalTax;
 }
