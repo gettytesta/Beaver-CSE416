@@ -13,6 +13,7 @@ import { CheckSquare, Square, ArrowDown } from "lucide-react";
 import { useState, useRef, useEffect } from "react";
 import { useRouter } from "next/navigation"; // ✅ Add this
 import { useUser } from "@/context/UserContext";
+import Link from "next/link";
 
 export default function ScenarioTable() {
   const router = useRouter(); // ✅ Initialize router
@@ -202,17 +203,14 @@ export default function ScenarioTable() {
                   : "—"}
               </td>
               <td className="p-4 text-center">
-                <button
+                <Link
                 className="px-5 py-2 bg-gray-500 text-white rounded-md text-base font-medium"
-                onClick={async e => {
-                  await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/api/yaml/scenario/${scenario._id}`, {
-                    method: 'POST',
-                    credentials: 'include',
-                  });
-                }}
+                href={`${process.env.NEXT_PUBLIC_BACKEND_URL}/api/yaml/scenario/${scenario._id}`}
+                target="_blank"
+                download
                 >
                   Export
-                </button>
+                </Link>
               </td>
               <td className="p-4 text-center" colSpan={2}>
                 <div className="flex justify-center gap-6">
