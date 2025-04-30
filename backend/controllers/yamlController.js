@@ -105,12 +105,14 @@ exports.exportScenarioYaml = async (req, res) => {
         }
         
         // Check if user has permission to access this scenario
-        if (scenario.user.toString() !== req.user._id.toString()) {
+        
+        if (scenario.userId.toString() !== req.user._id.toString()) {
             return res.status(403).json({
                 success: false,
                 message: 'Not authorized to access this scenario'
             });
         }
+        
         
         // Convert scenario to YAML format using the utility function
         const yamlString = convertScenarioToYaml(scenario);

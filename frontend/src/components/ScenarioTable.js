@@ -202,7 +202,15 @@ export default function ScenarioTable() {
                   : "—"}
               </td>
               <td className="p-4 text-center">
-                <button className="px-5 py-2 bg-gray-500 text-white rounded-md text-base font-medium">
+                <button
+                className="px-5 py-2 bg-gray-500 text-white rounded-md text-base font-medium"
+                onClick={async e => {
+                  await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/api/yaml/scenario/${scenario._id}`, {
+                    method: 'POST',
+                    credentials: 'include',
+                  });
+                }}
+                >
                   Export
                 </button>
               </td>
