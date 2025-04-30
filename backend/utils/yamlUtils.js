@@ -11,7 +11,6 @@ exports.convertYamlToScenario = (yamlData, userId) => {
     // This function would be implemented later to convert a parsed YAML 
     // object into a proper Scenario object structure
 
-    // TODO: Implement the conversion
     let data = {}
     data.name = yamlData.name;
     data.userId = userId;
@@ -67,7 +66,6 @@ exports.convertYamlToScenario = (yamlData, userId) => {
     data.investments = investments.map(i => i.toObject());
 
     // event series set
-    // TODO: finish this.... :(
     let eventSeriesSet = [];
     for (const event of yamlData.eventSeries)
     {
