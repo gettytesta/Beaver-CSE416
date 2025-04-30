@@ -16,8 +16,6 @@ var ScenarioSchema = new Schema({
     isMarriedCouple: { type: Boolean, required: true }, 
     userBirthYear: { type: Number, required: true }, 
     spouseBirthYear: { type: Number, required: function () { return this.isMarriedCouple;} }, 
-    userRetirementAge: { type: Number, required: true }, 
-    spouseRetirementAge: { type: Number, required: function () { return this.isMarriedCouple; } }, 
     userLifeExpectancy: { type: DistributionSchema, required: true }, 
     spouseLifeExpectancy: { type: DistributionSchema, required: function () { return this.isMarriedCouple;} }, 
     //investments
@@ -26,14 +24,14 @@ var ScenarioSchema = new Schema({
     eventSeriesSet: { type: [EventSeriesSchema], default: [] },
 
     spendingStrategy: {
-        type: [String], // Just store the _id (UUID string) of the selected event series
+        type: [String], //Just store the _id (UUID string) of the selected event series
         default: [],
     },
 
 
     //Expense Strategy
     expenseWithdrawalStrategy: {
-        type: [String], // not [ObjectId] if using UUIDs
+        type: [String], //  if using UUIDs
         default: [],
     },
 
@@ -42,7 +40,6 @@ var ScenarioSchema = new Schema({
 
     // Retire contribution limits (TODO add input in frontend)
     userRetireContributionLimit: { type: Number, required: true },
-    spouseRetireContributionLimit: { type: Number, required: function () { return this.isMarriedCouple;} },
 
     //roth conversion strategy 
     rothConversionOpt: { type: Boolean, default: false },

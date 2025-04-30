@@ -15,6 +15,8 @@ export default function EventSeries({
   openEventModal,
   removeEventSeries,
   addEventSeries,
+  investmentTypes,
+  isEdit
 }) {
   return (
     <div className="w-full border border-gray-300 rounded-md p-6 mt-8 bg-gray-50">
@@ -29,6 +31,8 @@ export default function EventSeries({
           eventSeries={eventSeries}
           setEventSeries={setEventSeries}
           investments={investments}
+          investmentTypes={investmentTypes} // ✅ Add this here
+          isEdit={isEdit}
         />
       )}
 

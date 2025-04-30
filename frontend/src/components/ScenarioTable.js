@@ -11,11 +11,11 @@
 
 import { CheckSquare, Square, ArrowDown } from "lucide-react";
 import { useState, useRef, useEffect } from "react";
-import { useRouter } from "next/navigation"; // ✅ Add this
+import { useRouter } from "next/navigation"; // 
 import { useUser } from "@/context/UserContext";
 
 export default function ScenarioTable() {
-  const router = useRouter(); // ✅ Initialize router
+  const router = useRouter(); // 
   const { user, checkedSession } = useUser();
   const [selected, setSelected] = useState(false);
   const [dropdownOpen, setDropdownOpen] = useState(false);
@@ -101,6 +101,33 @@ export default function ScenarioTable() {
   if (!checkedSession) {
     return <div className="text-center mt-20 text-gray-500">Loading scenarios...</div>;
   }
+
+  const handleExport = async (scenarioId) => {
+    try {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/api/yaml/scenario/${scenarioId}`, {
+        method: "GET",
+        credentials: "include",
+      });
+  
+      if (!res.ok) {
+        throw new Error("Failed to export YAML");
+      }
+  
+      const blob = await res.blob();
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `scenario_${scenarioId}.yaml`;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(url);
+    } catch (err) {
+      console.error("YAML Export Error:", err);
+      alert("Failed to export YAML");
+    }
+  };
+
 
   return (
     <div className="w-full p-1 relative">
@@ -202,7 +229,10 @@ export default function ScenarioTable() {
                   : "—"}
               </td>
               <td className="p-4 text-center">
-                <button className="px-5 py-2 bg-gray-500 text-white rounded-md text-base font-medium">
+                <button
+                  className="px-5 py-2 bg-gray-500 text-white rounded-md text-base font-medium"
+                  onClick={() => handleExport(scenario._id)}
+                >
                   Export
                 </button>
               </td>
