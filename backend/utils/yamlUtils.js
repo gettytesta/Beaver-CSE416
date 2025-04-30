@@ -242,7 +242,7 @@ exports.convertScenarioToYaml = (scenario) => {
                         d.assetAllocation[allocation] = values.initial;
                         d.assetAllocation2[allocation] = values.final;
                     } else
-                        d.assetAllocation[allocatoin] = values.value;
+                        d.assetAllocation[allocation] = values.value;
                 }
 
                 d.maxCash = event.invest.maxCash;
