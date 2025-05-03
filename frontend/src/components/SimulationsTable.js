@@ -146,7 +146,11 @@ export default function SimulationsTable({ scenarios }) {
                 </button>
               </td>
               <td className="p-4 text-center">
-                <button className="px-4 py-2 bg-orange-500 text-white rounded-md text-sm font-medium">
+                <button className="px-4 py-2 bg-orange-500 text-white rounded-md text-sm font-medium"
+                  onClick={() => {
+                    // TODO - Handle run simulation logic here
+                    console.log(`Running simulation for ${scenario.name}`);
+                  }}>
                   Run
                 </button>
               </td>
