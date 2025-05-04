@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 
 import ProbabilityOfSuccessChart from './graphs/ProbabilityOfSuccess.jsx';
 import ProbabilityRangesChart from './graphs/ProbabilityRanges.jsx';
@@ -134,12 +134,44 @@ const dummySimulationResult = {
     },
 };
 
+const scenario = {};
+
 const ChartsPage = () => {
+    const [currentChartIndex, setCurrentChartIndex] = useState(0);
+
+    const charts = [
+        <ProbabilityOfSuccessChart scenario={scenario} simulationResults={dummySimulationResult} />,
+        <ProbabilityRangesChart scenario={scenario} simulationResults={dummySimulationResult} />,
+        <StackedBarChart scenario={scenario} simulationResults={dummySimulationResult} />,
+    ];
+
+    const handlePrevious = () => {
+        setCurrentChartIndex((prevIndex) => (prevIndex === 0 ? charts.length - 1 : prevIndex - 1));
+    };
+
+    const handleNext = () => {
+        setCurrentChartIndex((prevIndex) => (prevIndex === charts.length - 1 ? 0 : prevIndex + 1));
+    };
+
     return (
         <div className="charts-page">
             <h1 className="text-4xl font-bold text-center mt-8">Charts</h1>
-            <div className="charts-container mt-4">
-                <StackedBarChart scenario={null} simulationResults={dummySimulationResult}/>
+            <div className="charts-container mt-4 relative">
+                <button
+                    className="absolute left-0 top-1/2 transform -translate-y-1/2 bg-gray-200 p-2 rounded-full"
+                    onClick={handlePrevious}
+                >
+                    &#8592; {/* Left arrow */}
+                </button>
+                <div className="chart-content mx-auto max-w-6xl bg-white shadow-md rounded-lg p-4 border border-black">
+                    {charts[currentChartIndex]}
+                </div>
+                <button
+                    className="absolute right-0 top-1/2 transform -translate-y-1/2 bg-gray-200 p-2 rounded-full"
+                    onClick={handleNext}
+                >
+                    &#8594; {/* Right arrow */}
+                </button>
             </div>
         </div>
     );

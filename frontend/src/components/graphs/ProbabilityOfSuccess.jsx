@@ -11,6 +11,9 @@ ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Title, T
 // goal is satisfied in a given year, it is sufficient to check the total value of investments at the end
 // of the year. Note that a success probability less than 100% might be OK.
 
+// TP - Github Copilot - Was fed the description from the requirements document as a prompt.
+//                       The code required heavy editing however.
+
 const ProbabilityOfSuccessChart = ({scenario, simulationResults}) => {
     const yearlyData = simulationResults.result.yearlyData;
 

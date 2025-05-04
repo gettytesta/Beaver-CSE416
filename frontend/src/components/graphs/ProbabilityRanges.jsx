@@ -16,7 +16,10 @@ ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Title, T
 //     5. percentage of total discretionary expenses incurred (the percentage is based on the amounts,
 //     not the number, of the discretionary expenses in that year).
 
-const ProbabilityRangesChart = ({ simulationResults }) => {
+// TP - Github Copilot - Was fed the description from the requirements document as a prompt.
+//                       The code required heavy editing however.
+
+const ProbabilityRangesChart = ({ scenario, simulationResults }) => {
     const yearlyData = simulationResults.result.yearlyData;
 
     // Extract data for the chart

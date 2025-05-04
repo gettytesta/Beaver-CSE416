@@ -1,7 +1,7 @@
 "use client";
 
 import { useUser } from "@/context/UserContext";
-import ProbabilityOfSuccessChart from "@/components/Charts"; // Import the chart component
+import ChartsPage from "@/components/Charts";
 
 export default function Dashboard() {
   const { user, checkedSession } = useUser(); //Access user session and loading state
@@ -30,10 +30,9 @@ export default function Dashboard() {
   return (
     <div className="text-center mt-20">
       <h1 className="text-4xl font-bold text-gray-900 mb-8">
-        TODO - Connect simulation results
       </h1>
       <div className="mx-auto max-w-6xl bg-white shadow-md rounded-lg">
-        <ProbabilityOfSuccessChart /> {/* Add the chart here */}
+        <ChartsPage />
       </div>
     </div>
   );
