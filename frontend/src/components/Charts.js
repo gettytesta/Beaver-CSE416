@@ -134,7 +134,10 @@ const dummySimulationResult = {
     },
 };
 
-const scenario = {};
+const scenario = {
+    name: "Dummy Scenario",
+    financialGoal: 100000,
+};
 
 const ChartsPage = () => {
     const [currentChartIndex, setCurrentChartIndex] = useState(0);
@@ -155,7 +158,7 @@ const ChartsPage = () => {
 
     return (
         <div className="charts-page">
-            <h1 className="text-4xl font-bold text-center mt-8">Charts</h1>
+            <h1 className="text-4xl font-bold text-center mt-8">{scenario.name}</h1>
             <div className="charts-container mt-4 relative">
                 <button
                     className="absolute left-0 top-1/2 transform -translate-y-1/2 bg-gray-200 p-2 rounded-full"

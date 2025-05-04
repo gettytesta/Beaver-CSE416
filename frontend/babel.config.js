@@ -7,5 +7,8 @@ module.exports = {
         "runtime": "automatic"
       }
     ]
+  ],
+  "plugins": [
+    "@babel/plugin-syntax-jsx"
   ]
 }
