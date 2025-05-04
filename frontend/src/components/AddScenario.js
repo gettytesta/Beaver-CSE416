@@ -342,6 +342,8 @@ function convertAllocationMapToDecimal(allocationMap, allocationType) {
         spouseBirthYear: filingStatus === "married" ? birthYears[1] : undefined,
         userLifeExpectancy: lifespanValues[0],
         spouseLifeExpectancy: filingStatus === "married" ? lifespanValues[1] : undefined,
+        userRetireContributionLimit: 0,
+        spouseRetireContributionLimit: filingStatus === "married" ? 0 : undefined,
         userStateOfResidence: state,
         financialGoal: financialGoal,
         stateTaxStatus,
@@ -490,7 +492,7 @@ function convertAllocationMapToDecimal(allocationMap, allocationType) {
         }),
 
 
-        spendingStrategy: spendingStrategy.map(item => item.id),
+        spendingStrategy: spendingStrategy.map(item => item.name),
 
         expenseWithdrawalStrategy: withdrawalStrategy.length > 0 ? withdrawalStrategy.map((item) => item.id) : [],
 
