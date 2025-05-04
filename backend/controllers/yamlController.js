@@ -103,12 +103,15 @@ exports.exportScenarioYaml = async (req, res) => {
                 message: 'Scenario not found'
             });
         }
+
+        console.log("Scenario.user:", scenario.user, "| req.user._id:", req.user._id);
+
         
         // Check if user has permission to access this scenario
-        if (scenario.user.toString() !== req.user._id.toString()) {
+        if (!scenario.userId || scenario.userId.toString() !== req.user._id.toString()) {
             return res.status(403).json({
-                success: false,
-                message: 'Not authorized to access this scenario'
+              success: false,
+              message: 'Not authorized to access this scenario',
             });
         }
         

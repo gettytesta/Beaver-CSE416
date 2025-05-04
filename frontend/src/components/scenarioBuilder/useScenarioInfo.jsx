@@ -2,16 +2,36 @@ import { useState, useRef, useEffect } from "react";
 import axios from "axios"; 
 import { useMemo } from "react";
 
-export default function useScenarioInfo() {
-  const [filingStatus, setFilingStatus] = useState("single");
-  const [state, setState] = useState("NONE");
-  const [scenarioName, setScenarioName] = useState("");
-  const [retirementAges, setRetirementAges] = useState([""]);
-  const [financialGoal, setFinancialGoal] = useState("");
-  const [birthYears, setBirthYears] = useState([""]);
+export default function useScenarioInfo(initialScenario = null) {
+  const [filingStatus, setFilingStatus] = useState(
+    initialScenario?.isMarriedCouple ? "married" : "single"
+  );
+  const [state, setState] = useState(initialScenario?.userStateOfResidence || "");
+
+  const [scenarioName, setScenarioName] = useState(initialScenario?.name || "");
+
+  const [financialGoal, setFinancialGoal] = useState(initialScenario?.financialGoal || "");
+
+  const [birthYears, setBirthYears] = useState(
+    initialScenario?.isMarriedCouple
+      ? [initialScenario?.userBirthYear || "", initialScenario?.spouseBirthYear || ""]
+      : [initialScenario?.userBirthYear || ""]
+  );
   const [showLifespanModal, setShowLifespanModal] = useState(false);
-  const [lifespanValues, setLifespanValues] = useState([{ type: "fixed", value: "" }]);
-  const [ignoreStateTax, setIgnoreStateTax] = useState(false);
+  
+  const [lifespanValues, setLifespanValues] = useState(
+    initialScenario?.isMarriedCouple
+      ? [initialScenario?.userLifeExpectancy || { type: "fixed", value: "" }, initialScenario?.spouseLifeExpectancy || { type: "fixed", value: "" }]
+      : [initialScenario?.userLifeExpectancy || { type: "fixed", value: "" }]
+  );
+
+  const [ignoreStateTax, setIgnoreStateTax] = useState(
+    initialScenario?.stateTaxStatus === "ignored" ? true : false
+  );
+  
+  const [userRetireContributionLimit, setUserRetireContributionLimit] = useState(
+    initialScenario?.userRetireContributionLimit || ""
+  );
 
   const fileInputRef = useRef(null);
   const currentYear = new Date().getFullYear();
@@ -136,11 +156,7 @@ export default function useScenarioInfo() {
     setBirthYears(updated);
   };
 
-  const handleRetirementAgeChange = (index, value) => {
-    const updated = [...retirementAges];
-    updated[index] = value;
-    setRetirementAges(updated);
-  };
+  
 
   const handleLifespanTypeChange = (index, type) => {
     const updated = [...lifespanValues];
@@ -162,11 +178,9 @@ export default function useScenarioInfo() {
     setFilingStatus(status);
     if (status === "single") {
       setBirthYears([birthYears[0] || ""]);
-      setRetirementAges([retirementAges[0] || ""]);
       setLifespanValues([lifespanValues[0] || { type: "fixed", value: "" }]);
     } else {
       setBirthYears([birthYears[0] || "", birthYears[1] || ""]);
-      setRetirementAges([retirementAges[0] || "", retirementAges[1] || ""]);
       setLifespanValues([
         lifespanValues[0] || { type: "fixed", value: "" },
         lifespanValues[1] || { type: "fixed", value: "" }
@@ -194,19 +208,6 @@ export default function useScenarioInfo() {
     </div>
   );
 
-  const renderRetirementAge = (label, index, placeholder) => (
-    <div className="flex flex-col">
-      <label className="text-sm text-gray-600 mb-1">{label}</label>
-      <input
-        type="number"
-        min="0"
-        placeholder={placeholder}
-        className="border border-gray-300 rounded-md px-3 py-2 w-[180px] focus:outline-none focus:ring-2 focus:ring-indigo-400"
-        value={retirementAges[index] || ""}
-        onChange={(e) => handleRetirementAgeChange(index, e.target.value)}
-      />
-    </div>
-  );
 
   const renderLifespanModal = () => (
     <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center">
@@ -272,8 +273,6 @@ export default function useScenarioInfo() {
     setState,
     scenarioName,
     setScenarioName,
-    retirementAges,
-    setRetirementAges,
     financialGoal,
     setFinancialGoal,
     birthYears,
@@ -288,15 +287,15 @@ export default function useScenarioInfo() {
     stateRequiresUpload,
     handleYamlUpload,
     handleBirthYearChange,
-    handleRetirementAgeChange,
     handleLifespanTypeChange,
     handleLifespanValueChange,
     handleFilingStatusChange,
     renderYearDropdown,
-    renderRetirementAge,
     renderLifespanModal,
     ignoreStateTax,             
     setIgnoreStateTax,
-    supportedStates
+    supportedStates,
+    userRetireContributionLimit,
+    setUserRetireContributionLimit,
   };
 }

@@ -79,124 +79,58 @@ const EventStartSchema = new Schema({
     discretionary: { type: Boolean, required: true },
   });
 
+  // --- Utility function ---
+function normalizeAllocationKeys(doc) {
+  if (doc.allocations instanceof Map) {
+    const normalized = {};
+    for (const [key, value] of doc.allocations.entries()) {
+      normalized[String(key)] = value;
+    }
+    doc.allocations = normalized;
+  }
+}
 
-  const InvestSchema = new Schema({
-    allocationType: {
-      type: String,
-      enum: ['fixed', 'glide'],
-      default: 'fixed',
-      required: true,
-    },
-  
-    selectedInvestments: {
-      type: [String], // Just store the _id (UUID string) of the selected event series
-      default: [],
-    },
-  
-    allocations: {
-      type: Map,
-      of: new Schema(
-        {
-          value: {
-            type: Number,
-            min: 0,
-            max: 1,
-          },
-          initial: {
-            type: Number,
-            min: 0,
-            max: 1,
-          },
-          final: {
-            type: Number,
-            min: 0,
-            max: 1,
-          },
-        },
-        { _id: false }
-      ),
-      required: true,
-      validate: {
-        validator: function (allocations) {
-          const isGlide = this.allocationType === 'glide';
-  
-          const total = Array.from(allocations.values()).reduce((sum, obj) => {
-            if (isGlide) {
-              return sum + ((obj.initial || 0) + (obj.final || 0)) / 2;
-            }
-            return sum + (obj.value || 0);
-          }, 0);
-  
-          return Math.round(total) === 1;
-        },
-        message:
-          'Total allocation must sum to 100%. For glide, both initial and final totals should equal 100%.',
-      },
-    },
-  
-    // maxCash addition
-    maxCash: {
-      type: Number,
-      min: 0,
-      default: 0,
-      required: true,
-    },
-  });
+const InvestSchema = new Schema({
+  allocationType: {
+    type: String,
+    enum: ['fixed', 'glide'],
+    default: 'fixed',
+    required: true,
+  },
+  allocations: {
+    type: Object,
+    required: true,
+  },
+  maxCash: {
+    type: Number,
+    min: 0,
+    default: 0,
+    required: true,
+  },
+});
 
-  const RebalanceSchema = new Schema({
-    allocationType: {
-      type: String,
-      enum: ['fixed', 'glide'],
-      default: 'fixed',
-      required: true,
-    },
-  
-    selectedInvestments: {
-      type: [String], // Just store the _id (UUID string) of the selected event series
-      default: [],
-    },
-  
-    allocations: {
-      type: Map,
-      of: new Schema(
-        {
-          value: {
-            type: Number,
-            min: 0,
-            max: 1,
-          },
-          initial: {
-            type: Number,
-            min: 0,
-            max: 1,
-          },
-          final: {
-            type: Number,
-            min: 0,
-            max: 1,
-          },
-        },
-        { _id: false }
-      ),
-      required: true,
-      validate: {
-        validator: function (allocations) {
-          const isGlide = this.allocationType === 'glide';
-  
-          const total = Array.from(allocations.values()).reduce((sum, obj) => {
-            if (isGlide) {
-              return sum + ((obj.initial || 0) + (obj.final || 0)) / 2;
-            }
-            return sum + (obj.value || 0);
-          }, 0);
-  
-          return Math.round(total) === 1;
-        },
-        message:
-          'Total allocation must sum to 100%. For glide, both initial and final totals should equal 100%.',
-      },
-    },
-  });
+InvestSchema.pre('validate', function (next) {
+  normalizeAllocationKeys(this); // Optional
+  next();
+});
+
+const RebalanceSchema = new Schema({
+  allocationType: {
+    type: String,
+    enum: ['fixed', 'glide'],
+    default: 'fixed',
+    required: true,
+  },
+  allocations: {
+    type: Object,
+    required: true,
+  },
+});
+
+RebalanceSchema.pre('validate', function (next) {
+  normalizeAllocationKeys(this); // Optional
+  next();
+});
 
   const EventSeriesSchema = new Schema({
     _id: {
