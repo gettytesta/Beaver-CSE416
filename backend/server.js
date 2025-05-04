@@ -56,11 +56,14 @@ const authRoutes = require('./routes/authRoutes');
 const yamlRoutes = require('./routes/yamlRoutes');
 const scenarioRoutes = require('./routes/scenarioRoutes');
 const simulationRoutes = require('./routes/simulationRoutes');
+const userLookupRoutes = require('./routes/userLookupRoutes');
+
 
 app.use('/auth', authRoutes);
 app.use('/api/yaml', yamlRoutes);
 app.use('/api/scenarios', scenarioRoutes);
 app.use('/api/simulations', simulationRoutes);
+app.use('/api/user-lookup', userLookupRoutes);
 
 app.get('/', async (_, res) => {
     return res.send('Hello, World');
