@@ -55,8 +55,6 @@ export default function AddScenario({ isEdit = false, scenarioId = null, prefill
     setFilingStatus,
     birthYears,
     setBirthYears,
-    retirementAges,
-    setRetirementAges,
     lifespanTypes,
     setLifespanTypes,
     lifespanValues,
@@ -73,14 +71,15 @@ export default function AddScenario({ isEdit = false, scenarioId = null, prefill
     scenarioName,
     setScenarioName,
     renderYearDropdown,
-    renderRetirementAge,
     renderLifespanModal,
     showLifespanModal,
     setShowLifespanModal,
     ignoreStateTax,             
     setIgnoreStateTax,
-    supportedStates
-  } = useScenarioInfo();
+    supportedStates,
+    userRetireContributionLimit,
+    setUserRetireContributionLimit,
+  } = useScenarioInfo(prefilledScenario);
   //components/UseScenarioInfo.jsx to edit this
   //get rid of supported states?
 
@@ -102,7 +101,7 @@ export default function AddScenario({ isEdit = false, scenarioId = null, prefill
     renderInvestmentTypeModal,
     handleEditInvestmentType,
     handleDeleteInvestmentType,
-  } = useInvestments();
+  } = useInvestments(prefilledScenario,isEdit);
 
   // ================== EVENT SERIES SECTION ==================
   const {
@@ -118,61 +117,8 @@ export default function AddScenario({ isEdit = false, scenarioId = null, prefill
     addEventSeries,
     removeEventSeries,
     openEventModal,
-  } = useEventSeries();
+  } = useEventSeries(prefilledScenario, isEdit);
 
-  useEffect(() => {
-    if (!isEdit || !prefilledScenario) return;
-  
-    console.log("🔁 Prefilling scenario:", prefilledScenario);
-  
-    // Scenario Info
-    setScenarioName(prefilledScenario.name || "");
-    setFilingStatus(prefilledScenario.isMarriedCouple ? "married" : "single");
-    setBirthYears([
-      prefilledScenario.userBirthYear || "",
-      prefilledScenario.spouseBirthYear || ""
-    ]);
-    setRetirementAges([
-      prefilledScenario.userRetirementAge || "",
-      prefilledScenario.spouseRetirementAge || ""
-    ]);
-    setLifespanValues([
-      prefilledScenario.userLifeExpectancy || {},
-      prefilledScenario.spouseLifeExpectancy || {}
-    ]);
-    setState(prefilledScenario.userStateOfResidence || "");
-    setFinancialGoal(prefilledScenario.financialGoal || "");
-    setIgnoreStateTax(prefilledScenario.stateTaxStatus === "ignored");
-  
-    // Investments
-    setInvestments(prefilledScenario.investments || []);
-    const types = (prefilledScenario.investments || []).map(inv => inv.type);
-    setInvestments(
-      (prefilledScenario.investments || []).map((inv) => ({
-        ...inv,
-        type: inv.type.name,               // flatten embedded type back to name
-        taxStatus: inv.accountTaxStatus,   // assign tax status for dropdown
-      }))
-    );
-  
-    // Event Series
-    setEventSeries(prefilledScenario.eventSeriesSet || []);
-  
-    // Inflation Assumption
-    setInflation(prefilledScenario.inflationAssumption || { type: "fixed", value: "" });
-  
-    // Strategies
-    setSpendingStrategy((prefilledScenario.spendingStrategy || []).map(id => ({ id, name: id })));
-    setWithdrawalStrategy((prefilledScenario.expenseWithdrawalStrategy || []).map(id => ({ id, name: id })));
-    setRmdStrategy((prefilledScenario.rmdStrategy || []).map(id => ({ id, name: id })));
-  
-    // Roth Conversion
-    setEnableRothConversion(prefilledScenario.rothConversionOpt || false);
-    setRothStartYear(prefilledScenario.rothConversionStart || "");
-    setRothEndYear(prefilledScenario.rothConversionEnd || "");
-    setRothConversionStrategy((prefilledScenario.rothConversionStrategy || []).map(id => ({ id, name: id })));
-  
-  }, [isEdit, prefilledScenario]);
   
   // ================== Spending Strategy SECTION ==================
   useEffect(() => {
@@ -183,13 +129,19 @@ export default function AddScenario({ isEdit = false, scenarioId = null, prefill
           (event.expense?.discretionary ?? event.expense?.isDiscretionary)
       )
       .map((event, index) => ({
-        id: event._id, // ✅ Already a UUID string
+        id: event._id,
         name: event.name || `Unnamed Expense ${index + 1}`,
       }));
   
-    console.log("💸 Discretionary expenses found:", discretionaryExpenses);
-  
-    setSpendingStrategy(discretionaryExpenses);
+    if (isEdit && prefilledScenario?.spendingStrategy?.length > 0) {
+      // Preserve ordering from existing strategy
+      const ordered = prefilledScenario.spendingStrategy
+        .map((id) => discretionaryExpenses.find((e) => e.id === id))
+        .filter(Boolean); 
+      setSpendingStrategy(ordered);
+    } else {
+      setSpendingStrategy(discretionaryExpenses);
+    }
   }, [eventSeries]);
   
 
@@ -198,26 +150,52 @@ export default function AddScenario({ isEdit = false, scenarioId = null, prefill
   
   // ================== Expense withdrawal strategy  SECTION ==================
   const [withdrawalStrategy, setWithdrawalStrategy] = useState([]);
+  const [selectedWithdrawalIds, setSelectedWithdrawalIds] = useState(() => {
+    return isEdit && prefilledScenario?.expenseWithdrawalStrategy
+      ? prefilledScenario.expenseWithdrawalStrategy
+      : [];
+  });
+  
 
   useEffect(() => {
-    const orderedInvestments = investments.map((inv) => ({
-      id: inv._id, // use actual unique _id
-      name: `${inv.type} ${inv.taxStatus}`, // Format: InvestmentType + TaxStatus
-    }));
-    setWithdrawalStrategy(orderedInvestments);
-  }, [investments]);
+    const selected = investments
+      .filter((inv) => selectedWithdrawalIds.includes(inv._id))
+      .map((inv) => ({
+        id: inv._id,
+        name: `${typeof inv.type === "string" ? inv.type : inv.type?.name || "Unnamed"} ${inv.taxStatus}`,
+      }));
+  
+    setWithdrawalStrategy(selected);
+  }, [investments, selectedWithdrawalIds]);
   
 
   // ================== Inflation Assumption  SECTION ==================
-  const [inflation, setInflation] = useState({
-    type: "fixed",
-    value: ""
+  const [inflation, setInflation] = useState(() => {
+    if (isEdit && prefilledScenario?.inflationAssumption) {
+      const infl = prefilledScenario.inflationAssumption;
+      const convert = (val) => val !== undefined ? String(val) : "";
+  
+      if (infl.type === "fixed") {
+        return { type: "fixed", value: convert(infl.value) };
+      }
+      if (infl.type === "normal") {
+        return { type: "normal", mean: convert(infl.mean), stdev: convert(infl.stdev) };
+      }
+      if (infl.type === "uniform") {
+        return { type: "uniform", lower: convert(infl.lower), upper: convert(infl.upper) };
+      }
+    }
+  
+    return { type: "fixed", value: "" }; // default for create mode
   });
 
   // ================== Roth Conversion Optimizer  SECTION ==================
   
 
-  const [enableRothConversion, setEnableRothConversion] = useState(false);
+  const [enableRothConversion, setEnableRothConversion] = useState(() => {
+    return isEdit ? !!prefilledScenario?.rothConversionOpt : false;
+  });
+  
 
 const enableRothConversionRef = useRef(enableRothConversion);
 
@@ -225,20 +203,35 @@ useEffect(() => {
   enableRothConversionRef.current = enableRothConversion;
 }, [enableRothConversion]);
   
-  const [rothStartYear, setRothStartYear] = useState("");
-  const [rothEndYear, setRothEndYear] = useState("");
+  const [rothStartYear, setRothStartYear] = useState(() => {
+    return isEdit ? prefilledScenario?.rothConversionStart ?? "" : "";
+  });
+
+  const [rothEndYear, setRothEndYear] = useState(() => {
+    return isEdit ? prefilledScenario?.rothConversionEnd ?? "" : "";
+  });
   const [rothConversionStrategy, setRothConversionStrategy] = useState([]);
+
   useEffect(() => {
-    if (enableRothConversion) {
-      const pretaxInvestments = investments
-        .filter((inv) => inv.taxStatus === "pre-tax")
-        .map((inv, index) => ({
-          id: inv._id, // for payload
-          name: `${inv.type} ${inv.taxStatus}`,
-        }));
+  if (enableRothConversion) {
+    const pretaxInvestments = investments
+      .filter((inv) => inv.taxStatus === "pre-tax")
+      .map((inv) => ({
+        id: inv._id,
+        name: `${typeof inv.type === "string" ? inv.type : inv.type?.name || "Unnamed"} ${inv.taxStatus}`,
+      }));
+
+    if (isEdit && prefilledScenario?.rothConversionStrategy?.length > 0) {
+      // preserve original order from prefilledScenario
+      const ordered = prefilledScenario.rothConversionStrategy
+        .map((id) => pretaxInvestments.find((inv) => inv.id === id))
+        .filter(Boolean);
+      setRothConversionStrategy(ordered);
+    } else {
       setRothConversionStrategy(pretaxInvestments);
     }
-  }, [enableRothConversion, investments]);
+  }
+}, [enableRothConversion, investments]);
   
 
 
@@ -246,19 +239,71 @@ useEffect(() => {
   const [rmdStrategy, setRmdStrategy] = useState([]);
 
   useEffect(() => {
-    //Filter pre-tax retirement investments and set them for RMD strategy
     const preTaxInvestments = investments
       .filter((inv) => inv.taxStatus === "pre-tax")
       .map((inv) => ({
-        id: inv._id,  
-        name: `${inv.type} – ${inv.taxStatus}`,  // Format: InvestmentType + TaxStatus
+        id: inv._id,
+        name: `${typeof inv.type === "string" ? inv.type : inv.type?.name || "Unnamed"} ${inv.taxStatus}`,
       }));
   
-    setRmdStrategy(preTaxInvestments); // Set the filtered list to the state
-  }, [investments]); // Run the effect when `investments` change
+    if (isEdit && prefilledScenario?.rmdStrategy?.length > 0) {
+      const ordered = prefilledScenario.rmdStrategy
+        .map((id) => preTaxInvestments.find((i) => i.id === id))
+        .filter(Boolean);
+      setRmdStrategy(ordered);
+    } else {
+      setRmdStrategy(preTaxInvestments);
+    }
+  }, [investments]);
   
 /////////////////////////SAVE SCENARIO////////////////////////////////////
 const router = useRouter();
+
+
+//PERCENT CONVERSION
+const percentToDecimal = (val) =>
+  val !== "" && !isNaN(val) ? parseFloat(val) / 100 : 0;
+
+const convertDistributionIfPercent = (dist, amtOrPct) => {
+  if (amtOrPct !== "percent") return dist;
+
+  const type = dist.type;
+  if (type === "fixed") {
+    return { type: "fixed", value: percentToDecimal(dist.value) };
+  } else if (type === "normal") {
+    return {
+      type: "normal",
+      mean: percentToDecimal(dist.mean),
+      stdev: percentToDecimal(dist.stdev),
+    };
+  } else if (type === "uniform") {
+    return {
+      type: "uniform",
+      lower: percentToDecimal(dist.lower),
+      upper: percentToDecimal(dist.upper),
+    };
+  }
+  return dist;
+};
+
+function convertAllocationMapToDecimal(allocationMap, allocationType) {
+  const converted = {};
+  for (const [key, val] of Object.entries(allocationMap)) {
+    const id = investments[key]?._id || key; // map index back to UUID
+    if (allocationType === "glide") {
+      converted[id] = {
+        initial: parseFloat(val.initial) / 100,
+        final: parseFloat(val.final) / 100,
+      };
+    } else {
+      converted[id] = {
+        value: parseFloat(val.value) / 100,
+      };
+    }
+  }
+  return converted;
+}
+
 // TP: ChatGPT. Prompt: "Help me debug a large save function for a scenario builder form. Where should I put console.logs? How can I inspect nested state?"
 // 
 // This function sends the scenario data to the backend. I used ChatGPT extensively to debug this logic,
@@ -295,8 +340,6 @@ const router = useRouter();
         isMarriedCouple: filingStatus === "married",
         userBirthYear: birthYears[0],
         spouseBirthYear: filingStatus === "married" ? birthYears[1] : undefined,
-        userRetirementAge: retirementAges[0],
-        spouseRetirementAge: filingStatus === "married" ? retirementAges[1] : undefined,
         userLifeExpectancy: lifespanValues[0],
         spouseLifeExpectancy: filingStatus === "married" ? lifespanValues[1] : undefined,
         userRetireContributionLimit: 0,
@@ -304,25 +347,69 @@ const router = useRouter();
         userStateOfResidence: state,
         financialGoal: financialGoal,
         stateTaxStatus,
+        userRetireContributionLimit: Number(userRetireContributionLimit),
         //investments next
-        investments: investments.map((inv) => {
-          const invType = investmentTypes.find((type) => type.name === inv.type);
-            return {
-              id: inv._id, 
-              type: {
-                name: invType.name,
-                description: invType.description,
-                returnAmtOrPct: invType.returnAmtOrPct,
-                expectedAnnualReturn: invType.returnDistribution,
-                expenseRatio: parseFloat(invType.expenseRatio),
-                incomeAmtOrPct: invType.incomeAmtOrPct,
-                expectedAnnualIncome: invType.incomeDistribution,
-                taxability: invType.taxability,
-              },
-              value: parseFloat(inv.value),
-              accountTaxStatus: inv.taxStatus,
-            };
-          }),
+        investments: investments.map((inv, index) => {
+          const invType = inv.type;
+
+          /*console.log(`📦 [${index}] Preparing investment "${invType?.name}" (ID: ${inv._id})`);
+
+          
+          if (!invType?.returnDistribution?.type) {
+            console.warn(`⚠️ Missing returnDistribution.type for investment ${inv._id}`, invType.returnDistribution);
+          }
+
+          if (!invType?.incomeDistribution?.type) {
+            console.warn(`⚠️ Missing incomeDistribution.type for investment ${inv._id}`, invType.incomeDistribution);
+          }*/
+
+          // Convert percentages to decimals if needed
+          const expectedAnnualReturn = {
+            ...invType.returnDistribution,
+            type: invType.returnDistribution.type,
+          };
+          if (invType.returnAmtOrPct === "percent") {
+            if (expectedAnnualReturn.type === "fixed") {
+              expectedAnnualReturn.value = expectedAnnualReturn.value; // Keep value as it is, no conversion
+            } else if (expectedAnnualReturn.type === "normal") {
+              expectedAnnualReturn.mean = expectedAnnualReturn.mean; // Keep mean as it is
+              expectedAnnualReturn.stdev = expectedAnnualReturn.stdev; // Keep stdev as it is
+            }
+          }
+
+          const expectedAnnualIncome = {
+            ...invType.incomeDistribution,
+            type: invType.incomeDistribution.type,
+          };
+          if (invType.incomeAmtOrPct === "percent") {
+            if (expectedAnnualIncome.type === "fixed") {
+              expectedAnnualIncome.value = expectedAnnualIncome.value; // Keep value as it is
+            } else if (expectedAnnualIncome.type === "normal") {
+              expectedAnnualIncome.mean = expectedAnnualIncome.mean; // Keep mean as it is
+              expectedAnnualIncome.stdev = expectedAnnualIncome.stdev; // Keep stdev as it is
+            }
+          }
+
+          const finalInvestment = {
+            _id: inv._id,
+            type: {
+              name: invType.name,
+              description: invType.description,
+              returnAmtOrPct: invType.returnAmtOrPct,
+              expectedAnnualReturn,
+              expenseRatio: invType.expenseRatio, // Keep expense ratio as is, no conversion
+              incomeAmtOrPct: invType.incomeAmtOrPct,
+              expectedAnnualIncome,
+              taxability: invType.taxability,
+            },
+            value: parseFloat(inv.value),
+            accountTaxStatus: inv.taxStatus,
+          };
+          //console.log(`✅ [${index}] Final investment payload:`, finalInvestment);
+
+          return finalInvestment;
+
+        }),
 
 
         //event series: 
@@ -362,14 +449,13 @@ const router = useRouter();
             type
           };
 
-          //Add income type-specific fields
           if (type === "income") {
             payload.income = {
               initialAmount: parseFloat(series.income.initialAmount),
               changeAmtOrPct: series.income.changeAmtOrPct,
               changeDistribution: series.income.changeDistribution,
               adjustForInflation: !!series.income.adjustForInflation,
-              userPct: filingStatus === "married" ? parseFloat(series.income.userPct) : undefined,
+              userPct: filingStatus === "married" ? series.income.userPct : undefined,
               isSocialSecurity: !!series.income.isSocialSecurity,
             };
           }
@@ -380,27 +466,24 @@ const router = useRouter();
               changeAmtOrPct: series.expense.changeAmtOrPct,
               changeDistribution: series.expense.changeDistribution,
               adjustForInflation: !!series.expense.adjustForInflation,
-              discretionary: series.expense?.discretionary ?? false, // Default to false if not provided
+              discretionary: series.expense?.discretionary ?? false,
               ...(filingStatus === "married" && {
-                userPct: series.expense?.userPct ? parseFloat(series.expense.userPct) : 0,
+                userPct: series.expense?.userPct ?? 0,
               }),
             };
           }
 
-           //
           if (type === "invest") {
             payload.invest = {
-              allocationType: series.invest.allocationType, // "fixed" or "glide"
-              selectedInvestments: series.invest.selected,  //assume already array of ObjectIds or names
-              allocations: series.invest.allocations,       //{ investmentId: { value / initial+final } }
+              allocationType: series.invest.allocationType,
+              allocations: series.invest.allocations,
               maxCash: parseFloat(series.invest.maxCash || 0),
             };
           }
 
           if (type === "rebalance") {
             payload.rebalance = {
-              allocationType: series.rebalance.allocationType, // "fixed" or "glide"
-              selectedInvestments: series.rebalance.selected,  
+              allocationType: series.rebalance.allocationType,
               allocations: series.rebalance.allocations,
             };
           }
@@ -424,7 +507,7 @@ const router = useRouter();
         scenarioInfoPayload.rothConversionStart = parseInt(rothStartYear);
         scenarioInfoPayload.rothConversionEnd = parseInt(rothEndYear);
         scenarioInfoPayload.rothConversionStrategy = rothConversionStrategy.map((item) => item.id);
-      }
+      } ////CHANGED
 
     /*
       console.log("SCENARIO NAME:", scenarioName);
@@ -493,8 +576,6 @@ const router = useRouter();
         onFilingStatusChange={handleFilingStatusChange}
         birthYears={birthYears}
         setBirthYears={setBirthYears}
-        retirementAges={retirementAges}
-        setRetirementAges={setRetirementAges}
         lifespanTypes={lifespanTypes}
         setLifespanTypes={setLifespanTypes}
         lifespanValues={lifespanValues}
@@ -511,9 +592,10 @@ const router = useRouter();
         setScenarioName={setScenarioName}
         setShowLifespanModal={setShowLifespanModal}
         renderYearDropdown={renderYearDropdown}
-        renderRetirementAge={renderRetirementAge}
         ignoreStateTax={ignoreStateTax}
         setIgnoreStateTax={setIgnoreStateTax}
+        userRetireContributionLimit={userRetireContributionLimit}
+        setUserRetireContributionLimit={setUserRetireContributionLimit}
       />
 
       {/* Investments Section */}
@@ -543,6 +625,8 @@ const router = useRouter();
         openEventModal={openEventModal}
         removeEventSeries={removeEventSeries}
         addEventSeries={addEventSeries}
+        investmentTypes={investmentTypes} 
+        isEdit={isEdit}
       />
 
       {/* Spending Strategy Section */}
@@ -556,6 +640,8 @@ const router = useRouter();
         investments={investments}
         withdrawalStrategy={withdrawalStrategy}
         setWithdrawalStrategy={setWithdrawalStrategy}
+        selectedWithdrawalIds={selectedWithdrawalIds}
+        setSelectedWithdrawalIds={setSelectedWithdrawalIds}
       />
 
       {/* Inflation Assumption Section */}
@@ -579,16 +665,15 @@ const router = useRouter();
         setRmdStrategy={setRmdStrategy}
       />
         
-    {/* Save button*/}
+   {/* Save button */}
     <div className="w-full mt-8 mb-8 flex justify-center">
       <button
         onClick={handleSaveScenario}
         className="px-6 py-2 bg-indigo-600 text-white rounded hover:bg-indigo-700"
       >
-        Save Scenario
+        {isEdit ? "Edit Scenario" : "Save Scenario"}
       </button>
     </div>
-
 
 
 </div> 
