@@ -1,7 +1,9 @@
 "use client";
-
-import { CheckSquare, Square, ArrowDown } from "lucide-react";
+// SimulationsTable.js
+import { CheckSquare, Square } from "lucide-react";
 import { useState, useRef, useEffect } from "react";
+import ChartModal from "./ChartModal"; // Import the modal component
+import ParameterModal from "./ParameterModal"; // Import the parameter modal component
 
 export default function SimulationsTable({ scenarios }) {
   const [selected, setSelected] = useState(false);
@@ -9,6 +11,10 @@ export default function SimulationsTable({ scenarios }) {
   const dropdownRef = useRef(null);
   const [filter, setFilter] = useState("All");
   const [simulationCounts, setSimulationCounts] = useState({});
+  const [showModal, setShowModal] = useState(false); // Modal visibility state for charts
+  const [showParameterModal, setShowParameterModal] = useState(false); // Modal visibility state for parameters
+  const [selectedCharts, setSelectedCharts] = useState([]); // To store selected charts
+  const [selectedParameter, setSelectedParameter] = useState(null); // To store selected parameter value
 
   const toggleSelection = () => setSelected(!selected);
 
@@ -17,11 +23,17 @@ export default function SimulationsTable({ scenarios }) {
     setFilter(option);
   };
 
+  // Handle simulation count change for each scenario
   const handleSimChange = (id, value) => {
-    setSimulationCounts((prev) => ({
-      ...prev,
-      [id]: value,
-    }));
+    setSimulationCounts((prev) => {
+      const updatedCounts = {
+        ...prev,
+        [id]: value,
+      };
+      // Log the updated simulation count for the specific scenario
+      console.log(`Scenario ID: ${id}, Simulations: ${updatedCounts[id]}`);
+      return updatedCounts;
+    });
   };
 
   useEffect(() => {
@@ -63,7 +75,27 @@ export default function SimulationsTable({ scenarios }) {
     );
   };
 
-  const staticStatusOptions = ["Inactive", "Completed", "In Progress"];
+  // Prepare the payload (for later backend usage)
+  const preparePayload = (scenarioId) => {
+    const numSimulations = simulationCounts[scenarioId];
+    if (!numSimulations || numSimulations <= 0) return; // Ensure positive number of simulations
+
+    const scenario = scenarios.find((s) => s._id === scenarioId);
+    
+    const payload = {
+      scenarioId: scenario._id,
+      numSimulations: numSimulations,  // Include number of simulations the user wants
+      parameters: {
+        initialInvestment: scenario.initialInvestment, // Example: Scenario parameters
+        interestRate: scenario.interestRate,
+        inflationRate: scenario.inflationRate,
+        // You can add more parameters from your scenario here
+      },
+      charts: selectedCharts, // Add the selected charts to the payload
+    };
+
+    console.log("Simulation Payload:", payload); // Log it for now
+  };
 
   return (
     <div className="w-full p-1 relative">
@@ -108,7 +140,7 @@ export default function SimulationsTable({ scenarios }) {
           </tr>
         </thead>
         <tbody>
-          {filteredScenarios.map((scenario, index) => (
+          {filteredScenarios.map((scenario) => (
             <tr key={scenario._id} className="border-b border-gray-200 hover:bg-gray-50 transition">
               <td className="p-4 text-left">
                 <button onClick={toggleSelection} className="flex items-center justify-center">
@@ -125,7 +157,7 @@ export default function SimulationsTable({ scenarios }) {
               <td className="p-4 text-center">
                 <input
                   type="number"
-                  min="0"
+                  min="1"
                   className="w-20 px-2 py-1 border border-gray-300 rounded-md text-sm"
                   value={simulationCounts[scenario._id] ?? ""}
                   placeholder="5"
@@ -133,24 +165,29 @@ export default function SimulationsTable({ scenarios }) {
                 />
               </td>
               <td className="p-4 text-center">
-                {renderStatusBadge(staticStatusOptions[index % staticStatusOptions.length])}
+                {renderStatusBadge("Inactive")}
               </td>
               <td className="p-4 text-center">
-                <button className="px-4 py-2 bg-gray-500 text-white rounded-md text-sm font-medium">
+                <button
+                  onClick={() => setShowParameterModal(true)} // Open the parameter modal
+                  className="px-4 py-2 bg-gray-500 text-white rounded-md text-sm font-medium"
+                >
                   Choose Parameters
                 </button>
               </td>
               <td className="p-4 text-center">
-                <button className="px-4 py-2 bg-gray-600 text-white rounded-md text-sm font-medium">
+                <button
+                  className="px-4 py-2 bg-gray-600 text-white rounded-md text-sm font-medium"
+                  onClick={() => setShowModal(true)} // Open the modal when "Charts" is clicked
+                >
                   Charts
                 </button>
               </td>
               <td className="p-4 text-center">
-                <button className="px-4 py-2 bg-orange-500 text-white rounded-md text-sm font-medium"
-                  onClick={() => {
-                    // TODO - Handle run simulation logic here
-                    console.log(`Running simulation for ${scenario.name}`);
-                  }}>
+                <button
+                  className="px-4 py-2 bg-orange-500 text-white rounded-md text-sm font-medium"
+                  onClick={() => preparePayload(scenario._id)} // Prepare payload when "Run" is clicked
+                >
                   Run
                 </button>
               </td>
@@ -158,7 +195,21 @@ export default function SimulationsTable({ scenarios }) {
           ))}
         </tbody>
       </table>
+
+      {/* Modal for Chart Selection */}
+      <ChartModal
+        showModal={showModal}
+        setShowModal={setShowModal}
+        selectedCharts={selectedCharts}
+        setSelectedCharts={setSelectedCharts}
+      />
+
+      {/* Modal for Parameter Selection */}
+      <ParameterModal
+        showModal={showParameterModal}
+        setShowModal={setShowParameterModal}
+        setSelectedParameter={setSelectedParameter}
+      />
     </div>
   );
 }
-
