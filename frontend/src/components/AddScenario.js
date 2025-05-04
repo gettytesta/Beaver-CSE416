@@ -119,59 +119,6 @@ export default function AddScenario({ isEdit = false, scenarioId = null, prefill
     openEventModal,
   } = useEventSeries(prefilledScenario, isEdit);
 
-
-  //EDIT FIX THIS ONCE YOU"RE DONE WITH THE REST.............................................................
-  /*
-   useEffect(() => {
-     if (!isEdit || !prefilledScenario) return;
-   
-     console.log("🔁 Prefilling scenario:", prefilledScenario);
-   
-     // Scenario Info
-     setScenarioName(prefilledScenario.name || "");
-     setFilingStatus(prefilledScenario.isMarriedCouple ? "married" : "single");
-     setBirthYears([
-       prefilledScenario.userBirthYear || "",
-       prefilledScenario.spouseBirthYear || ""
-     ]);
-     setLifespanValues([
-       prefilledScenario.userLifeExpectancy || {},
-       prefilledScenario.spouseLifeExpectancy || {}
-     ]);
-     setState(prefilledScenario.userStateOfResidence || "");
-     setFinancialGoal(prefilledScenario.financialGoal || "");
-     setIgnoreStateTax(prefilledScenario.stateTaxStatus === "ignored");
-   
-     // Investments
-     setInvestments(prefilledScenario.investments || []);
-     const types = (prefilledScenario.investments || []).map(inv => inv.type);
-     setInvestments(
-       (prefilledScenario.investments || []).map((inv) => ({
-         ...inv,
-         type: inv.type.name,               // flatten embedded type back to name
-         taxStatus: inv.accountTaxStatus,   // assign tax status for dropdown
-       }))
-     );
-   
-     // Event Series
-     setEventSeries(prefilledScenario.eventSeriesSet || []);
-   
-     // Inflation Assumption
-     setInflation(prefilledScenario.inflationAssumption || { type: "fixed", value: "" });
-   
-     // Strategies
-     setSpendingStrategy((prefilledScenario.spendingStrategy || []).map(id => ({ id, name: id })));
-     setWithdrawalStrategy((prefilledScenario.expenseWithdrawalStrategy || []).map(id => ({ id, name: id })));
-     setRmdStrategy((prefilledScenario.rmdStrategy || []).map(id => ({ id, name: id })));
-   
-     // Roth Conversion
-     setEnableRothConversion(prefilledScenario.rothConversionOpt || false);
-     setRothStartYear(prefilledScenario.rothConversionStart || "");
-     setRothEndYear(prefilledScenario.rothConversionEnd || "");
-     setRothConversionStrategy((prefilledScenario.rothConversionStrategy || []).map(id => ({ id, name: id })));
-   
-   }, [isEdit, prefilledScenario]);*/
-   
   
   // ================== Spending Strategy SECTION ==================
   useEffect(() => {
@@ -226,7 +173,7 @@ export default function AddScenario({ isEdit = false, scenarioId = null, prefill
   const [inflation, setInflation] = useState(() => {
     if (isEdit && prefilledScenario?.inflationAssumption) {
       const infl = prefilledScenario.inflationAssumption;
-      const convert = (val) => val !== undefined ? String(parseFloat(val) * 100) : "";
+      const convert = (val) => val !== undefined ? String(val) : "";
   
       if (infl.type === "fixed") {
         return { type: "fixed", value: convert(infl.value) };
@@ -378,13 +325,13 @@ function convertAllocationMapToDecimal(allocationMap, allocationType) {
 
       let inflationAssumption = { type: inflation.type };
         if (inflation.type === "fixed") {
-          inflationAssumption.value = percentToDecimal(inflation.value);
+          inflationAssumption.value = parseFloat(inflation.value);
         } else if (inflation.type === "normal") {
-          inflationAssumption.mean = percentToDecimal(inflation.mean);
-          inflationAssumption.stdev = percentToDecimal(inflation.stdev);
+          inflationAssumption.mean = parseFloat(inflation.mean);
+          inflationAssumption.stdev = parseFloat(inflation.stdev);
         } else if (inflation.type === "uniform") {
-          inflationAssumption.lower = percentToDecimal(inflation.lower);
-          inflationAssumption.upper = percentToDecimal(inflation.upper);
+          inflationAssumption.lower = parseFloat(inflation.lower);
+          inflationAssumption.upper = parseFloat(inflation.upper);
         }
       //Build payload
       const scenarioInfoPayload = {
@@ -400,38 +347,55 @@ function convertAllocationMapToDecimal(allocationMap, allocationType) {
         stateTaxStatus,
         userRetireContributionLimit: Number(userRetireContributionLimit),
         //investments next
-        investments: investments.map((inv) => {
+        investments: investments.map((inv, index) => {
           const invType = inv.type;
 
+          /*console.log(`📦 [${index}] Preparing investment "${invType?.name}" (ID: ${inv._id})`);
+
+          
+          if (!invType?.returnDistribution?.type) {
+            console.warn(`⚠️ Missing returnDistribution.type for investment ${inv._id}`, invType.returnDistribution);
+          }
+
+          if (!invType?.incomeDistribution?.type) {
+            console.warn(`⚠️ Missing incomeDistribution.type for investment ${inv._id}`, invType.incomeDistribution);
+          }*/
+
           // Convert percentages to decimals if needed
-          const expectedAnnualReturn = { ...invType.returnDistribution };
+          const expectedAnnualReturn = {
+            ...invType.returnDistribution,
+            type: invType.returnDistribution.type,
+          };
           if (invType.returnAmtOrPct === "percent") {
             if (expectedAnnualReturn.type === "fixed") {
-              expectedAnnualReturn.value = percentToDecimal(expectedAnnualReturn.value);
+              expectedAnnualReturn.value = expectedAnnualReturn.value; // Keep value as it is, no conversion
             } else if (expectedAnnualReturn.type === "normal") {
-              expectedAnnualReturn.mean = percentToDecimal(expectedAnnualReturn.mean);
-              expectedAnnualReturn.stdev = percentToDecimal(expectedAnnualReturn.stdev);
+              expectedAnnualReturn.mean = expectedAnnualReturn.mean; // Keep mean as it is
+              expectedAnnualReturn.stdev = expectedAnnualReturn.stdev; // Keep stdev as it is
             }
           }
 
-          const expectedAnnualIncome = { ...invType.incomeDistribution };
+          const expectedAnnualIncome = {
+            ...invType.incomeDistribution,
+            type: invType.incomeDistribution.type,
+          };
           if (invType.incomeAmtOrPct === "percent") {
             if (expectedAnnualIncome.type === "fixed") {
-              expectedAnnualIncome.value = percentToDecimal(expectedAnnualIncome.value);
+              expectedAnnualIncome.value = expectedAnnualIncome.value; // Keep value as it is
             } else if (expectedAnnualIncome.type === "normal") {
-              expectedAnnualIncome.mean = percentToDecimal(expectedAnnualIncome.mean);
-              expectedAnnualIncome.stdev = percentToDecimal(expectedAnnualIncome.stdev);
+              expectedAnnualIncome.mean = expectedAnnualIncome.mean; // Keep mean as it is
+              expectedAnnualIncome.stdev = expectedAnnualIncome.stdev; // Keep stdev as it is
             }
           }
 
-          return {
+          const finalInvestment = {
             _id: inv._id,
             type: {
               name: invType.name,
               description: invType.description,
               returnAmtOrPct: invType.returnAmtOrPct,
               expectedAnnualReturn,
-              expenseRatio: percentToDecimal(invType.expenseRatio),
+              expenseRatio: invType.expenseRatio, // Keep expense ratio as is, no conversion
               incomeAmtOrPct: invType.incomeAmtOrPct,
               expectedAnnualIncome,
               taxability: invType.taxability,
@@ -439,54 +403,11 @@ function convertAllocationMapToDecimal(allocationMap, allocationType) {
             value: parseFloat(inv.value),
             accountTaxStatus: inv.taxStatus,
           };
+          //console.log(`✅ [${index}] Final investment payload:`, finalInvestment);
+
+          return finalInvestment;
+
         }),
-
-        //FOR DEMONSTRATION to show that update works but small bug with frontend/backend investment conversion
-    /*  investments: investments.map((inv) => {
-            const invType = inv.type;
-
-            const expectedAnnualReturn = {
-              type: invType.returnDistribution?.type ?? "fixed",
-            };
-            if (expectedAnnualReturn.type === "fixed") {
-              expectedAnnualReturn.value = percentToDecimal(invType.returnDistribution?.value ?? 0);
-            } else if (expectedAnnualReturn.type === "normal") {
-              expectedAnnualReturn.mean = percentToDecimal(invType.returnDistribution?.mean ?? 0);
-              expectedAnnualReturn.stdev = percentToDecimal(invType.returnDistribution?.stdev ?? 0);
-            } else if (expectedAnnualReturn.type === "uniform") {
-              expectedAnnualReturn.lower = percentToDecimal(invType.returnDistribution?.lower ?? 0);
-              expectedAnnualReturn.upper = percentToDecimal(invType.returnDistribution?.upper ?? 0);
-            }
-
-            const expectedAnnualIncome = {
-              type: invType.incomeDistribution?.type ?? "fixed",
-            };
-            if (expectedAnnualIncome.type === "fixed") {
-              expectedAnnualIncome.value = percentToDecimal(invType.incomeDistribution?.value ?? 0);
-            } else if (expectedAnnualIncome.type === "normal") {
-              expectedAnnualIncome.mean = percentToDecimal(invType.incomeDistribution?.mean ?? 0);
-              expectedAnnualIncome.stdev = percentToDecimal(invType.incomeDistribution?.stdev ?? 0);
-            } else if (expectedAnnualIncome.type === "uniform") {
-              expectedAnnualIncome.lower = percentToDecimal(invType.incomeDistribution?.lower ?? 0);
-              expectedAnnualIncome.upper = percentToDecimal(invType.incomeDistribution?.upper ?? 0);
-            }
-
-            return {
-              _id: inv._id,
-              type: {
-                name: invType.name,
-                description: invType.description,
-                returnAmtOrPct: invType.returnAmtOrPct,
-                expectedAnnualReturn,
-                expenseRatio: percentToDecimal(invType.expenseRatio ?? 0),
-                incomeAmtOrPct: invType.incomeAmtOrPct,
-                expectedAnnualIncome,
-                taxability: invType.taxability,
-              },
-              value: parseFloat(inv.value ?? 0),
-              accountTaxStatus: inv.taxStatus,
-            };
-          }), */
 
 
         //event series: 
@@ -526,60 +447,42 @@ function convertAllocationMapToDecimal(allocationMap, allocationType) {
             type
           };
 
-          //Add income type-specific fields
           if (type === "income") {
             payload.income = {
               initialAmount: parseFloat(series.income.initialAmount),
               changeAmtOrPct: series.income.changeAmtOrPct,
-              changeDistribution: convertDistributionIfPercent(
-                series.income.changeDistribution,
-                series.income.changeAmtOrPct
-              ),
+              changeDistribution: series.income.changeDistribution,
               adjustForInflation: !!series.income.adjustForInflation,
-              userPct: filingStatus === "married"
-                ? percentToDecimal(series.income.userPct)
-                : undefined,
+              userPct: filingStatus === "married" ? series.income.userPct : undefined,
               isSocialSecurity: !!series.income.isSocialSecurity,
             };
           }
-          
+
           if (type === "expense") {
             payload.expense = {
               initialAmount: parseFloat(series.expense.initialAmount),
               changeAmtOrPct: series.expense.changeAmtOrPct,
-              changeDistribution: convertDistributionIfPercent(
-                series.expense.changeDistribution,
-                series.expense.changeAmtOrPct
-              ),
+              changeDistribution: series.expense.changeDistribution,
               adjustForInflation: !!series.expense.adjustForInflation,
               discretionary: series.expense?.discretionary ?? false,
               ...(filingStatus === "married" && {
-                userPct: series.expense?.userPct
-                  ? percentToDecimal(series.expense.userPct)
-                  : 0,
+                userPct: series.expense?.userPct ?? 0,
               }),
             };
           }
 
-           //
           if (type === "invest") {
             payload.invest = {
-              allocationType: series.invest.allocationType, // "fixed" or "glide"
-              allocations: convertAllocationMapToDecimal(
-                series.invest.allocations,
-                series.invest.allocationType  //{ investmentId: { value / initial+final } }
-              ),
+              allocationType: series.invest.allocationType,
+              allocations: series.invest.allocations,
               maxCash: parseFloat(series.invest.maxCash || 0),
             };
           }
 
           if (type === "rebalance") {
             payload.rebalance = {
-              allocationType: series.rebalance.allocationType, // "fixed" or "glide"
-              allocations: convertAllocationMapToDecimal(
-                series.rebalance.allocations,
-                series.rebalance.allocationType
-              ),
+              allocationType: series.rebalance.allocationType,
+              allocations: series.rebalance.allocations,
             };
           }
 
@@ -602,7 +505,7 @@ function convertAllocationMapToDecimal(allocationMap, allocationType) {
         scenarioInfoPayload.rothConversionStart = parseInt(rothStartYear);
         scenarioInfoPayload.rothConversionEnd = parseInt(rothEndYear);
         scenarioInfoPayload.rothConversionStrategy = rothConversionStrategy.map((item) => item.id);
-      }
+      } ////CHANGED
 
     /*
       console.log("SCENARIO NAME:", scenarioName);

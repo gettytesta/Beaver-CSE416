@@ -9,12 +9,27 @@ export default function useInvestments(initialScenario = null, isEdit=false) {
       return [{ _id: uuidv4(), value: "", taxStatus: "", type: "" }];
     }
   
-    return initialScenario.investments.map((inv) => ({
-      _id: inv._id,
-      value: inv.value,
-      taxStatus: inv.accountTaxStatus,
-      type: inv.type, // temporarily unnormalized
-    }));
+    return initialScenario.investments.map((inv, index) => {
+      const normalized = {
+        _id: inv._id,
+        value: inv.value,
+        taxStatus: inv.accountTaxStatus,
+        type: {
+          name: inv.type.name,
+          description: inv.type.description,
+          returnAmtOrPct: inv.type.returnAmtOrPct,
+          returnDistribution: inv.type.expectedAnnualReturn,
+          expenseRatio: inv.type.expenseRatio,
+          incomeAmtOrPct: inv.type.incomeAmtOrPct,
+          incomeDistribution: inv.type.expectedAnnualIncome,
+          taxability: inv.type.taxability,
+        },
+      };
+  
+      console.log(`🔁 [${index}] Normalized investment "${normalized.type.name}"`, normalized);
+  
+      return normalized;
+    });
   });
   
   const [investmentTypes, setInvestmentTypes] = useState(() => {
@@ -44,6 +59,8 @@ export default function useInvestments(initialScenario = null, isEdit=false) {
     incomeAmtOrPct: "percent",
     incomeDistribution: { type: "fixed", value: "" },
     taxability: true,
+    expenseRatioWasChanged: false,
+
   });
 
   const investmentStatusOptions = ["Taxable", "Tax-Deferred", "Tax-Exempt"];
@@ -70,6 +87,22 @@ export default function useInvestments(initialScenario = null, isEdit=false) {
       const updated = [...investmentTypes];
       updated[editIndex] = newInvestmentType;
       setInvestmentTypes(updated);
+    
+      // 🩹 Propagate updates to all investments using this type
+      setInvestments((prev) =>
+        prev.map((inv) => {
+          if (
+            inv.type.name === newInvestmentType.name &&
+            inv.type.taxability === newInvestmentType.taxability
+          ) {
+            return {
+              ...inv,
+              type: newInvestmentType,
+            };
+          }
+          return inv;
+        })
+      );
     } else {
       setInvestmentTypes([...investmentTypes, newInvestmentType]);
     }
@@ -91,10 +124,9 @@ export default function useInvestments(initialScenario = null, isEdit=false) {
   const handleEditInvestmentType = (index) => {
     const original = investmentTypes[index] || {};
   
-    const asString = (val, convertToPercent = false) => {
+    const asString = (val) => {
       if (val === undefined || val === null) return "";
-      const numberVal = parseFloat(val);
-      return isEdit && convertToPercent ? String(numberVal * 100) : String(numberVal);
+      return String(val); // Don't convert percentage to decimal here anymore
     };
   
     const convertDistribution = (dist, amtOrPct) => {
@@ -177,7 +209,7 @@ export default function useInvestments(initialScenario = null, isEdit=false) {
           onChange={(e) => {
             const val = e.target.value;
     if (val !== "" && (!/^\d*\.?\d*$/.test(val) || parseFloat(val) < 0 || parseFloat(val) > 100)) return;
-            setNewInvestmentType({ ...newInvestmentType, expenseRatio: val });
+            setNewInvestmentType({ ...newInvestmentType, expenseRatio: val, expenseRatioWasChanged: true, });
           }}
           className="w-full border px-3 py-2 rounded pr-8"
         />

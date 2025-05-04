@@ -63,132 +63,115 @@ export default function useEventSeries(initialScenario = null, isEdit = false) {
     const original = eventSeries[index];
     const type = original.type || "";
   
-    const percentFromDecimal = (val) =>
-      val != null && !isNaN(val)
-        ? String(Math.round(parseFloat(val) * 100))
-        : "";
-  
-    const formatValue = (val, isPercent) =>
-      val !== undefined ? (isPercent ? percentFromDecimal(val) : String(val)) : "";
+    const formatValue = (val) =>
+      val !== undefined && val !== null ? String(val) : "";
   
     let incomeDefaults, expenseDefaults;
   
     if (type === "income") {
-      const isPercent = original.income?.changeAmtOrPct === "percent";
-  
       incomeDefaults = {
         initialAmount: original.income?.initialAmount ?? "",
         changeAmtOrPct: original.income?.changeAmtOrPct ?? "amount",
         changeDistribution: {
           type: original.income?.changeDistribution?.type ?? "fixed",
           ...(original.income?.changeDistribution?.type === "fixed" && {
-            value: formatValue(original.income.changeDistribution.value, isPercent),
+            value: formatValue(original.income.changeDistribution?.value),
           }),
           ...(original.income?.changeDistribution?.type === "normal" && {
-            mean: formatValue(original.income.changeDistribution.mean, isPercent),
-            stdev: formatValue(original.income.changeDistribution.stdev, isPercent),
+            mean: formatValue(original.income.changeDistribution?.mean),
+            stdev: formatValue(original.income.changeDistribution?.stdev),
           }),
           ...(original.income?.changeDistribution?.type === "uniform" && {
-            lower: formatValue(original.income.changeDistribution.lower, isPercent),
-            upper: formatValue(original.income.changeDistribution.upper, isPercent),
+            lower: formatValue(original.income.changeDistribution?.lower),
+            upper: formatValue(original.income.changeDistribution?.upper),
           }),
         },
         adjustForInflation: original.income?.adjustForInflation ?? false,
         isSocialSecurity: original.income?.isSocialSecurity ?? false,
-        userPct: isEdit ? percentFromDecimal(original.income?.userPct) : original.income?.userPct ?? "",
+        userPct: original.income?.userPct ?? "",
       };
     }
   
     if (type === "expense") {
-      const isPercent = original.expense?.changeAmtOrPct === "percent";
-  
       expenseDefaults = {
         initialAmount: original.expense?.initialAmount ?? "",
         changeAmtOrPct: original.expense?.changeAmtOrPct ?? "amount",
         changeDistribution: {
           type: original.expense?.changeDistribution?.type ?? "fixed",
           ...(original.expense?.changeDistribution?.type === "fixed" && {
-            value: formatValue(original.expense.changeDistribution.value, isPercent),
+            value: formatValue(original.expense.changeDistribution?.value),
           }),
           ...(original.expense?.changeDistribution?.type === "normal" && {
-            mean: formatValue(original.expense.changeDistribution.mean, isPercent),
-            stdev: formatValue(original.expense.changeDistribution.stdev, isPercent),
+            mean: formatValue(original.expense.changeDistribution?.mean),
+            stdev: formatValue(original.expense.changeDistribution?.stdev),
           }),
           ...(original.expense?.changeDistribution?.type === "uniform" && {
-            lower: formatValue(original.expense.changeDistribution.lower, isPercent),
-            upper: formatValue(original.expense.changeDistribution.upper, isPercent),
+            lower: formatValue(original.expense.changeDistribution?.lower),
+            upper: formatValue(original.expense.changeDistribution?.upper),
           }),
         },
         adjustForInflation: original.expense?.adjustForInflation ?? false,
         discretionary: original.expense?.discretionary ?? false,
-        userPct: isEdit ? percentFromDecimal(original.expense?.userPct) : original.expense?.userPct ?? "",
+        userPct: original.expense?.userPct ?? "",
       };
     }
-
+  
     let investDefaults;
-
     if (type === "invest") {
       const allocationMap = original.invest?.allocations ?? {};
       const isGlide = original.invest?.allocationType === "glide";
-    
+  
       const convertedAllocations = {};
       for (const [key, val] of Object.entries(allocationMap)) {
         convertedAllocations[key] = isGlide
           ? {
-              initial: isEdit ? percentFromDecimal(val.initial) : val.initial,
-              final: isEdit ? percentFromDecimal(val.final) : val.final,
+              initial: val.initial,
+              final: val.final,
             }
           : {
-              value: isEdit ? percentFromDecimal(val.value) : val.value,
+              value: val.value,
             };
       }
-    
+  
       investDefaults = {
         allocationType: original.invest?.allocationType ?? "fixed",
         allocations: convertedAllocations,
         maxCash: original.invest?.maxCash ?? "",
-        selected: Object.keys(convertedAllocations), // optional: drives checkboxes
+        selected: Object.keys(convertedAllocations),
       };
     }
-
-
+  
     let rebalanceDefaults;
-    
     if (type === "rebalance") {
       const allocationMap = original.rebalance?.allocations ?? {};
       const isGlide = original.rebalance?.allocationType === "glide";
-    
+  
       const normalizedAllocations = {};
       for (const [key, val] of Object.entries(allocationMap)) {
-        normalizedAllocations[String(key)] = {
-          ...(isGlide
-            ? {
-                initial: isEdit ? percentFromDecimal(val.initial) : val.initial,
-                final: isEdit ? percentFromDecimal(val.final) : val.final,
-              }
-            : {
-                value: isEdit ? percentFromDecimal(val.value) : val.value,
-              }),
-        };
+        normalizedAllocations[String(key)] = isGlide
+          ? {
+              initial: val.initial,
+              final: val.final,
+            }
+          : {
+              value: val.value,
+            };
       }
-    
+  
       rebalanceDefaults = {
         allocationType: original.rebalance?.allocationType ?? "fixed",
         allocations: normalizedAllocations,
         selected: Object.keys(normalizedAllocations),
       };
     }
-
-
   
     const temp = {
       ...original,
       ...(type === "income" && { income: incomeDefaults }),
       ...(type === "expense" && { expense: expenseDefaults }),
-      ...(type === "invest" && { invest: investDefaults }), 
+      ...(type === "invest" && { invest: investDefaults }),
       ...(type === "rebalance" && { rebalance: rebalanceDefaults }),
     };
-    
   
     setEditingEventIndex(index);
     setTempEvent(temp);
