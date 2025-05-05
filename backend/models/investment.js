@@ -16,7 +16,7 @@ const AccountTaxStatus = Object.freeze({
 
 var InvestmentSchema = new Schema({
     _id: {type: String, required: true, default: uuidv4, }, //THIS
-    //id: {type: String, required: true,},
+    // id:  {type: String, required: true, default: "", }, // derived as type.name + accountTaxStatus
     type: {type: InvestmentTypeSchema, required: true},
     value: {type: Number, required: true},
     accountTaxStatus: {
