@@ -1,5 +1,7 @@
 const passport = require('passport');
 const GoogleStrategy = require('passport-google-oauth20').Strategy;
+const CustomStrategy = require('passport-custom');
+const { v4: uuidv4, } = require('uuid');
 const User = require('../models/user');
 const { generateUniqueUsername } = require('../utils/usernameUtils');
 
@@ -42,6 +44,23 @@ passport.use(
         }
     )
 );
+
+// guest authentication
+passport.use('guest', new CustomStrategy(
+  async (req, cb) => {
+    const username = await generateUniqueUsername("Guest", "");
+    const newUser = new User({
+      googleId: uuidv4(),
+      username: username,
+      email: username,
+      name: "Guest",
+      profilePicture: '',
+      isGuest: true,
+    });
+    let user = await newUser.save();
+    return cb(null, user);
+  }
+));
 
 // Serialize user into the session
 passport.serializeUser((user, done) => {

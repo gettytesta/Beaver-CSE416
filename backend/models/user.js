@@ -20,7 +20,7 @@ const UserSchema = new mongoose.Schema({
     required: true,
     unique: true,
     trim: true,
-    lowercase: true
+    lowercase: true,
   },
   name: {
     type: String,
@@ -28,6 +28,11 @@ const UserSchema = new mongoose.Schema({
   },
   profilePicture: {
     type: String
+  },
+  isGuest: {
+    type: Boolean,
+    required: true,
+    default: false,
   },
   createdAt: {
     type: Date,

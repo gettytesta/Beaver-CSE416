@@ -13,7 +13,7 @@ import { useRouter } from "next/navigation";
 const backendURL = process.env.NEXT_PUBLIC_BACKEND_URL;
 
 export default function LandingPage() {
-  const handleGuest = async () => {
+  const handleGuest = /*async () => {
     try {
       const res = await fetch(`${backendURL}/auth/guest`, {
         method: "POST",
@@ -40,7 +40,18 @@ export default function LandingPage() {
       console.error("Guest login error:", error);
       alert("Something went wrong.");
     }
-  };
+  };*/
+  async () => {
+    let res = await fetch(`${backendURL}/auth/guest`, {
+      method: "GET",
+      credentials: "include",
+    });
+    console.log("Sent");
+    if (res.ok)
+      window.location.href = "/dashboard";
+    else
+      alert("Guest login failed.");
+  }
 
   // Redirects to the Google OAuth login page on the backend
   const handleLogin = () => {
