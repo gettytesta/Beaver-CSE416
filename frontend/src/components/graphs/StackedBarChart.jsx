@@ -20,9 +20,8 @@ ChartJS.register(CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend)
 // simulation are aggregated and displayed as a single “Other” category. Hovering over a bar raises a pop-
 // up displaying the height of the bar and the height of each segment.
 
-// TP - Github Copilot - Was fed the description from the requirements document as a prompt.
-//                       The code required heavy editing however.
-
+// TP - ChatGPT - Was asked to create functions for calculating the median and average of an array of numbers.
+//                       Was also asked to create a function that generates a random color in RGBA format.
 function getMedian(values) {
     values.sort((a, b) => a - b);
     const mid = Math.floor(values.length / 2);
@@ -43,8 +42,8 @@ const getRandomColor = () => {
     return `rgba(${r}, ${g}, ${b}, 0.8)`; // Random color with 80% opacity
 };
 
-// typeOption represents whether we use median or average values
-// "median" or "average"
+// TP - Github Copilot - Was fed the description from the requirements document as a prompt.
+//                       The code required heavy editing however.
 export const StackedBarChartInvestments = ({scenario, simulationResults, typeOption, aggregationThreshold }) => {
     const investmentData = {};
     const investmentCategories = simulationResults[0].result.yearlyData[0].investments.map(investment => investment.type);
@@ -121,6 +120,179 @@ export const StackedBarChartInvestments = ({scenario, simulationResults, typeOpt
                 title: {
                     display: true,
                     text: 'Investment Value ($)',
+                },
+            },
+        },
+    };
+
+    return <Bar data={data} options={options} />;
+};
+
+export const StackedBarChartIncome = ({scenario, simulationResults, typeOption, aggregationThreshold }) => {
+    const eventIncome = {};
+    const eventSeriesNames = simulationResults[0].result.yearlyData[0].incomeEvents.map(event => event.name);
+    eventSeriesNames.push("Other"); // Add "Other" category for aggregation
+
+    simulationResults.forEach(simulation => {
+        simulation.result.yearlyData.forEach(yearData => {
+            if (eventIncome[yearData.year] === undefined) {
+                eventIncome[yearData.year] = {};
+            }
+            yearData.incomeEvents.forEach(event => {
+                if (eventIncome[yearData.year][event.name] === undefined) {
+                    eventIncome[yearData.year][event.name] = [];
+                }
+                if (event.income >= aggregationThreshold) { 
+                    eventIncome[yearData.year][event.name].push(event.value);
+                    
+                } else {
+                    eventIncome[yearData.year]["Other"].push(event.value);
+                }
+            })
+        });
+    })
+
+    const labels = Object.keys(eventIncome).sort((a, b) => a - b); // Sort years in ascending order
+    const colors = eventSeriesNames.map(() => getRandomColor()); // Generate random colors for each year
+    const datasets = eventSeriesNames.map(category => ({
+        label: category,
+        data: labels.map(year => {
+            const values = eventIncome[year][category];
+            if (!values || values.length === 0) {
+                return 0; // No data for this category in this year
+            }
+            return typeOption === "median" ? getMedian(values) : getAverage(values);
+        }),
+        borderWidth: 1,
+        backgroundColor: colors[eventSeriesNames.indexOf(category)],
+    }));
+
+    const data = {
+        labels,
+        datasets
+    };
+
+    const options = {
+        responsive: true,
+        plugins: {
+            legend: {
+                position: 'top',
+            },
+            title: {
+                display: true,
+                text: 'Stacked Bar Chart of Income Over Time',
+            },
+            tooltip: {
+                callbacks: {
+                    label: function (context) {
+                        return `${context.dataset.label}: $${context.raw.toLocaleString()}`;
+                    },
+                },
+            },
+        },
+        scales: {
+            x: {
+                stacked: true,
+                title: {
+                    display: true,
+                    text: 'Years',
+                },
+            },
+            y: {
+                stacked: true,
+                beginAtZero: true,
+                title: {
+                    display: true,
+                    text: 'Income Value ($)',
+                },
+            },
+        },
+    };
+
+    return <Bar data={data} options={options} />;
+};
+
+export const StackedBarChartExpenses = ({scenario, simulationResults, typeOption, aggregationThreshold }) => {
+    const eventExpenses = {};
+    const eventSeriesNames = simulationResults[0].result.yearlyData[0].expenseEvents.map(event => event.name);
+    eventSeriesNames.push("Other"); // Add "Other" category for aggregation
+    eventSeriesNames.push("Taxes");
+
+    simulationResults.forEach(simulation => {
+        simulation.result.yearlyData.forEach(yearData => {
+            if (eventExpenses[yearData.year] === undefined) {
+                eventExpenses[yearData.year] = {};
+            }
+            yearData.expenseEvents.forEach(event => {
+                if (eventExpenses[yearData.year][event.name] === undefined) {
+                    eventExpenses[yearData.year][event.name] = [];
+                }
+                if (event.income >= aggregationThreshold) { 
+                    eventExpenses[yearData.year][event.name].push(event.value);
+                    
+                } else {
+                    eventExpenses[yearData.year]["Other"].push(event.value);
+                }
+            })
+            if (eventExpenses[yearData.year]["Taxes"] === undefined) {
+                eventExpenses[yearData.year]["Taxes"] = [];
+            }
+            eventExpenses[yearData.year]["Taxes"].push(yearData.taxesIncurred);
+        });
+    })
+
+    const labels = Object.keys(eventExpenses).sort((a, b) => a - b); // Sort years in ascending order
+    const colors = eventSeriesNames.map(() => getRandomColor()); // Generate random colors for each year
+    const datasets = eventSeriesNames.map(category => ({
+        label: category,
+        data: labels.map(year => {
+            const values = eventExpenses[year][category];
+            if (!values || values.length === 0) {
+                return 0; // No data for this category in this year
+            }
+            return typeOption === "median" ? getMedian(values) : getAverage(values);
+        }),
+        borderWidth: 1,
+        backgroundColor: colors[eventSeriesNames.indexOf(category)],
+    }));
+
+    const data = {
+        labels,
+        datasets
+    };
+
+    const options = {
+        responsive: true,
+        plugins: {
+            legend: {
+                position: 'top',
+            },
+            title: {
+                display: true,
+                text: 'Stacked Bar Chart of Expenses Over Time',
+            },
+            tooltip: {
+                callbacks: {
+                    label: function (context) {
+                        return `${context.dataset.label}: $${context.raw.toLocaleString()}`;
+                    },
+                },
+            },
+        },
+        scales: {
+            x: {
+                stacked: true,
+                title: {
+                    display: true,
+                    text: 'Years',
+                },
+            },
+            y: {
+                stacked: true,
+                beginAtZero: true,
+                title: {
+                    display: true,
+                    text: 'Expenses Value ($)',
                 },
             },
         },

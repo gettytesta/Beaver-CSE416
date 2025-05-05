@@ -280,6 +280,7 @@ const ChartsPage = () => {
             <h1 className="text-4xl font-bold text-center mt-8">{scenario.name}</h1>
             <div className="charts-container mt-4 relative">
                 <button
+                    title='Previous Chart'
                     className="absolute left-0 top-1/2 transform -translate-y-1/2 bg-gray-200 p-2 rounded-full"
                     onClick={handlePrevious}
                 >
@@ -289,6 +290,7 @@ const ChartsPage = () => {
                     {charts[currentChartIndex]}
                 </div>
                 <button
+                    title='Next Chart'
                     className="absolute right-0 top-1/2 transform -translate-y-1/2 bg-gray-200 p-2 rounded-full"
                     onClick={handleNext}
                 >

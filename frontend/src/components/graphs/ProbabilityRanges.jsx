@@ -16,9 +16,6 @@ ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Title, T
 //     5. percentage of total discretionary expenses incurred (the percentage is based on the amounts,
 //     not the number, of the discretionary expenses in that year).
 
-// TP - Github Copilot - Was fed the description from the requirements document as a prompt.
-//                       The code required heavy editing however.
-
 
 //   <option value="totalInvestments">Total Investments</option>
 //   <option value="totalIncome">Total Income</option>
@@ -27,8 +24,7 @@ ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Title, T
 //   <option value="discretionaryExpenses">Discretionary Expenses</option>
 
 
-
-
+// TP - ChatGPT - Was asked to create functions for calculating the median of an array of numbers.
 function getMedian(values) {
     values.sort((a, b) => a - b);
     const mid = Math.floor(values.length / 2);
@@ -37,6 +33,8 @@ function getMedian(values) {
     : (values[mid - 1] + values[mid]) / 2;
 }               
 
+// TP - Github Copilot - Was fed the description from the requirements document as a prompt.
+//                       The code required heavy editing however.
 export const ProbabilityRangesChartInvestment = ({ scenario, simulationResults }) => {
     const financialGoal = scenario.financialGoal;
     const medianValues = {};
