@@ -492,7 +492,8 @@ function convertAllocationMapToDecimal(allocationMap, allocationType) {
         }),
 
 
-        spendingStrategy: spendingStrategy.map(item => item.name),
+        //spendingStrategy: spendingStrategy.map(item => item.name),
+        spendingStrategy: spendingStrategy.map(item => item.id),
 
         expenseWithdrawalStrategy: withdrawalStrategy.length > 0 ? withdrawalStrategy.map((item) => item.id) : [],
 
