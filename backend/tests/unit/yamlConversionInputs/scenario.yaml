@@ -46,7 +46,7 @@ investments:
   - investmentType: cash
     value: 100
     taxStatus: non-retirement # "non-retirement", "pre-tax", or "after-tax"
-    id: cash
+    id: cash non-retirement
 
   - investmentType: S&P 500
     value: 10000
@@ -56,7 +56,7 @@ investments:
   - investmentType: tax-exempt bonds
     value: 2000
     taxStatus: non-retirement
-    id: tax-exempt bonds
+    id: tax-exempt bonds non-retirement
 
   - investmentType: S&P 500
     value: 10000
@@ -131,7 +131,7 @@ eventSeries:
 inflationAssumption: {type: fixed, value: 0.03}
 afterTaxContributionLimit: 7000 # annual limit on contributions to after-tax retirement accounts
 spendingStrategy: ["vacation", "streaming services"]  # list of discretionary expenses, identified by name
-expenseWithdrawalStrategy: [S&P 500 non-retirement, tax-exempt bonds, S&P 500 after-tax] # list of investments, identified by id
+expenseWithdrawalStrategy: [S&P 500 non-retirement, tax-exempt bonds non-retirement, S&P 500 after-tax] # list of investments, identified by id
 RMDStrategy: [S&P 500 pre-tax] # list of pre-tax investments, identified by id
 RothConversionOpt: true   # boolean indicating whether the Roth Conversion optimizer is enabled
 RothConversionStart: 2050 # start year

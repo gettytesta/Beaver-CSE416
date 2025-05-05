@@ -17,14 +17,21 @@ const AccountTaxStatus = Object.freeze({
 var InvestmentSchema = new Schema({
     _id: {type: String, required: true, default: uuidv4, }, //THIS
     // id:  {type: String, required: true, default: "", }, // derived as type.name + accountTaxStatus
-    type: {type: InvestmentTypeSchema, required: true},
+
+    // type: {type: InvestmentTypeSchema, required: true},
+    type: {type: String, required: true}, // CHANGED to the name of the investment type, i.e. it's ID
+    
     value: {type: Number, required: true},
     accountTaxStatus: {
         type: String,
         enum: Object.values(AccountTaxStatus),
         required: true,
     },
-})
+});
+
+InvestmentSchema.virtual('name').get(function() {
+    return this.type.name + ' ' + this.accountTaxStatus
+});
 
 const Investment = mongoose.model('Investment', InvestmentSchema);
 
