@@ -11,6 +11,8 @@ export default function EventModal({
   eventSeries,
   setEventSeries,
   investments,
+  investmentTypes,
+  isEdit
 }) {
   if (editingEventIndex === null || !tempEvent) return null;
 
@@ -732,128 +734,162 @@ export default function EventModal({
 
     {/* Investment Selection */}
     <div>
-      <label className="block text-sm font-medium mb-1">Select Investments (non-pre-tax only)</label>
-      <div className="space-y-1">
-        {investments
-          .filter((inv) => inv.taxStatus !== "pretaxretirement") // ✅ Updated filter
-          .map((inv, index) => {
-            const isChecked = tempEvent.invest?.selected?.includes(index) || false;
-            return (
-              <label key={index} className="flex items-center">
-                <input
-                  type="checkbox"
-                  className="mr-2"
-                  checked={isChecked}
-                  onChange={(e) => {
-                    const selected = new Set(tempEvent.invest?.selected || []);
-                    const updatedAllocations = { ...tempEvent.invest.allocations };
+  <label className="block text-sm font-medium mb-1">Select Investments (non-pre-tax only)</label>
+  <div className="space-y-1">
+    {investments
+      .filter((inv) => inv.taxStatus !== "pre-tax")
+      .map((inv, index) => {
+        const isChecked =
+          (Array.isArray(tempEvent.invest?.selected) && tempEvent.invest.selected.includes(inv._id)) ||
+          Object.prototype.hasOwnProperty.call(tempEvent.invest?.allocations || {}, inv._id);
 
-                    if (e.target.checked) {
-                      selected.add(index);
-                    } else {
-                      selected.delete(index);
-                      delete updatedAllocations[index]; // 🧼 Remove stale allocation entry
+        // ✅ Dynamically lookup full investment type info
+        const typeObj = typeof inv.type === "string"
+          ? investmentTypes.find((t) => t.name === inv.type)
+          : inv.type;
+
+        const typeName = typeObj?.name || "Unnamed";
+        const taxLabel = inv.taxStatus || "";
+        console.log("INVESTMENTS IDs:", investments.map(inv => inv._id));
+        console.log("INVEST ALLOC KEYS:", Object.keys(tempEvent.invest?.allocations || {}));
+        return (
+          <label key={index} className="flex items-center">
+            <input
+                type="checkbox"
+                className="mr-2"
+                checked={isChecked}
+                onChange={(e) => {
+                  const selected = new Set(tempEvent.invest?.selected || []);
+                  const updatedAllocations = { ...tempEvent.invest.allocations };
+                  const isGlide = (tempEvent.invest?.allocationType || "fixed") === "glide";
+
+                  if (e.target.checked) {
+                    selected.add(inv._id);
+
+                    // ✅ Initialize allocation object if not already present
+                    if (!updatedAllocations[inv._id]) {
+                      updatedAllocations[inv._id] = isGlide
+                        ? { initial: "", final: "" }
+                        : { value: "" };
                     }
+                  } else {
+                    selected.delete(inv._id);
+                    delete updatedAllocations[inv._id];
+                  }
 
-                    setTempEvent({
-                      ...tempEvent,
-                      invest: {
-                        ...tempEvent.invest,
-                        selected: Array.from(selected),
-                        allocations: updatedAllocations,
-                      },
-                    });
-                  }}
-                />
-                {`Investment ${index + 1} (${inv.type || "Unnamed"})`}
-              </label>
-            );
-          })}
-      </div>
-    </div>
+                  setTempEvent({
+                    ...tempEvent,
+                    invest: {
+                      ...tempEvent.invest,
+                      selected: Array.from(selected),
+                      allocations: updatedAllocations,
+                    },
+                  });
+                }}
+              />
+            {`Investment ${index + 1} (${typeName} ${taxLabel})`}
+          </label>
+        );
+      })}
+  </div>
+</div>
 
         {/* Allocation Inputs */}
-        {tempEvent.invest?.selected?.length > 0 && (
+        {(tempEvent.invest?.selected?.length > 0 || Object.keys(tempEvent.invest?.allocations || {}).length > 0) && (
           <div className="space-y-3">
-            {tempEvent.invest.selected.map((invIndex) => (
-              <div key={invIndex}>
-                <label className="block text-sm font-medium mb-1">{`Investment ${invIndex + 1} Allocation (%)`}</label>
+            {Object.keys(tempEvent.invest.allocations).map((invId) => {
+              const inv = investments.find((i) => i._id === invId);
+              if (!inv) return null;
 
-                {(tempEvent.invest.allocationType || "fixed") === "fixed" ? (
-                  <input
-                    type="number"
-                    className="w-full border px-3 py-2 rounded"
-                    placeholder="e.g. 50"
-                    value={tempEvent.invest?.allocations?.[invIndex]?.value || ""}
-                    onChange={(e) => {
-                      const updatedAlloc = {
-                        ...tempEvent.invest.allocations,
-                        [invIndex]: {
-                          value: e.target.value,
-                        },
-                      };
-                      setTempEvent({
-                        ...tempEvent,
-                        invest: {
-                          ...tempEvent.invest,
-                          allocations: updatedAlloc,
-                        },
-                      });
-                    }}
-                  />
-                ) : (
-                  // Glide path: show both initial and final
-                  <div className="flex gap-2">
-                    <input
-                      type="number"
-                      className="w-1/2 border px-3 py-2 rounded"
-                      placeholder="Initial %"
-                      value={tempEvent.invest?.allocations?.[invIndex]?.initial || ""}
-                      onChange={(e) => {
-                        const updatedAlloc = {
-                          ...tempEvent.invest.allocations,
-                          [invIndex]: {
-                            ...tempEvent.invest.allocations?.[invIndex],
-                            initial: e.target.value,
-                          },
-                        };
-                        setTempEvent({
-                          ...tempEvent,
-                          invest: {
-                            ...tempEvent.invest,
-                            allocations: updatedAlloc,
-                          },
-                        });
-                      }}
-                    />
-                    <input
-                      type="number"
-                      className="w-1/2 border px-3 py-2 rounded"
-                      placeholder="Final %"
-                      value={tempEvent.invest?.allocations?.[invIndex]?.final || ""}
-                      onChange={(e) => {
-                        const updatedAlloc = {
-                          ...tempEvent.invest.allocations,
-                          [invIndex]: {
-                            ...tempEvent.invest.allocations?.[invIndex],
-                            final: e.target.value,
-                          },
-                        };
-                        setTempEvent({
-                          ...tempEvent,
-                          invest: {
-                            ...tempEvent.invest,
-                            allocations: updatedAlloc,
-                          },
-                        });
-                      }}
-                    />
+              const typeObj = typeof inv.type === "string"
+                ? investmentTypes.find((t) => t.name === inv.type)
+                : inv.type;
+
+              const typeName = typeObj?.name || "Unnamed";
+              const taxLabel = inv.taxStatus || "";
+
+              return (
+                <div key={invId}>
+                  <label className="block text-sm font-medium mb-1">
+                    {`Investment (${typeName} ${taxLabel}) Allocation (%)`}
+                  </label>
+
+                    {(tempEvent.invest.allocationType || "fixed") === "fixed" ? (
+                      <input
+                        type="number"
+                        className="w-full border px-3 py-2 rounded"
+                        placeholder="e.g. 50"
+                        value={tempEvent.invest?.allocations?.[invId]?.value || ""}
+                        onChange={(e) => {
+                          const updatedAlloc = {
+                            ...tempEvent.invest.allocations,
+                            [invId]: {
+                              value: e.target.value,
+                            },
+                          };
+                          setTempEvent({
+                            ...tempEvent,
+                            invest: {
+                              ...tempEvent.invest,
+                              allocations: updatedAlloc,
+                            },
+                          });
+                        }}
+                      />
+                    ) : (
+                      // Glide path: show both initial and final
+                      <div className="flex gap-2">
+                        <input
+                          type="number"
+                          className="w-1/2 border px-3 py-2 rounded"
+                          placeholder="Initial %"
+                          value={tempEvent.invest?.allocations?.[invId]?.initial || ""}
+                          onChange={(e) => {
+                            const updatedAlloc = {
+                              ...tempEvent.invest.allocations,
+                              [invId]: {
+                                ...tempEvent.invest.allocations?.[invId],
+                                initial: e.target.value,
+                              },
+                            };
+                            setTempEvent({
+                              ...tempEvent,
+                              invest: {
+                                ...tempEvent.invest,
+                                allocations: updatedAlloc,
+                              },
+                            });
+                          }}
+                        />
+                        <input
+                          type="number"
+                          className="w-1/2 border px-3 py-2 rounded"
+                          placeholder="Final %"
+                          value={tempEvent.invest?.allocations?.[invId]?.final || ""}
+                          onChange={(e) => {
+                            const updatedAlloc = {
+                              ...tempEvent.invest.allocations,
+                              [invId]: {
+                                ...tempEvent.invest.allocations?.[invId],
+                                final: e.target.value,
+                              },
+                            };
+                            setTempEvent({
+                              ...tempEvent,
+                              invest: {
+                                ...tempEvent.invest,
+                                allocations: updatedAlloc,
+                              },
+                            });
+                          }}
+                        />
+                      </div>
+                    )}
                   </div>
-                )}
-              </div>
-            ))}
-          </div>
-        )}
+                );
+              })}
+            </div>
+          )}
 
         {/* Max Cash */}
         <div>
@@ -917,11 +953,11 @@ export default function EventModal({
       <div className="space-y-1">
         {investments.map((inv, index) => {
           const selected = tempEvent.rebalance?.selected || [];
-          const isChecked = selected.includes(index);
+          const isChecked = selected.includes(inv._id);
 
           // Get tax status of the first selected investment
-          const firstSelectedTaxStatus =
-            selected.length > 0 ? investments[selected[0]]?.taxStatus : null;
+          const firstSelectedInv = investments.find((i) => i._id === selected[0]);
+          const firstSelectedTaxStatus = firstSelectedInv?.taxStatus;
 
           // Enforce same tax status
           const isSelectable =
@@ -946,10 +982,10 @@ export default function EventModal({
                   };
 
                   if (e.target.checked) {
-                    updatedSelected.add(index);
+                    updatedSelected.add(inv._id);
                   } else {
-                    updatedSelected.delete(index);
-                    delete updatedAllocations[index]; // Clear stale allocation
+                    updatedSelected.delete(inv._id);
+                    delete updatedAllocations[inv._id]; // Clear stale allocation
                   }
 
                   setTempEvent({
@@ -962,7 +998,11 @@ export default function EventModal({
                   });
                 }}
               />
-              {`Investment ${index + 1} (${inv.type || "Unnamed"} – ${
+              {`Investment ${index + 1} (${
+  typeof inv.type === "string"
+    ? inv.type
+    : inv.type?.name || "Unnamed"
+} – ${
                 inv.taxStatus || "Unknown"
               })`}
               {!isSelectable && (
@@ -980,44 +1020,23 @@ export default function EventModal({
     {/* Allocation Inputs */}
     {tempEvent.rebalance?.selected?.length > 0 && (
       <div className="space-y-3">
-        {tempEvent.rebalance.selected.map((invIndex) => (
-          <div key={invIndex}>
-            <label className="block text-sm font-medium mb-1">{`Investment ${invIndex + 1} Allocation (%)`}</label>
-            {(tempEvent.rebalance.allocationType || "fixed") === "fixed" ? (
-              <input
-                type="number"
-                className="w-full border px-3 py-2 rounded"
-                placeholder="e.g. 50"
-                value={tempEvent.rebalance?.allocations?.[invIndex]?.value || ""}
-                onChange={(e) => {
-                  const updatedAlloc = {
-                    ...tempEvent.rebalance.allocations,
-                    [invIndex]: {
-                      value: e.target.value,
-                    },
-                  };
-                  setTempEvent({
-                    ...tempEvent,
-                    rebalance: {
-                      ...tempEvent.rebalance,
-                      allocations: updatedAlloc,
-                    },
-                  });
-                }}
-              />
-            ) : (
-              <div className="flex gap-2">
+        {tempEvent.rebalance.selected.map((invId) => {
+          const invIndex = investments.findIndex((i) => i._id === invId);
+          return (
+            <div key={invId}>
+              <label className="block text-sm font-medium mb-1">{`Investment ${invIndex + 1} Allocation (%)`}</label>
+
+              {(tempEvent.rebalance.allocationType || "fixed") === "fixed" ? (
                 <input
                   type="number"
-                  className="w-1/2 border px-3 py-2 rounded"
-                  placeholder="Initial %"
-                  value={tempEvent.rebalance?.allocations?.[invIndex]?.initial || ""}
+                  className="w-full border px-3 py-2 rounded"
+                  placeholder="e.g. 50"
+                  value={tempEvent.rebalance?.allocations?.[invId]?.value || ""}
                   onChange={(e) => {
                     const updatedAlloc = {
                       ...tempEvent.rebalance.allocations,
-                      [invIndex]: {
-                        ...tempEvent.rebalance.allocations?.[invIndex],
-                        initial: e.target.value,
+                      [invId]: {
+                        value: e.target.value,
                       },
                     };
                     setTempEvent({
@@ -1029,32 +1048,58 @@ export default function EventModal({
                     });
                   }}
                 />
-                <input
-                  type="number"
-                  className="w-1/2 border px-3 py-2 rounded"
-                  placeholder="Final %"
-                  value={tempEvent.rebalance?.allocations?.[invIndex]?.final || ""}
-                  onChange={(e) => {
-                    const updatedAlloc = {
-                      ...tempEvent.rebalance.allocations,
-                      [invIndex]: {
-                        ...tempEvent.rebalance.allocations?.[invIndex],
-                        final: e.target.value,
-                      },
-                    };
-                    setTempEvent({
-                      ...tempEvent,
-                      rebalance: {
-                        ...tempEvent.rebalance,
-                        allocations: updatedAlloc,
-                      },
-                    });
-                  }}
-                />
-              </div>
-            )}
-          </div>
-        ))}
+              ) : (
+                // Glide path: show both initial and final
+                <div className="flex gap-2">
+                  <input
+                    type="number"
+                    className="w-1/2 border px-3 py-2 rounded"
+                    placeholder="Initial %"
+                    value={tempEvent.rebalance?.allocations?.[invId]?.initial || ""}
+                    onChange={(e) => {
+                      const updatedAlloc = {
+                        ...tempEvent.rebalance.allocations,
+                        [invId]: {
+                          ...tempEvent.rebalance.allocations?.[invId],
+                          initial: e.target.value,
+                        },
+                      };
+                      setTempEvent({
+                        ...tempEvent,
+                        rebalance: {
+                          ...tempEvent.rebalance,
+                          allocations: updatedAlloc,
+                        },
+                      });
+                    }}
+                  />
+                  <input
+                    type="number"
+                    className="w-1/2 border px-3 py-2 rounded"
+                    placeholder="Final %"
+                    value={tempEvent.rebalance?.allocations?.[invId]?.final || ""}
+                    onChange={(e) => {
+                      const updatedAlloc = {
+                        ...tempEvent.rebalance.allocations,
+                        [invId]: {
+                          ...tempEvent.rebalance.allocations?.[invId],
+                          final: e.target.value,
+                        },
+                      };
+                      setTempEvent({
+                        ...tempEvent,
+                        rebalance: {
+                          ...tempEvent.rebalance,
+                          allocations: updatedAlloc,
+                        },
+                      });
+                    }}
+                  />
+                </div>
+              )}
+            </div>
+          );
+        })}
       </div>
     )}
   </div>

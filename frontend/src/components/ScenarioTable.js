@@ -8,70 +8,28 @@
 // is displayed in multiple rows. I integrated those changes into the existing component, updated the filtering 
 // logic, added simulation input handling, and polished the UI layout using Tailwind CSS.
 
-
 import { CheckSquare, Square, ArrowDown } from "lucide-react";
 import { useState, useRef, useEffect } from "react";
-import { useRouter } from "next/navigation"; // ✅ Add this
+import { useRouter } from "next/navigation";
 import { useUser } from "@/context/UserContext";
+import ManageShareModal from "./ManageShareModal";
 
-export default function ScenarioTable() {
-  const router = useRouter(); // ✅ Initialize router
-  const { user, checkedSession } = useUser();
+
+export default function ScenarioTable({ scenarios, onUpdateShare  }) {
+  const router = useRouter();
+  const { checkedSession } = useUser();
+
   const [selected, setSelected] = useState(false);
   const [dropdownOpen, setDropdownOpen] = useState(false);
-  const [simulations, setSimulations] = useState(5);
-  const [scenarios, setScenarios] = useState([]);
-  const [error, setError] = useState(null);
   const [filter, setFilter] = useState("All");
   const dropdownRef = useRef(null);
 
-  useEffect(() => {
-    if (!checkedSession || !user) return;
-
-    const fetchScenarios = async () => {
-      try {
-        const res = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/api/scenarios`, {
-          credentials: "include",
-        });
-
-        const data = await res.json();
-        if (res.ok && data.success) {
-          setScenarios(data.data || []);
-        } else {
-          setError("Failed to load scenarios");
-        }
-      } catch (err) {
-        console.error("Error fetching scenarios:", err);
-        setError("Something went wrong.");
-      }
-    };
-
-    fetchScenarios();
-  }, [checkedSession, user]);
+  const [showManageShareModal, setShowManageShareModal] = useState(false);
+  const [selectedScenario, setSelectedScenario] = useState(null);
 
   const toggleSelection = () => setSelected(!selected);
 
-  const handleSimChange = (e) => {
-    const value = e.target.value;
-    if (value === "") {
-      setSimulations("");
-      return;
-    }
-
-    const parsed = parseInt(value);
-    if (!isNaN(parsed)) {
-      setSimulations(parsed);
-    }
-  };
-
-  const handleSimBlur = () => {
-    if (simulations === "") {
-      setSimulations(0);
-    }
-  };
-
   const handleFilterSelect = (option) => {
-    console.log("Selected Filter:", option);
     setDropdownOpen(false);
     setFilter(option);
   };
@@ -82,7 +40,6 @@ export default function ScenarioTable() {
         setDropdownOpen(false);
       }
     };
-
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
@@ -94,9 +51,32 @@ export default function ScenarioTable() {
     return false;
   });
 
-  if (error) {
-    return <div className="text-center mt-20 text-red-500">{error}</div>;
-  }
+  const handleExport = async (scenarioId) => {
+    try {
+      const res = await fetch(
+        `${process.env.NEXT_PUBLIC_BACKEND_URL}/api/yaml/scenario/${scenarioId}`,
+        {
+          method: "GET",
+          credentials: "include",
+        }
+      );
+
+      if (!res.ok) throw new Error("Failed to export YAML");
+
+      const blob = await res.blob();
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `scenario_${scenarioId}.yaml`;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(url);
+    } catch (err) {
+      console.error("YAML Export Error:", err);
+      alert("Failed to export YAML");
+    }
+  };
 
   if (!checkedSession) {
     return <div className="text-center mt-20 text-gray-500">Loading scenarios...</div>;
@@ -184,7 +164,23 @@ export default function ScenarioTable() {
                 </button>
               </td>
 
-              <td className="p-4">{scenario.name}</td>
+              <td className="p-4">
+  <div className="flex items-center gap-2">
+    <span>{scenario.name}</span>
+
+    {scenario.sharedWith?.length > 0 && (
+      <button
+        onClick={() => {
+          setSelectedScenario(scenario);
+          setShowManageShareModal(true);
+        }}
+        className="text-blue-500 hover:bg-blue-100 hover:underline text-xs px-1 py-0.5 rounded"
+      >
+        [Sharing]
+      </button>
+    )}
+  </div>
+</td>
               <td className="p-4">{scenario.isMarriedCouple ? "Married" : "Single"}</td>
               <td className="p-4 text-center">
                 {Array.isArray(scenario.investments) ? scenario.investments.length : 0}
@@ -202,7 +198,10 @@ export default function ScenarioTable() {
                   : "—"}
               </td>
               <td className="p-4 text-center">
-                <button className="px-5 py-2 bg-gray-500 text-white rounded-md text-base font-medium">
+                <button
+                  className="px-5 py-2 bg-gray-500 text-white rounded-md text-base font-medium"
+                  onClick={() => handleExport(scenario._id)}
+                >
                   Export
                 </button>
               </td>
@@ -210,7 +209,7 @@ export default function ScenarioTable() {
                 <div className="flex justify-center gap-6">
                   <button
                     className="px-5 py-2 bg-gray-600 text-white rounded-md text-base font-medium"
-                    onClick={() => router.push(`/scenarios/edit/${scenario._id}`)} // ✅ This is the edit button
+                    onClick={() => router.push(`/scenarios/edit/${scenario._id}`)}
                   >
                     Edit
                   </button>
@@ -223,6 +222,17 @@ export default function ScenarioTable() {
           ))}
         </tbody>
       </table>
+
+      {showManageShareModal && selectedScenario && (
+        <ManageShareModal
+    isOpen={true}
+    scenario={selectedScenario}
+    onClose={() => setShowManageShareModal(false)}
+    onUpdateShare={onUpdateShare} // ✅ key fix here
+  />
+      )}
+
     </div>
   );
 }
+
