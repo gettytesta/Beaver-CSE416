@@ -1,6 +1,18 @@
 import React from "react";
 import EventModal from "./EventModal";
 
+const formatDistribution = (dist) => {
+  if (!dist || typeof dist !== "object") return "—";
+  if (dist.type === "fixed") return `fixed – ${dist.value}`;
+  if (dist.type === "normal") return `normal – mean ${dist.mean}, stdev ${dist.stdev}`;
+  if (dist.type === "uniform") return `uniform – ${dist.lower}–${dist.upper}`;
+  if (dist.type === "startWith") return `start with "${dist.eventSeries}"`;
+  if (dist.type === "startAfter") return `start after "${dist.eventSeries}"`;
+  return JSON.stringify(dist);
+};
+
+
+
 export default function EventSeries({
   eventSeries,
   showEventModal,
@@ -46,9 +58,9 @@ export default function EventSeries({
           >
             <div className="flex justify-between items-start mb-2">
               <div>
-                <h3 className="text-md font-semibold text-gray-800">
-                  {event.name || "Unnamed Event Series"}
-                </h3>
+              <h3 className="text-md font-semibold text-gray-800">
+                <span className="font-bold">{event.name || "Unnamed Event Series"}</span>
+              </h3>
                 {event.description && (
                   <p className="text-sm text-gray-600">{event.description}</p>
                 )}
@@ -70,13 +82,59 @@ export default function EventSeries({
             </div>
 
             <div className="text-sm text-gray-700 space-y-1">
-              <p>
-                <span className="font-medium">Start:</span> {event.start.type} – {event.start.value || "–"}
-              </p>
-              <p>
-                <span className="font-medium">Duration:</span> {event.duration.type} – {event.duration.value || "–"}
-              </p>
-            </div>
+  <p><span className="font-medium"><strong>Start:</strong></span> {formatDistribution(event.start)}</p>
+  <p><span className="font-medium"><strong>Duration:</strong></span> {formatDistribution(event.duration)}</p>
+  <p><span className="font-medium"><strong>Type:</strong></span> {event.type}</p>
+
+  {event.type === "income" && event.income && (
+    <>
+      <p><strong>Initial Amount:</strong> ${event.income.initialAmount}</p>
+      <p><strong>Change Distribution:</strong> {formatDistribution(event.income.changeDistribution)}</p>
+      <p><strong>Adjust for Inflation:</strong> {event.income.adjustForInflation ? "Yes" : "No"}</p>
+      <p><strong>User %:</strong> {event.income.userPct}</p>
+      <p><strong>Social Security:</strong> {event.income.isSocialSecurity ? "Yes" : "No"}</p>
+    </>
+  )}
+
+  {event.type === "expense" && event.expense && (
+    <>
+      <p><strong>Initial Amount:</strong> ${event.expense.initialAmount}</p>
+      <p><strong>Change Distribution:</strong> {formatDistribution(event.expense.changeDistribution)}</p>
+      <p><strong>Adjust for Inflation:</strong> {event.expense.adjustForInflation ? "Yes" : "No"}</p>
+      <p><strong>User %:</strong> {event.expense.userPct}</p>
+      <p><strong>Discretionary:</strong> {event.expense.discretionary ? "Yes" : "No"}</p>
+    </>
+  )}
+
+  {event.type === "invest" && event.invest && (
+    <>
+      <p><strong>Allocation Type:</strong> {event.invest.allocationType}</p>
+      <p><strong>Max Cash:</strong> ${event.invest.maxCash}</p>
+      <p><strong>Allocations:</strong></p>
+      <ul className="list-disc ml-6">
+        {Object.entries(event.invest.allocations).map(([invId, alloc]) => (
+          <li key={invId}>
+            {invId}: {alloc.initial} → {alloc.final}
+          </li>
+        ))}
+      </ul>
+    </>
+  )}
+
+  {event.type === "rebalance" && event.rebalance && (
+    <>
+      <p><strong>Allocation Type:</strong> {event.rebalance.allocationType}</p>
+      <p><strong>Allocations:</strong></p>
+      <ul className="list-disc ml-6">
+        {Object.entries(event.rebalance.allocations).map(([invId, alloc]) => (
+          <li key={invId}>
+            {invId}: {alloc.value}
+          </li>
+        ))}
+      </ul>
+    </>
+  )}
+</div>
           </div>
         ))}
       </div>

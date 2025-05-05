@@ -115,6 +115,7 @@ exports.exportScenarioYaml = async (req, res) => {
             });
         }
         
+        
         // Convert scenario to YAML format using the utility function
         const yamlString = convertScenarioToYaml(scenario);
         

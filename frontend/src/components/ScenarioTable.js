@@ -7,71 +7,30 @@
 // ChatGPT helped refactor the fetch call to include session-based auth and improved how the scenario data 
 // is displayed in multiple rows. I integrated those changes into the existing component, updated the filtering 
 // logic, added simulation input handling, and polished the UI layout using Tailwind CSS.
-
-
 import { CheckSquare, Square, ArrowDown } from "lucide-react";
 import { useState, useRef, useEffect } from "react";
-import { useRouter } from "next/navigation"; // 
+import { useRouter } from "next/navigation";
 import { useUser } from "@/context/UserContext";
+import ManageShareModal from "./ManageShareModal";
+import ViewScenarioModal from "./ViewScenarioModal";
 
-export default function ScenarioTable() {
-  const router = useRouter(); // 
-  const { user, checkedSession } = useUser();
+export default function ScenarioTable({ scenarios, onUpdateShare, setScenarios }) {
+  const router = useRouter();
+  const { checkedSession } = useUser();
+  const { user } = useUser(); 
+
   const [selected, setSelected] = useState(false);
   const [dropdownOpen, setDropdownOpen] = useState(false);
-  const [simulations, setSimulations] = useState(5);
-  const [scenarios, setScenarios] = useState([]);
-  const [error, setError] = useState(null);
   const [filter, setFilter] = useState("All");
   const dropdownRef = useRef(null);
 
-  useEffect(() => {
-    if (!checkedSession || !user) return;
-
-    const fetchScenarios = async () => {
-      try {
-        const res = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/api/scenarios`, {
-          credentials: "include",
-        });
-
-        const data = await res.json();
-        if (res.ok && data.success) {
-          setScenarios(data.data || []);
-        } else {
-          setError("Failed to load scenarios");
-        }
-      } catch (err) {
-        console.error("Error fetching scenarios:", err);
-        setError("Something went wrong.");
-      }
-    };
-
-    fetchScenarios();
-  }, [checkedSession, user]);
+  const [showManageShareModal, setShowManageShareModal] = useState(false);
+  const [showViewModal, setShowViewModal] = useState(false);
+  const [selectedScenario, setSelectedScenario] = useState(null);
 
   const toggleSelection = () => setSelected(!selected);
 
-  const handleSimChange = (e) => {
-    const value = e.target.value;
-    if (value === "") {
-      setSimulations("");
-      return;
-    }
-
-    const parsed = parseInt(value);
-    if (!isNaN(parsed)) {
-      setSimulations(parsed);
-    }
-  };
-
-  const handleSimBlur = () => {
-    if (simulations === "") {
-      setSimulations(0);
-    }
-  };
-
   const handleFilterSelect = (option) => {
-    console.log("Selected Filter:", option);
     setDropdownOpen(false);
     setFilter(option);
   };
@@ -82,7 +41,6 @@ export default function ScenarioTable() {
         setDropdownOpen(false);
       }
     };
-
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
@@ -94,25 +52,18 @@ export default function ScenarioTable() {
     return false;
   });
 
-  if (error) {
-    return <div className="text-center mt-20 text-red-500">{error}</div>;
-  }
-
-  if (!checkedSession) {
-    return <div className="text-center mt-20 text-gray-500">Loading scenarios...</div>;
-  }
-
   const handleExport = async (scenarioId) => {
     try {
-      const res = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/api/yaml/scenario/${scenarioId}`, {
-        method: "GET",
-        credentials: "include",
-      });
-  
-      if (!res.ok) {
-        throw new Error("Failed to export YAML");
-      }
-  
+      const res = await fetch(
+        `${process.env.NEXT_PUBLIC_BACKEND_URL}/api/yaml/scenario/${scenarioId}`,
+        {
+          method: "GET",
+          credentials: "include",
+        }
+      );
+
+      if (!res.ok) throw new Error("Failed to export YAML");
+
       const blob = await res.blob();
       const url = window.URL.createObjectURL(blob);
       const link = document.createElement("a");
@@ -128,6 +79,30 @@ export default function ScenarioTable() {
     }
   };
 
+  if (!checkedSession) {
+    return <div className="text-center mt-20 text-gray-500">Loading scenarios...</div>;
+  }
+
+  const handleDeleteScenario = async (scenarioId) => {
+    try {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/api/scenarios/${scenarioId}`, {
+        method: "DELETE",
+        credentials: "include",
+      });
+  
+      if (!response.ok) {
+        throw new Error("Failed to delete scenario");
+      }
+  
+      // Update the state to remove the deleted scenario
+      setScenarios((prevScenarios) => prevScenarios.filter((scenario) => scenario._id !== scenarioId));
+  
+      alert("Scenario deleted successfully");
+    } catch (err) {
+      console.error("Error deleting scenario:", err);
+      alert("Failed to delete scenario");
+    }
+  };
 
   return (
     <div className="w-full p-1 relative">
@@ -202,16 +177,58 @@ export default function ScenarioTable() {
           {filteredScenarios.map((scenario) => (
             <tr key={scenario._id} className="border-b border-gray-200 hover:bg-gray-50 transition">
               <td className="p-4 text-left">
-                <button onClick={toggleSelection} className="flex items-center justify-center">
-                  {selected ? (
-                    <CheckSquare className="w-5 h-5 text-blue-500" />
-                  ) : (
-                    <Square className="w-5 h-5 text-gray-500" />
-                  )}
-                </button>
+              <button
+    onClick={() => handleDeleteScenario(scenario._id)}
+    className="flex items-center justify-center text-red-600"
+  >
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      fill="none"
+      viewBox="0 0 24 24"
+      stroke="currentColor"
+      className="w-6 h-6 text-red-600"
+    >
+      <path
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        strokeWidth="2"
+        d="M6 18L18 6M6 6l12 12"
+      />
+    </svg>
+  </button>
               </td>
 
-              <td className="p-4">{scenario.name}</td>
+              <td className="p-4">
+              <div className="flex items-center gap-2">
+  <span>{scenario.name}</span>
+
+  {/* Display [Sharing] button for owners */}
+  {scenario.userId?.toString() === user?.id.toString() && scenario.sharedWith?.length > 0 && (
+    <button
+      onClick={() => {
+        setSelectedScenario(scenario);
+        setShowManageShareModal(true);
+      }}
+      className="text-blue-500 hover:bg-blue-100 hover:underline text-xs px-1 py-0.5 rounded"
+    >
+      [Sharing]
+    </button>
+  )}
+
+  {/* Display access level for shared scenarios */}
+  {scenario.sharedWith?.length > 0 && scenario.userId?.toString() !== user?.id.toString() && (
+    <div className="text-xs text-gray-600">
+      {scenario.sharedWith.map((sharedUser) => (
+        <div key={sharedUser._id}>
+          {sharedUser.accessLevel === "read_write"
+            ? "Read-write"
+            : "Read-only"}
+        </div>
+      ))}
+    </div>
+  )}
+</div>
+              </td>
               <td className="p-4">{scenario.isMarriedCouple ? "Married" : "Single"}</td>
               <td className="p-4 text-center">
                 {Array.isArray(scenario.investments) ? scenario.investments.length : 0}
@@ -238,13 +255,27 @@ export default function ScenarioTable() {
               </td>
               <td className="p-4 text-center" colSpan={2}>
                 <div className="flex justify-center gap-6">
+                  {/* Display 'Edit' button only for owner or read-write access */}
+                  {(scenario.userId?.toString() === user?.id.toString() || 
+                    scenario.sharedWith?.some(sharedUser => {
+                      return sharedUser.accessLevel === "read_write" && sharedUser.userId.toString() === user?.id.toString(); // Check userId match
+                    })) && (
+                    <button
+                      className="px-5 py-2 bg-gray-600 text-white rounded-md text-base font-medium"
+                      onClick={() => router.push(`/scenarios/edit/${scenario._id}`)}
+                    >
+                      Edit
+                    </button>
+                  )}
+
+                  {/* Display 'View' button for everyone */}
                   <button
-                    className="px-5 py-2 bg-gray-600 text-white rounded-md text-base font-medium"
-                    onClick={() => router.push(`/scenarios/edit/${scenario._id}`)} // ✅ This is the edit button
+                    className="px-5 py-2 bg-orange-500 text-white rounded-md text-base font-medium"
+                    onClick={() => {
+                      setSelectedScenario(scenario);
+                      setShowViewModal(true);
+                    }}
                   >
-                    Edit
-                  </button>
-                  <button className="px-5 py-2 bg-orange-500 text-white rounded-md text-base font-medium">
                     View
                   </button>
                 </div>
@@ -253,6 +284,25 @@ export default function ScenarioTable() {
           ))}
         </tbody>
       </table>
+
+      {showManageShareModal && selectedScenario && (
+        <ManageShareModal
+          isOpen={true}
+          scenario={selectedScenario}
+          onClose={() => setShowManageShareModal(false)}
+          onUpdateShare={onUpdateShare}
+        />
+      )}
+
+      {showViewModal && selectedScenario && (
+        <ViewScenarioModal
+          isOpen={true}
+          scenario={selectedScenario}
+          onClose={() => setShowViewModal(false)}
+        />
+      )}
     </div>
   );
 }
+
+
