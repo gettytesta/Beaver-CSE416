@@ -55,7 +55,7 @@ exports.convertYamlToScenario = (yamlData, userId) => {
         })[investment.taxStatus];
         investments.push(
             new Investment({
-                id: investment.id,
+                // id: investment.id,
                 type: investmentType[investment.investmentType],
                 value: investment.value,
                 accountTaxStatus: ts,
@@ -202,7 +202,7 @@ exports.convertScenarioToYaml = (scenario) => {
             investmentType: investment.type.name,
             value: investment.value,
             taxStatus: investment.accountTaxStatus,
-            id: investment.id,
+            id: investment.type.name + ' ' + investment.accountTaxStatus,
         })
     );
     scenario.eventSeriesSet.forEach(event => {
