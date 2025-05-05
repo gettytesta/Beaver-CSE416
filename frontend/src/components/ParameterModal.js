@@ -26,7 +26,7 @@ export default function ParameterModal({
       setSelectedField(currentParameter?.field || "start");
     }
   }, [showModal]);
-
+//
   const handleApply = () => {
     const parameter = {
       parameterType: selectedOption,
