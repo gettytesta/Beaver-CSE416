@@ -57,23 +57,9 @@ async function runSingleSimulation(scenario, simulationId, federalTax, stateTax,
         let expenseEvents = allEvents.filter(event => event.type === 'expense');
         let investEvents = allEvents.filter(event => event.type === 'invest');
         let rebalanceEvents = allEvents.filter(event => event.type === 'rebalance');
-        
-        // Check if investments exist
-        if (!scenario.investments || !Array.isArray(scenario.investments)) {
-            throw Error("Invalid scenario: improper investments given.");
-        }
 
-        // Initialize investments
+        // Initialize investments so that each one has a initial value and purchase price field
         scenario.investments = SimulationUtils.initializeInvestments(scenario.investments);
-        let investments = SimulationUtils.initializeInvestments(scenario.investments);
-
-        // Cash investment
-        let cashInvestment = investments.find(investment => investment.type.name === 'cash');
-
-        // If no cash investment is found throw error.
-        if (!cashInvestment) {
-            throw Error("No cash investment found!");
-        }
 
         // Helper functions
         const isUserDead = () => curYear >= userDeathYear;
@@ -83,9 +69,23 @@ async function runSingleSimulation(scenario, simulationId, federalTax, stateTax,
         const shouldRunEvent = (event) => curYear >= event.start && curYear <= event.start + event.duration;
         const getTotalAssets = () => {
             let s = cashInvestment.value;
-            investments.forEach(inv => { s += inv.value; });
+            scenario.investments.forEach(inv => { s += inv.value; });
             return s;
         };
+        const getInvestmentType = (id) => {
+            return scenario.investmentTypes.find(type => type.name === id);
+        };
+        const getInvestment = (id) => {
+            return scenario.investments.find(inv => inv._id === id);
+        };
+
+        // Cash investment
+        let cashInvestment = scenario.investments.find(investment => getInvestmentType(investment.type).name === 'cash');
+
+        // If no cash investment is found throw error.
+        if (!cashInvestment) {
+            throw Error("No cash investment found!");
+        }
 
         // ====================
         // MAIN SIMULATION LOOP
@@ -171,7 +171,7 @@ async function runSingleSimulation(scenario, simulationId, federalTax, stateTax,
 
                 // 3.c. s = sum of values of the investments with tax status = pre-tax, as of the end of the previous year.
                 let s = 0;
-                investments.filter(
+                scenario.investments.filter(
                     investment => investment.accountTaxStatus === 'pre-tax'
                 ).forEach(
                     investment => { s += investment.value; }
@@ -189,8 +189,8 @@ async function runSingleSimulation(scenario, simulationId, federalTax, stateTax,
                 // transferred.
                 let remainingRmd = rmd;
                 for (const investmentId of scenario.rmdStrategy) {
-                    const investment = investments.find(inv => inv.id === investmentId); // Find the investment by its UUID
-                    
+                    const investment = getInvestment(investmentId); // Find the investment by its UUID
+
                     // 3.g. “Transferring in-kind” means reducing the value of the source investment by the transferred
                     // amount, checking whether an investment with the same investment type and target tax status
                     // already exists, and if so, adding the transferred amount to its value, otherwise creating an
@@ -201,7 +201,7 @@ async function runSingleSimulation(scenario, simulationId, federalTax, stateTax,
                     
                     // Ensure investment.value is a valid number
                     if (typeof investment.value !== 'number' || isNaN(investment.value)) {
-                        // console.warn(`Invalid investment value for investment ${investment.id}: ${investment.value}`);
+                        // console.warn(`Invalid investment value for investment ${investment._id}: ${investment.value}`);
                         investment.value = 0;
                         continue;
                     }
@@ -210,7 +210,7 @@ async function runSingleSimulation(scenario, simulationId, federalTax, stateTax,
                     investment.value -= transferAmount; // Reduce the source investment's value
                     
                     // Find or create the target investment
-                    let targetInvestment = investments.find(inv => 
+                    let targetInvestment = scenario.investments.find(inv => 
                         inv.type.name === investment.type.name && 
                         inv.accountTaxStatus === 'non-retirement'
                     );
@@ -218,14 +218,14 @@ async function runSingleSimulation(scenario, simulationId, federalTax, stateTax,
                     if (!targetInvestment) {
                         // Create new non-retirement investment with same type
                         targetInvestment = {
-                            id: crypto.randomUUID(),
+                            _id: crypto.randomUUID(),
                             type: investment.type,
                             accountTaxStatus: 'non-retirement',
                             value: 0,
                             initialValue: 0,
                             purchasePrice: 0
                         };
-                        investments.push(targetInvestment);
+                        scenario.investments.push(targetInvestment);
                     }
                     
                     targetInvestment.value += transferAmount; // Add the transferred amount to the target investment
@@ -244,7 +244,7 @@ async function runSingleSimulation(scenario, simulationId, federalTax, stateTax,
             // income, and subtraction of expenses.
             // =================================================================================================
 
-            investments.forEach(investment => {
+            scenario.investments.forEach(investment => {
                 // 4.a. Calculate the generated income, using the given fixed amount or percentage, or sampling from the
                 // specified probability distribution.
                 let expectedAnnualIncome = SimulationUtils.sampleValueFromDistribution(investment.type.expectedAnnualIncome);
@@ -296,13 +296,13 @@ async function runSingleSimulation(scenario, simulationId, federalTax, stateTax,
 
                 let remainingRc = rc;
                 for (const investmentId of scenario.rothConversionStrategy) {
-                    const investment = investments.find(inv => inv.id === investmentId);
+                    const investment = getInvestment(investmentId); // Find the investment by its UUID
                     
                     if (!investment || investment.value <= 0) continue;
                     
                     // Ensure investment.value is a valid number
                     if (typeof investment.value !== 'number' || isNaN(investment.value)) {
-                        // console.warn(`Invalid investment value for investment ${investment.id}: ${investment.value}`);
+                        // console.warn(`Invalid investment value for investment ${investment._id}: ${investment.value}`);
                         investment.value = 0;
                         continue;
                     }
@@ -311,7 +311,7 @@ async function runSingleSimulation(scenario, simulationId, federalTax, stateTax,
                     investment.value -= transferAmount;
                     
                     // Find or create the target investment
-                    let targetInvestment = investments.find(inv => 
+                    let targetInvestment = scenario.investments.find(inv => 
                         inv.type.name === investment.type.name && 
                         inv.accountTaxStatus === 'after-tax'
                     );
@@ -319,14 +319,14 @@ async function runSingleSimulation(scenario, simulationId, federalTax, stateTax,
                     if (!targetInvestment) {
                         // Create new after-tax retirement investment with same type
                         targetInvestment = {
-                            id: crypto.randomUUID(),
+                            _id: crypto.randomUUID(),
                             type: investment.type,
                             accountTaxStatus: 'after-tax',
                             value: 0,
                             initialValue: 0,
                             purchasePrice: 0
                         };
-                        investments.push(targetInvestment);
+                        scenario.investments.push(targetInvestment);
                     }
                     
                     targetInvestment.value += transferAmount;
@@ -445,13 +445,13 @@ async function runSingleSimulation(scenario, simulationId, federalTax, stateTax,
 
             let remainingW = W;
             for (const investmentId of scenario.expenseWithdrawalStrategy) {
-                const investment = investments.find(inv => inv.id === investmentId);
+                const investment = getInvestment(investmentId); // Find the investment by its UUID
                 
                 if (!investment || investment.value <= 0) continue;
                 
                 // Ensure investment.value is a valid number
                 if (typeof investment.value !== 'number' || isNaN(investment.value)) {
-                    // console.warn(`Invalid investment value for investment ${investment.id}: ${investment.value}`);
+                    // console.warn(`Invalid investment value for investment ${investment._id}: ${investment.value}`);
                     investment.value = 0;
                     continue;
                 }
@@ -555,7 +555,7 @@ async function runSingleSimulation(scenario, simulationId, federalTax, stateTax,
                 let L = curUserRetireContributionLimit; // Ignore spouse for now.
                 let B = 0;
                 event.selectedInvestments.forEach(investmentId => {
-                    const investment = investments.find(inv => inv.id === investmentId);
+                    const investment = getInvestment(investmentId); // Find the investment by its UUID
                     if (investment.accountTaxStatus === 'after-tax') {
                         B += investment.value;
                     }
@@ -564,7 +564,7 @@ async function runSingleSimulation(scenario, simulationId, federalTax, stateTax,
                     let scalingFactor = L / B;
                     let moneyToRealloc = 0;
                     event.selectedInvestments.forEach(investmentId => {
-                        const investment = investments.find(inv => inv.id === investmentId);
+                        const investment = getInvestment(investmentId); // Find the investment by its UUID
                         if (investment.accountTaxStatus === 'after-tax') {
                             moneyToRealloc = investment.purchasePrice * (1-scalingFactor);
                             investment.purchasePrice *= scalingFactor;
@@ -577,7 +577,7 @@ async function runSingleSimulation(scenario, simulationId, federalTax, stateTax,
 
                     // If still money left over, fallback (dump it in the first investment in the strategy)
                     if (moneyToRealloc > 0) {
-                        investments.find(inv => inv.id === event.selectedInvestments[0].id).purchasePrice += moneyToRealloc;
+                        scenario.investments.find(inv => inv._id === event.selectedInvestments[0]._id).purchasePrice += moneyToRealloc;
                     }
                 }
             });
@@ -597,8 +597,8 @@ async function runSingleSimulation(scenario, simulationId, federalTax, stateTax,
 
                 // Calculate total value of all investments in the rebalance strategy
                 let totalValue = 0;
-                const selectedInvestments = investments.filter(inv => 
-                    event.selectedInvestments.includes(inv.id)
+                const selectedInvestments = scenario.investments.filter(inv => 
+                    event.selectedInvestments.includes(inv._id)
                 );
                 
                 selectedInvestments.forEach(inv => {
@@ -631,7 +631,7 @@ async function runSingleSimulation(scenario, simulationId, federalTax, stateTax,
 
                 // Process sales first (investments that need to be reduced)
                 for (const investment of selectedInvestments) {
-                    const targetValue = targetValues.get(investment.id) || 0;
+                    const targetValue = targetValues.get(investment._id) || 0;
                     
                     if (investment.value > targetValue) {
                         const amountToSell = investment.value - targetValue; // Need to sell some of this investment
@@ -653,7 +653,7 @@ async function runSingleSimulation(scenario, simulationId, federalTax, stateTax,
 
                 // Process purchases (investments that need to be increased)
                 for (const investment of selectedInvestments) {
-                    const targetValue = targetValues.get(investment.id) || 0;
+                    const targetValue = targetValues.get(investment._id) || 0;
                     
                     if (investment.value < targetValue) {
                         const amountToBuy = targetValue - investment.value; // Need to buy more of this investment
@@ -669,7 +669,7 @@ async function runSingleSimulation(scenario, simulationId, federalTax, stateTax,
                             
                             cashInvestment.value -= amountToBuy; // Reduce cash
                         } else {
-                            // console.warn(`Not enough cash to fully rebalance investment ${investment.id}`); 
+                            // console.warn(`Not enough cash to fully rebalance investment ${investment._id}`); 
                             
                             // Use whatever cash is available
                             const availableCash = cashInvestment.value;
@@ -694,7 +694,7 @@ async function runSingleSimulation(scenario, simulationId, federalTax, stateTax,
                 income: curYearIncome,
                 socialSecurity: curYearSS,
                 inflationRate: curInflationRate,
-                investments: investments.map(inv => { 
+                investments: scenario.investments.map(inv => { 
                     // Ensure value is a valid number
                     const validValue = (typeof inv.value === 'number' && !isNaN(inv.value)) ? inv.value : 0;
                     
@@ -704,7 +704,7 @@ async function runSingleSimulation(scenario, simulationId, federalTax, stateTax,
                         : 'non-retirement'; // Default value
                     
                     return {
-                        id: inv.id,
+                        id: inv._id,
                         type: inv.type.name,
                         accountTaxStatus: validAccountTaxStatus,
                         value: validValue
