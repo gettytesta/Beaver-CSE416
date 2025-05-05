@@ -1,72 +1,91 @@
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 
 export default function ChartModal({ showModal, setShowModal, selectedCharts, setSelectedCharts }) {
+  const wasCancelled = useRef(false);
+
   const [lineChartCount, setLineChartCount] = useState(0);
   const [shadedLineChartCount, setShadedLineChartCount] = useState(0);
+  const [stackedBarChartCount, setStackedBarChartCount] = useState(0);
   const [selectedQuantity, setSelectedQuantity] = useState("totalInvestments");
   const [selectedChartType, setSelectedChartType] = useState("investments");
   const [aggregationThreshold, setAggregationThreshold] = useState(0);
-  const [selectedValueType, setSelectedValueType] = useState("median"); // Default to median
+  const [selectedValueType, setSelectedValueType] = useState("median");
 
-  // Handle checkbox change for chart selection
+  // ✅ Sync modal state when modal opens for a new scenario
+  useEffect(() => {
+    if (showModal) {
+      setLineChartCount(selectedCharts.lineChart || 0);
+      setShadedLineChartCount(selectedCharts.shadedLineChart || 0);
+      setStackedBarChartCount(selectedCharts.stackedBarChart || 0);
+      setSelectedQuantity(selectedCharts.selectedQuantity || "totalInvestments");
+      setSelectedChartType(selectedCharts.selectedChartType || "investments");
+      setAggregationThreshold(selectedCharts.aggregationThreshold || 0);
+      setSelectedValueType(selectedCharts.selectedValueType || "median");
+    }
+  }, [showModal, selectedCharts]);
+
+  useEffect(() => {
+    if (!showModal && wasCancelled.current) {
+      setLineChartCount(0);
+      setShadedLineChartCount(0);
+      setStackedBarChartCount(0);
+      setSelectedQuantity("totalInvestments");
+      setSelectedChartType("investments");
+      setAggregationThreshold(0);
+      setSelectedValueType("median");
+      setSelectedCharts({});
+      wasCancelled.current = false;
+    }
+  }, [showModal]);
+
   const handleCheckboxChange = (e) => {
     const { name, checked } = e.target;
-    if (checked) {
-      setSelectedCharts((prev) => ({
-        ...prev,
-        [name]: checked ? (name === "lineChart" ? lineChartCount : shadedLineChartCount) : 0,
-      }));
-    } else {
-      setSelectedCharts((prev) => {
-        const updatedCharts = { ...prev };
-        delete updatedCharts[name]; // Remove the chart type if unchecked
-        return updatedCharts;
-      });
-
-      // Reset counts when unchecked
-      if (name === "lineChart") setLineChartCount(0);
-      else setShadedLineChartCount(0);
+    if (name === "lineChart") {
+      setLineChartCount(checked ? 1 : 0);
+    } else if (name === "shadedLineChart") {
+      setShadedLineChartCount(checked ? 1 : 0);
+    } else if (name === "stackedBarChart") {
+      setStackedBarChartCount(checked ? 1 : 0);
     }
   };
 
   const handleNumberChange = (e, chartType) => {
-    const value = e.target.value;
-    if (value === "" || value === "0") {
-      if (chartType === "lineChart") {
-        setLineChartCount(0);
-      } else {
-        setShadedLineChartCount(0);
-      }
-    } else {
-      const parsedValue = Math.max(0, parseInt(value, 10) || 0);
-      if (chartType === "lineChart") {
-        setLineChartCount(parsedValue);
-      } else {
-        setShadedLineChartCount(parsedValue);
-      }
-    }
+    const parsed = Math.max(0, parseInt(e.target.value, 10) || 0);
+    if (chartType === "lineChart") setLineChartCount(parsed);
+    else if (chartType === "shadedLineChart") setShadedLineChartCount(parsed);
+    else if (chartType === "stackedBarChart") setStackedBarChartCount(parsed);
   };
 
+  const handleQuantitySelect = (e) => setSelectedQuantity(e.target.value);
+  const handleChartTypeSelect = (e) => setSelectedChartType(e.target.value);
+  const handleValueTypeSelect = (e) => setSelectedValueType(e.target.value);
+  const handleThresholdChange = (e) => setAggregationThreshold(Math.max(0, parseInt(e.target.value, 10) || 0));
+
   const handleApply = () => {
+    const newSelectedCharts = {};
+
+    if (lineChartCount > 0) newSelectedCharts.lineChart = lineChartCount;
+
+    if (shadedLineChartCount > 0) {
+      newSelectedCharts.shadedLineChart = shadedLineChartCount;
+      newSelectedCharts.selectedQuantity = selectedQuantity;
+    }
+
+    if (stackedBarChartCount > 0) {
+      newSelectedCharts.stackedBarChart = stackedBarChartCount;
+      newSelectedCharts.selectedChartType = selectedChartType;
+      newSelectedCharts.selectedValueType = selectedValueType;
+      newSelectedCharts.aggregationThreshold = aggregationThreshold;
+    }
+
+    setSelectedCharts(newSelectedCharts);
+    wasCancelled.current = false;
     setShowModal(false);
   };
 
-  const handleQuantitySelect = (e) => {
-    setSelectedQuantity(e.target.value);
-  };
-
-  const handleChartTypeSelect = (e) => {
-    setSelectedChartType(e.target.value);
-  };
-
-  // Handle the Median/Average toggle
-  const handleValueTypeSelect = (e) => {
-    setSelectedValueType(e.target.value);
-  };
-
-  const handleThresholdChange = (e) => {
-    const value = e.target.value;
-    setAggregationThreshold(Math.max(0, parseInt(value, 10) || 0));
+  const handleCancel = () => {
+    wasCancelled.current = true;
+    setShowModal(false);
   };
 
   return (
@@ -74,60 +93,56 @@ export default function ChartModal({ showModal, setShowModal, selectedCharts, se
       <div className="bg-white p-8 rounded-lg shadow-lg w-full max-w-2xl">
         <h3 className="text-2xl font-semibold mb-4">Select Charts</h3>
 
-        {/* Line Chart Option */}
+        {/* Line Chart */}
         <div className="mb-4">
           <label className="flex items-center space-x-2">
             <input
               type="checkbox"
               name="lineChart"
               onChange={handleCheckboxChange}
-              checked={selectedCharts["lineChart"] !== undefined}
-              className="focus:ring-blue-500"
+              checked={lineChartCount > 0}
             />
-            <span className="text-gray-800 text-sm">Line Chart (Probability of Success Over Time)</span>
+            <span className="text-sm text-gray-800">Line Chart (Probability of Success Over Time)</span>
           </label>
-          {selectedCharts["lineChart"] !== undefined && (
+          {lineChartCount > 0 && (
             <div className="mt-2">
-              <span className="text-sm text-gray-600">Number of Line Charts</span>
+              <label className="text-sm text-gray-600">Number of Line Charts</label>
               <input
                 type="number"
                 min="0"
                 value={lineChartCount === 0 ? "" : lineChartCount}
                 onChange={(e) => handleNumberChange(e, "lineChart")}
                 className="w-16 ml-2 p-1 border border-gray-300 rounded-md text-sm"
-                placeholder="0"
               />
             </div>
           )}
         </div>
 
-        {/* Shaded Line Chart Option */}
+        {/* Shaded Line Chart */}
         <div className="mb-4">
           <label className="flex items-center space-x-2">
             <input
               type="checkbox"
               name="shadedLineChart"
               onChange={handleCheckboxChange}
-              checked={selectedCharts["shadedLineChart"] !== undefined}
-              className="focus:ring-blue-500"
+              checked={shadedLineChartCount > 0}
             />
-            <span className="text-gray-800 text-sm">Shaded Line Chart (Probability Ranges Over Time)</span>
+            <span className="text-sm text-gray-800">Shaded Line Chart (Probability Ranges Over Time)</span>
           </label>
-          {selectedCharts["shadedLineChart"] !== undefined && (
+          {shadedLineChartCount > 0 && (
             <>
               <div className="mt-2">
-                <span className="text-sm text-gray-600">Number of Shaded Line Charts</span>
+                <label className="text-sm text-gray-600">Number of Shaded Line Charts</label>
                 <input
                   type="number"
                   min="0"
                   value={shadedLineChartCount === 0 ? "" : shadedLineChartCount}
                   onChange={(e) => handleNumberChange(e, "shadedLineChart")}
                   className="w-16 ml-2 p-1 border border-gray-300 rounded-md text-sm"
-                  placeholder="0"
                 />
               </div>
               <div className="mt-2">
-                <span className="text-sm text-gray-600">Select Quantity</span>
+                <label className="text-sm text-gray-600">Select Quantity</label>
                 <select
                   value={selectedQuantity}
                   onChange={handleQuantitySelect}
@@ -144,22 +159,31 @@ export default function ChartModal({ showModal, setShowModal, selectedCharts, se
           )}
         </div>
 
-        {/* Stacked Bar Chart Option */}
+        {/* Stacked Bar Chart */}
         <div className="mb-4">
           <label className="flex items-center space-x-2">
             <input
               type="checkbox"
               name="stackedBarChart"
               onChange={handleCheckboxChange}
-              checked={selectedCharts["stackedBarChart"] !== undefined}
-              className="focus:ring-blue-500"
+              checked={stackedBarChartCount > 0}
             />
-            <span className="text-gray-800 text-sm">Stacked Bar Chart (Median/Average Values Over Time)</span>
+            <span className="text-sm text-gray-800">Stacked Bar Chart (Median/Average Values Over Time)</span>
           </label>
-          {selectedCharts["stackedBarChart"] !== undefined && (
+          {stackedBarChartCount > 0 && (
             <>
               <div className="mt-2">
-                <span className="text-sm text-gray-600">Select Data Type</span>
+                <label className="text-sm text-gray-600">Number of Stacked Bar Charts</label>
+                <input
+                  type="number"
+                  min="0"
+                  value={stackedBarChartCount === 0 ? "" : stackedBarChartCount}
+                  onChange={(e) => handleNumberChange(e, "stackedBarChart")}
+                  className="w-16 ml-2 p-1 border border-gray-300 rounded-md text-sm"
+                />
+              </div>
+              <div className="mt-2">
+                <label className="text-sm text-gray-600">Select Data Type</label>
                 <select
                   value={selectedChartType}
                   onChange={handleChartTypeSelect}
@@ -170,10 +194,8 @@ export default function ChartModal({ showModal, setShowModal, selectedCharts, se
                   <option value="expenses">Expenses</option>
                 </select>
               </div>
-
-              {/* Median/Average Toggle */}
               <div className="mt-2">
-                <span className="text-sm text-gray-600">Select Median or Average</span>
+                <label className="text-sm text-gray-600">Select Median or Average</label>
                 <div className="flex items-center">
                   <label className="mr-4">
                     <input
@@ -181,7 +203,7 @@ export default function ChartModal({ showModal, setShowModal, selectedCharts, se
                       value="median"
                       checked={selectedValueType === "median"}
                       onChange={handleValueTypeSelect}
-                      className="mr-2"
+                      className="mr-1"
                     />
                     Median
                   </label>
@@ -191,16 +213,14 @@ export default function ChartModal({ showModal, setShowModal, selectedCharts, se
                       value="average"
                       checked={selectedValueType === "average"}
                       onChange={handleValueTypeSelect}
-                      className="mr-2"
+                      className="mr-1"
                     />
                     Average
                   </label>
                 </div>
               </div>
-
-              {/* Aggregation Threshold */}
               <div className="mt-2">
-                <span className="text-sm text-gray-600">Aggregation Threshold</span>
+                <label className="text-sm text-gray-600">Aggregation Threshold</label>
                 <input
                   type="number"
                   min="0"
@@ -216,7 +236,7 @@ export default function ChartModal({ showModal, setShowModal, selectedCharts, se
 
         <div className="mt-6 flex justify-end space-x-4">
           <button
-            onClick={() => setShowModal(false)}
+            onClick={handleCancel}
             className="px-4 py-2 text-gray-600 border border-gray-300 rounded-md text-sm"
           >
             Cancel

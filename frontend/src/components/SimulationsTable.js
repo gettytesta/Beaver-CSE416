@@ -1,9 +1,8 @@
 "use client";
-// SimulationsTable.js
 import { CheckSquare, Square } from "lucide-react";
 import { useState, useRef, useEffect } from "react";
-import ChartModal from "./ChartModal"; // Import the modal component
-import ParameterModal from "./ParameterModal"; // Import the parameter modal component
+import ChartModal from "./ChartModal";
+import ParameterModal from "./ParameterModal";
 
 export default function SimulationsTable({ scenarios }) {
   const [selected, setSelected] = useState(false);
@@ -11,10 +10,15 @@ export default function SimulationsTable({ scenarios }) {
   const dropdownRef = useRef(null);
   const [filter, setFilter] = useState("All");
   const [simulationCounts, setSimulationCounts] = useState({});
-  const [showModal, setShowModal] = useState(false); // Modal visibility state for charts
-  const [showParameterModal, setShowParameterModal] = useState(false); // Modal visibility state for parameters
-  const [selectedCharts, setSelectedCharts] = useState([]); // To store selected charts
-  const [selectedParameter, setSelectedParameter] = useState(null); // To store selected parameter value
+
+  // ✅ NEW: Per-scenario state
+  const [selectedParameters, setSelectedParameters] = useState({});
+  const [selectedChartsByScenario, setSelectedChartsByScenario] = useState({});
+
+  // For modals
+  const [showModal, setShowModal] = useState(false);
+  const [showParameterModal, setShowParameterModal] = useState(false);
+  const [activeScenarioId, setActiveScenarioId] = useState(null);
 
   const toggleSelection = () => setSelected(!selected);
 
@@ -23,17 +27,11 @@ export default function SimulationsTable({ scenarios }) {
     setFilter(option);
   };
 
-  // Handle simulation count change for each scenario
   const handleSimChange = (id, value) => {
-    setSimulationCounts((prev) => {
-      const updatedCounts = {
-        ...prev,
-        [id]: value,
-      };
-      // Log the updated simulation count for the specific scenario
-      console.log(`Scenario ID: ${id}, Simulations: ${updatedCounts[id]}`);
-      return updatedCounts;
-    });
+    setSimulationCounts((prev) => ({
+      ...prev,
+      [id]: value,
+    }));
   };
 
   useEffect(() => {
@@ -75,26 +73,48 @@ export default function SimulationsTable({ scenarios }) {
     );
   };
 
-  // Prepare the payload (for later backend usage)
-  const preparePayload = (scenarioId) => {
-    const numSimulations = simulationCounts[scenarioId];
-    if (!numSimulations || numSimulations <= 0) return; // Ensure positive number of simulations
-
+  const handleRunClick = (scenarioId) => {
     const scenario = scenarios.find((s) => s._id === scenarioId);
-    
-    const payload = {
-      scenarioId: scenario._id,
-      numSimulations: numSimulations,  // Include number of simulations the user wants
-      parameters: {
-        initialInvestment: scenario.initialInvestment, // Example: Scenario parameters
-        interestRate: scenario.interestRate,
-        inflationRate: scenario.inflationRate,
-        // You can add more parameters from your scenario here
-      },
-      charts: selectedCharts, // Add the selected charts to the payload
-    };
+    const selectedParameter = selectedParameters[scenarioId];
+    const selectedCharts = selectedChartsByScenario[scenarioId];
 
-    console.log("Simulation Payload:", payload); // Log it for now
+    if (!scenario || !simulationCounts[scenarioId]) {
+      console.warn("Missing scenario or simulation count");
+      return;
+    }
+
+    if (selectedParameter?.parameterType === "noParameters") {
+      console.log("✅ Running basic simulation for:", scenario.name);
+
+      const chartsToRun = {};
+
+      if (selectedCharts?.lineChart !== undefined) {
+        chartsToRun.lineChart = selectedCharts.lineChart;
+      }
+
+      if (selectedCharts?.shadedLineChart !== undefined) {
+        chartsToRun.shadedLineChart = selectedCharts.shadedLineChart;
+        chartsToRun.selectedQuantity = selectedCharts.selectedQuantity;
+      }
+
+      if (selectedCharts?.stackedBarChart !== undefined) {
+        chartsToRun.stackedBarChart = selectedCharts.stackedBarChart;
+        chartsToRun.selectedChartType = selectedCharts.selectedChartType;
+        chartsToRun.selectedValueType = selectedCharts.selectedValueType;
+        chartsToRun.aggregationThreshold = selectedCharts.aggregationThreshold;
+      }
+
+      console.log("📊 Charts selected:", chartsToRun);
+      console.log("⚙️ Parameters selected:", selectedParameter);
+      // TODO: Replace with real backend simulation call
+      // await axios.post("/api/simulate", { scenarioId, chartsToRun, selectedParameter });
+ 
+      // TODO: On simulation finish, store results in state and show chart modal or redirect
+
+      alert("Simulation finished (stub). Charts ready to view (stub).");
+    } else {
+      console.warn("Only 'No Parameters' supported for now.");
+    }
   };
 
   return (
@@ -169,7 +189,10 @@ export default function SimulationsTable({ scenarios }) {
               </td>
               <td className="p-4 text-center">
                 <button
-                  onClick={() => setShowParameterModal(true)} // Open the parameter modal
+                  onClick={() => {
+                    setActiveScenarioId(scenario._id);
+                    setShowParameterModal(true);
+                  }}
                   className="px-4 py-2 bg-gray-500 text-white rounded-md text-sm font-medium"
                 >
                   Choose Parameters
@@ -178,7 +201,17 @@ export default function SimulationsTable({ scenarios }) {
               <td className="p-4 text-center">
                 <button
                   className="px-4 py-2 bg-gray-600 text-white rounded-md text-sm font-medium"
-                  onClick={() => setShowModal(true)} // Open the modal when "Charts" is clicked
+                  onClick={() => {
+                    const param = selectedParameters[scenario._id];
+                    if (!param) {
+                      alert("Please select a parameter first.");
+                    } else if (param.parameterType === "noParameters") {
+                      setActiveScenarioId(scenario._id);
+                      setShowModal(true);
+                    } else {
+                      alert(`${param.parameterType} charts coming soon`);
+                    }
+                  }}
                 >
                   Charts
                 </button>
@@ -186,7 +219,7 @@ export default function SimulationsTable({ scenarios }) {
               <td className="p-4 text-center">
                 <button
                   className="px-4 py-2 bg-orange-500 text-white rounded-md text-sm font-medium"
-                  onClick={() => preparePayload(scenario._id)} // Prepare payload when "Run" is clicked
+                  onClick={() => handleRunClick(scenario._id)}
                 >
                   Run
                 </button>
@@ -196,19 +229,31 @@ export default function SimulationsTable({ scenarios }) {
         </tbody>
       </table>
 
-      {/* Modal for Chart Selection */}
+      {/* Chart Modal */}
       <ChartModal
         showModal={showModal}
         setShowModal={setShowModal}
-        selectedCharts={selectedCharts}
-        setSelectedCharts={setSelectedCharts}
+        selectedCharts={selectedChartsByScenario[activeScenarioId] || {}}
+        setSelectedCharts={(newCharts) =>
+          setSelectedChartsByScenario((prev) => ({
+            ...prev,
+            [activeScenarioId]: newCharts,
+          }))
+        }
       />
 
-      {/* Modal for Parameter Selection */}
+      {/* Parameter Modal */}
       <ParameterModal
         showModal={showParameterModal}
         setShowModal={setShowParameterModal}
-        setSelectedParameter={setSelectedParameter}
+        currentParameter={selectedParameters[activeScenarioId] || null}
+        scenario={scenarios.find((s) => s._id === activeScenarioId)}
+        setSelectedParameter={(param) =>
+          setSelectedParameters((prev) => ({
+            ...prev,
+            [activeScenarioId]: param,
+          }))
+        }
       />
     </div>
   );
