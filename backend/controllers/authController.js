@@ -28,12 +28,14 @@ exports.getCurrentUser = async (req, res) => {
                     email: user.email,
                     name: user.name,
                     profilePicture: user.profilePicture,
+                    isGuest: user.isGuest,
                     //yamlFiles: user.yamlFiles
                 }
             });
         }
 
         // Handle guest sessions (added)
+        /*
         if (req.session?.passport?.user?.isGuest) {
             return res.status(200).json({
                 success: true,
@@ -43,6 +45,7 @@ exports.getCurrentUser = async (req, res) => {
                 }
             });
         }
+        */
 
         // No authenticated user or guest
         return res.status(401).json({
