@@ -2,6 +2,7 @@
 import { Dialog } from "@headlessui/react";
 import { useEffect, useState } from "react";
 import { useUser } from "../context/UserContext";
+
 export default function ShareScenarioModal({
   isOpen,
   onClose,
@@ -11,8 +12,10 @@ export default function ShareScenarioModal({
   onSubmit,
 }) {
   const [users, setUsers] = useState([]);
+  const [filteredScenarios, setFilteredScenarios] = useState([]);
   const { user } = useUser();
 
+  // Fetch the list of users
   useEffect(() => {
     const fetchUsers = async () => {
       try {
@@ -37,13 +40,24 @@ export default function ShareScenarioModal({
     if (isOpen) fetchUsers();
   }, [isOpen, user]);
 
+  // Filter scenarios to show only those where the current user is the owner
+  useEffect(() => {
+    const filteredScenarios = scenarios.filter((scenario) => {
+      // Compare userIds (both should be ObjectIds, so convert to string)
+      return scenario.userId.toString() === user.id.toString();
+    });
+
+    console.log("Filtered Scenarios (Owner Only):", filteredScenarios); // Log for debugging
+    setFilteredScenarios(filteredScenarios); // Store the filtered scenarios
+  }, [scenarios, user]);
+
   const handleSubmit = () => {
     if (!shareData.scenarioId || !shareData.username.trim()) {
       alert("Please select a valid user.");
       return;
     }
-    onSubmit();
-    onClose();
+    onSubmit(); // Submit the share action
+    onClose();  // Close the modal after submission
   };
 
   return (
@@ -62,7 +76,7 @@ export default function ShareScenarioModal({
               }
             >
               <option value="">Choose a scenario</option>
-              {scenarios.map((s) => (
+              {filteredScenarios.map((s) => (
                 <option key={s._id} value={s._id}>
                   {s.name}
                 </option>
@@ -121,6 +135,7 @@ export default function ShareScenarioModal({
     </Dialog>
   );
 }
+
 
 
 

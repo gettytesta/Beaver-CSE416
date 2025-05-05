@@ -117,15 +117,6 @@ export default function ScenarioDashboard() {
         </div>
 
         <div className="flex items-center space-x-8">
-          <button className="text-gray-600 hover:text-gray-900 flex items-center justify-center text-lg">
-            <Trash2 className="w-6 h-6 mr-1" />
-            <span className="font-semibold">Delete</span>
-          </button>
-
-          <button className="text-gray-600 hover:text-gray-900 flex items-center justify-center text-lg">
-            <Filter className="w-6 h-6 mr-1" />
-            <span className="font-semibold">Filters</span>
-          </button>
 
           <Link href="/scenarios/add">
             <button className="px-5 py-3 bg-blue-500 text-white rounded-md flex items-center justify-center text-lg font-semibold hover:bg-blue-600">

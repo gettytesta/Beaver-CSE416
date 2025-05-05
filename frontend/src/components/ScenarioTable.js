@@ -17,6 +17,7 @@ import ViewScenarioModal from "./ViewScenarioModal";
 export default function ScenarioTable({ scenarios, onUpdateShare, setScenarios }) {
   const router = useRouter();
   const { checkedSession } = useUser();
+  const { user } = useUser(); 
 
   const [selected, setSelected] = useState(false);
   const [dropdownOpen, setDropdownOpen] = useState(false);
@@ -198,21 +199,35 @@ export default function ScenarioTable({ scenarios, onUpdateShare, setScenarios }
               </td>
 
               <td className="p-4">
-                <div className="flex items-center gap-2">
-                  <span>{scenario.name}</span>
+              <div className="flex items-center gap-2">
+  <span>{scenario.name}</span>
 
-                  {scenario.sharedWith?.length > 0 && (
-                    <button
-                      onClick={() => {
-                        setSelectedScenario(scenario);
-                        setShowManageShareModal(true);
-                      }}
-                      className="text-blue-500 hover:bg-blue-100 hover:underline text-xs px-1 py-0.5 rounded"
-                    >
-                      [Sharing]
-                    </button>
-                  )}
-                </div>
+  {/* Display [Sharing] button for owners */}
+  {scenario.userId?.toString() === user?.id.toString() && scenario.sharedWith?.length > 0 && (
+    <button
+      onClick={() => {
+        setSelectedScenario(scenario);
+        setShowManageShareModal(true);
+      }}
+      className="text-blue-500 hover:bg-blue-100 hover:underline text-xs px-1 py-0.5 rounded"
+    >
+      [Sharing]
+    </button>
+  )}
+
+  {/* Display access level for shared scenarios */}
+  {scenario.sharedWith?.length > 0 && scenario.userId?.toString() !== user?.id.toString() && (
+    <div className="text-xs text-gray-600">
+      {scenario.sharedWith.map((sharedUser) => (
+        <div key={sharedUser._id}>
+          {sharedUser.accessLevel === "read_write"
+            ? "Read-write"
+            : "Read-only"}
+        </div>
+      ))}
+    </div>
+  )}
+</div>
               </td>
               <td className="p-4">{scenario.isMarriedCouple ? "Married" : "Single"}</td>
               <td className="p-4 text-center">
@@ -240,12 +255,20 @@ export default function ScenarioTable({ scenarios, onUpdateShare, setScenarios }
               </td>
               <td className="p-4 text-center" colSpan={2}>
                 <div className="flex justify-center gap-6">
-                  <button
-                    className="px-5 py-2 bg-gray-600 text-white rounded-md text-base font-medium"
-                    onClick={() => router.push(`/scenarios/edit/${scenario._id}`)}
-                  >
-                    Edit
-                  </button>
+                  {/* Display 'Edit' button only for owner or read-write access */}
+                  {(scenario.userId?.toString() === user?.id.toString() || 
+                    scenario.sharedWith?.some(sharedUser => {
+                      return sharedUser.accessLevel === "read_write" && sharedUser.userId.toString() === user?.id.toString(); // Check userId match
+                    })) && (
+                    <button
+                      className="px-5 py-2 bg-gray-600 text-white rounded-md text-base font-medium"
+                      onClick={() => router.push(`/scenarios/edit/${scenario._id}`)}
+                    >
+                      Edit
+                    </button>
+                  )}
+
+                  {/* Display 'View' button for everyone */}
                   <button
                     className="px-5 py-2 bg-orange-500 text-white rounded-md text-base font-medium"
                     onClick={() => {
