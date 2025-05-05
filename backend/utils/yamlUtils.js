@@ -234,23 +234,23 @@ exports.convertScenarioToYaml = (scenario) => {
                 d.glidePath = event.invest.allocationType === 'glide';
                 d.assetAllocation = {};
                 d.assetAllocation2 = {};
-                for (const [allocation, values] of event.invest.allocations)
+                for (const allocation of Object.keys(event.invest.allocations))
                 {
                     if (d.glidePath)
                     {
-                        d.assetAllocation[allocation] = values.initial;
-                        d.assetAllocation2[allocation] = values.final;
+                        d.assetAllocation[allocation] = event.invest.allocations[allocation].initial;
+                        d.assetAllocation2[allocation] = event.invest.allocations[allocation].final;
                     } else
-                        d.assetAllocation[allocatoin] = values.value;
+                        d.assetAllocation[allocation] = event.invest.allocations[allocation].value;
                 }
 
                 d.maxCash = event.invest.maxCash;
                 break;
             case 'rebalance':
                 d.assetAllocation = {};
-                for (const [allocation, values] of event.rebalance.allocations)
+                for (const allocation of Object.keys(event.rebalance.allocations))
                 {
-                    d.assetAllocation[allocation] = values.value;
+                    d.assetAllocation[allocation] = event.rebalance.allocations[allocation].value;
                 }
                 break;
             default:
