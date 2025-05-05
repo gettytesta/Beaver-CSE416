@@ -7,15 +7,14 @@
 // ChatGPT helped refactor the fetch call to include session-based auth and improved how the scenario data 
 // is displayed in multiple rows. I integrated those changes into the existing component, updated the filtering 
 // logic, added simulation input handling, and polished the UI layout using Tailwind CSS.
-
 import { CheckSquare, Square, ArrowDown } from "lucide-react";
 import { useState, useRef, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useUser } from "@/context/UserContext";
 import ManageShareModal from "./ManageShareModal";
+import ViewScenarioModal from "./ViewScenarioModal";
 
-
-export default function ScenarioTable({ scenarios, onUpdateShare  }) {
+export default function ScenarioTable({ scenarios, onUpdateShare, setScenarios }) {
   const router = useRouter();
   const { checkedSession } = useUser();
 
@@ -25,6 +24,7 @@ export default function ScenarioTable({ scenarios, onUpdateShare  }) {
   const dropdownRef = useRef(null);
 
   const [showManageShareModal, setShowManageShareModal] = useState(false);
+  const [showViewModal, setShowViewModal] = useState(false);
   const [selectedScenario, setSelectedScenario] = useState(null);
 
   const toggleSelection = () => setSelected(!selected);
@@ -81,6 +81,27 @@ export default function ScenarioTable({ scenarios, onUpdateShare  }) {
   if (!checkedSession) {
     return <div className="text-center mt-20 text-gray-500">Loading scenarios...</div>;
   }
+
+  const handleDeleteScenario = async (scenarioId) => {
+    try {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/api/scenarios/${scenarioId}`, {
+        method: "DELETE",
+        credentials: "include",
+      });
+  
+      if (!response.ok) {
+        throw new Error("Failed to delete scenario");
+      }
+  
+      // Update the state to remove the deleted scenario
+      setScenarios((prevScenarios) => prevScenarios.filter((scenario) => scenario._id !== scenarioId));
+  
+      alert("Scenario deleted successfully");
+    } catch (err) {
+      console.error("Error deleting scenario:", err);
+      alert("Failed to delete scenario");
+    }
+  };
 
   return (
     <div className="w-full p-1 relative">
@@ -155,32 +176,44 @@ export default function ScenarioTable({ scenarios, onUpdateShare  }) {
           {filteredScenarios.map((scenario) => (
             <tr key={scenario._id} className="border-b border-gray-200 hover:bg-gray-50 transition">
               <td className="p-4 text-left">
-                <button onClick={toggleSelection} className="flex items-center justify-center">
-                  {selected ? (
-                    <CheckSquare className="w-5 h-5 text-blue-500" />
-                  ) : (
-                    <Square className="w-5 h-5 text-gray-500" />
-                  )}
-                </button>
+              <button
+    onClick={() => handleDeleteScenario(scenario._id)}
+    className="flex items-center justify-center text-red-600"
+  >
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      fill="none"
+      viewBox="0 0 24 24"
+      stroke="currentColor"
+      className="w-6 h-6 text-red-600"
+    >
+      <path
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        strokeWidth="2"
+        d="M6 18L18 6M6 6l12 12"
+      />
+    </svg>
+  </button>
               </td>
 
               <td className="p-4">
-  <div className="flex items-center gap-2">
-    <span>{scenario.name}</span>
+                <div className="flex items-center gap-2">
+                  <span>{scenario.name}</span>
 
-    {scenario.sharedWith?.length > 0 && (
-      <button
-        onClick={() => {
-          setSelectedScenario(scenario);
-          setShowManageShareModal(true);
-        }}
-        className="text-blue-500 hover:bg-blue-100 hover:underline text-xs px-1 py-0.5 rounded"
-      >
-        [Sharing]
-      </button>
-    )}
-  </div>
-</td>
+                  {scenario.sharedWith?.length > 0 && (
+                    <button
+                      onClick={() => {
+                        setSelectedScenario(scenario);
+                        setShowManageShareModal(true);
+                      }}
+                      className="text-blue-500 hover:bg-blue-100 hover:underline text-xs px-1 py-0.5 rounded"
+                    >
+                      [Sharing]
+                    </button>
+                  )}
+                </div>
+              </td>
               <td className="p-4">{scenario.isMarriedCouple ? "Married" : "Single"}</td>
               <td className="p-4 text-center">
                 {Array.isArray(scenario.investments) ? scenario.investments.length : 0}
@@ -213,7 +246,13 @@ export default function ScenarioTable({ scenarios, onUpdateShare  }) {
                   >
                     Edit
                   </button>
-                  <button className="px-5 py-2 bg-orange-500 text-white rounded-md text-base font-medium">
+                  <button
+                    className="px-5 py-2 bg-orange-500 text-white rounded-md text-base font-medium"
+                    onClick={() => {
+                      setSelectedScenario(scenario);
+                      setShowViewModal(true);
+                    }}
+                  >
                     View
                   </button>
                 </div>
@@ -225,14 +264,22 @@ export default function ScenarioTable({ scenarios, onUpdateShare  }) {
 
       {showManageShareModal && selectedScenario && (
         <ManageShareModal
-    isOpen={true}
-    scenario={selectedScenario}
-    onClose={() => setShowManageShareModal(false)}
-    onUpdateShare={onUpdateShare} // ✅ key fix here
-  />
+          isOpen={true}
+          scenario={selectedScenario}
+          onClose={() => setShowManageShareModal(false)}
+          onUpdateShare={onUpdateShare}
+        />
       )}
 
+      {showViewModal && selectedScenario && (
+        <ViewScenarioModal
+          isOpen={true}
+          scenario={selectedScenario}
+          onClose={() => setShowViewModal(false)}
+        />
+      )}
     </div>
   );
 }
+
 

@@ -172,6 +172,7 @@ export default function ScenarioDashboard() {
       <ScenarioTable
         scenarios={scenarios}
         onUpdateShare={fetchScenarios} // 👈 key fix here
+        setScenarios={setScenarios} 
       />
 
       <ShareScenarioModal
