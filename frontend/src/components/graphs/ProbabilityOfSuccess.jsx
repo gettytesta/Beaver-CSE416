@@ -1,6 +1,7 @@
 import React from 'react';
 import { Line } from 'react-chartjs-2';
 import { Chart as ChartJS, CategoryScale, LinearScale, PointElement, LineElement, Title, Tooltip, Legend } from 'chart.js';
+import { data } from 'autoprefixer';
 
 // Register Chart.js components
 ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Title, Tooltip, Legend);
@@ -15,21 +16,33 @@ ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Title, T
 //                       The code required heavy editing however.
 
 const ProbabilityOfSuccessChart = ({scenario, simulationResults}) => {
-    const yearlyData = simulationResults.result.yearlyData;
+    const financialGoal = scenario.financialGoal;
+    const successCounts = {};
 
-    // Extract data for the chart
-    const labels = yearlyData.map(data => data.year);
-    const probabilities = yearlyData.map(data => data.yearGains / 50000 * 100);
+    simulationResults.forEach(simulation => {
+        simulation.result.yearlyData.forEach(yearData => {
+            if (successCounts[yearData.year] === undefined) {
+                successCounts[yearData.year] = 0; // Initialize count for the year
+            }
+            const totalInvestments = yearData.investments.reduce((sum, investment) => sum + investment.value, 0);
+            if (totalInvestments >= financialGoal) {
+                successCounts[yearData.year] += 1;
+            }
+        });
+    })
+
+    // Extract labels (years) and data (number of successful simulations)
+    const labels = Object.keys(successCounts).sort((a, b) => a - b); // Sort years in ascending order
+    const dataPoints = labels.map(year => successCounts[year] / simulationResults.length * 100);
 
     const data = {
         labels,
         datasets: [
             {
                 label: 'Probability of Success',
-                data: probabilities,
-                borderColor: 'rgba(75, 192, 192, 1)',
-                backgroundColor: 'rgba(75, 192, 192, 0.2)',
-                tension: 0.4,
+                data: dataPoints,
+                borderColor: 'rgb(171, 19, 19)',
+                backgroundColor: 'rgba(171, 19, 19,0.3)',
             },
         ],
     };

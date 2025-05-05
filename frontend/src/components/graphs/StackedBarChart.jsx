@@ -23,34 +23,70 @@ ChartJS.register(CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend)
 // TP - Github Copilot - Was fed the description from the requirements document as a prompt.
 //                       The code required heavy editing however.
 
-const StackedBarChart = ({scenario, simulationResults }) => {
-    const yearlyData = simulationResults.result.yearlyData;
+function getMedian(values) {
+    values.sort((a, b) => a - b);
+    const mid = Math.floor(values.length / 2);
+    return values.length % 2 !== 0
+    ? values[mid]
+    : (values[mid - 1] + values[mid]) / 2;
+}    
 
-    // Extract data for the chart
-    const labels = yearlyData.map(data => data.year);
+function getAverage(values) {
+    const sum = values.reduce((a, b) => a + b, 0);
+    return sum / values.length;
+}
 
-    // Example data for stacked bars (replace with actual calculations)
-    const investmentCategories = ['Stocks', 'Bonds', 'Real Estate', 'Cash'];
-    const investmentsData = investmentCategories.map(category =>
-        yearlyData.map(data => {
-            const investment = data.investments.find(inv => inv.type.toLowerCase() === category.toLowerCase());
-            return investment ? investment.value : 0;
-        })
-    );
+const getRandomColor = () => {
+    const r = Math.floor(Math.random() * 256);
+    const g = Math.floor(Math.random() * 256);
+    const b = Math.floor(Math.random() * 256);
+    return `rgba(${r}, ${g}, ${b}, 0.8)`; // Random color with 80% opacity
+};
+
+// typeOption represents whether we use median or average values
+// "median" or "average"
+export const StackedBarChartInvestments = ({scenario, simulationResults, typeOption, aggregationThreshold }) => {
+    const investmentData = {};
+    const investmentCategories = simulationResults[0].result.yearlyData[0].investments.map(investment => investment.type);
+    investmentCategories.push("Other"); // Add "Other" category for aggregation
+
+    simulationResults.forEach(simulation => {
+        simulation.result.yearlyData.forEach(yearData => {
+            if (investmentData[yearData.year] === undefined) {
+                investmentData[yearData.year] = {};
+            }
+            yearData.investments.forEach(investment => {
+                if (investmentData[yearData.year][investment.type] === undefined) {
+                    investmentData[yearData.year][investment.type] = [];
+                }
+                if (investment.value >= aggregationThreshold) { 
+                    investmentData[yearData.year][investment.type].push(investment.value);
+                    
+                } else {
+                    investmentData[yearData.year]["Other"].push(investment.value);
+                }
+            })
+        });
+    })
+
+    const labels = Object.keys(investmentData).sort((a, b) => a - b); // Sort years in ascending order
+    const colors = investmentCategories.map(() => getRandomColor()); // Generate random colors for each year
+    const datasets = investmentCategories.map(category => ({
+        label: category,
+        data: labels.map(year => {
+            const values = investmentData[year][category];
+            if (!values || values.length === 0) {
+                return 0; // No data for this category in this year
+            }
+            return typeOption === "median" ? getMedian(values) : getAverage(values);
+        }),
+        borderWidth: 1,
+        backgroundColor: colors[investmentCategories.indexOf(category)],
+    }));
 
     const data = {
         labels,
-        datasets: investmentCategories.map((category, index) => ({
-            label: category,
-            data: investmentsData[index],
-            backgroundColor: [
-                'rgba(75, 192, 192, 0.8)', // Stocks
-                'rgba(54, 162, 235, 0.8)', // Bonds
-                'rgba(255, 206, 86, 0.8)', // Real Estate
-                'rgba(153, 102, 255, 0.8)', // Cash
-            ][index],
-            borderWidth: 1,
-        })),
+        datasets
     };
 
     const options = {
@@ -92,5 +128,3 @@ const StackedBarChart = ({scenario, simulationResults }) => {
 
     return <Bar data={data} options={options} />;
 };
-
-export default StackedBarChart;
