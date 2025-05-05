@@ -80,15 +80,21 @@ exports.logout = (req, res) => {
 
 exports.guestLogin = (req, res) => {
     // create a simple guest user object
-    const guestUser = { username: 'guest', isGuest: true };
+    //const guestUser = { username: 'guest', isGuest: true };
   
     // Log them in using passport
+    /*
     req.login(guestUser, (err) => {
       if (err) {
         console.error('Guest login error:', err);
         return res.status(500).json({ success: false, message: 'Guest login failed' });
       }
       return res.status(200).json({ success: true, user: guestUser });
+    });
+    */
+    req.session.save(() => {
+        //res.redirect(process.env.CLIENT_URL || 'http://localhost:3000/dashboard');
+        return res.status(200).json({ success: true });
     });
   };
 

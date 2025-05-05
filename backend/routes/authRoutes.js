@@ -46,7 +46,12 @@ router.get('/current-user', authController.getCurrentUser);
 router.get('/logout', authController.logout);
 
 //guest login
-router.post('/guest', authController.guestLogin);
+router.get('/guest',
+    passport.authenticate('guest', {
+        failureRedirect: '/login-failed',
+    }),
+    authController.guestLogin
+);
 
 
 
