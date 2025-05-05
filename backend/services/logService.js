@@ -45,7 +45,7 @@ exports.logSimulationResult = async (name, result) => {
         if (yearData.investments && Array.isArray(yearData.investments)) {
             yearData.investments.forEach(investment => {
                 if (investment && investment.type) {
-                    investmentTypes.add(investment.type);
+                    investmentTypes.add(investment.type.name);
                 }
             });
         }
@@ -60,20 +60,20 @@ exports.logSimulationResult = async (name, result) => {
     
     // Add data rows for each year
     yearlyData.forEach(yearData => {
-        // console.log(yearlyData);
+        console.log(yearlyData);
         
         csvContent += yearData.year;
         
         // Add value for each investment type
         investmentTypes.forEach(type => {
-            // console.log(type);
+            console.log(type);
             let value = '0.00';
             
             if (yearData.investments && Array.isArray(yearData.investments)) {
-                const investment = yearData.investments.find(inv => inv && inv.type === type);
-                // console.log(investment);
+                const investment = yearData.investments.find(inv => inv && inv.type.name === type);
+                console.log(investment);
                 
-                if (investment && typeof investment.value === 'number' && !isNaN(investment.value)) {
+                if (investment) {
                     value = investment.value.toFixed(2);
                 }
             }

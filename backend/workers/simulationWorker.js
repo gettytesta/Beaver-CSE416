@@ -23,7 +23,7 @@ async function runSingleSimulation(scenario, simulationId, federalTax, stateTax,
         const spouseLifeExpectancy = SimulationUtils.sampleValueFromDistribution(scenario.spouseLifeExpectancy);
         const spouseDeathYear = scenario.spouseBirthYear + spouseLifeExpectancy;
         const endYear = userDeathYear;
-        
+
         // ====================
         // SIMULATION VARIABLES
         // ====================
@@ -49,10 +49,9 @@ async function runSingleSimulation(scenario, simulationId, federalTax, stateTax,
 
         // Save annual limits on retirement account contributions, they are inflation adjusted every year.
         let curUserRetireContributionLimit = scenario.userRetireContributionLimit;
-        let curSpouseRetireContributionLimit = scenario.spouseRetireContributionLimit;
 
         // Save active events
-        const allEvents = SimulationUtils.initializeEvents (scenario.eventSeriesSet);
+        const allEvents = SimulationUtils.initializeEvents(scenario.eventSeriesSet);
         let incomeEvents = allEvents.filter(event => event.type === 'income');
         let expenseEvents = allEvents.filter(event => event.type === 'expense');
         let investEvents = allEvents.filter(event => event.type === 'invest');
@@ -72,15 +71,15 @@ async function runSingleSimulation(scenario, simulationId, federalTax, stateTax,
             scenario.investments.forEach(inv => { s += inv.value; });
             return s;
         };
-        const getInvestmentType = (id) => {
-            return scenario.investmentTypes.find(type => type.name === id);
-        };
         const getInvestment = (id) => {
             return scenario.investments.find(inv => inv._id === id);
         };
+        const getEventSeries = (id) => {
+            return allEvents.find(event => event.name == id);
+        }
 
         // Cash investment
-        let cashInvestment = scenario.investments.find(investment => getInvestmentType(investment.type).name === 'cash');
+        let cashInvestment = scenario.investments.find(investment => investment.type.name === 'cash');
 
         // If no cash investment is found throw error.
         if (!cashInvestment) {
@@ -112,7 +111,6 @@ async function runSingleSimulation(scenario, simulationId, federalTax, stateTax,
             // 1.c. Compute and store the inflation-adjusted annual limits on retirement account contributions, in a
             // similar way.
             curUserRetireContributionLimit = SimulationUtils.adjustNumber(curUserRetireContributionLimit, curInflationRate);
-            curSpouseRetireContributionLimit = SimulationUtils.adjustNumber(curSpouseRetireContributionLimit, curInflationRate);
 
             // ===============================================================
             // 2. Run income events, adding the income to the cash investment.
@@ -122,15 +120,15 @@ async function runSingleSimulation(scenario, simulationId, federalTax, stateTax,
             let curYearSS = 0;
 
             incomeEvents.filter(event => shouldRunEvent(event)).forEach(event => {
-                
+
                 // 2.a. The amount of this income event in the previous year needs to be stored and updated based on the
                 // expected annual change in amount, because the expected annual change can be sampled from a
                 // probability distribution, and the sampling is done each year.
                 let expectedAnnualChange = SimulationUtils.sampleValueFromDistribution(event.changeDistribution);
-                event.currAmount = event.changeAmtOrPct === 'amount' 
-                    ? expectedAnnualChange + event.currAmount 
+                event.currAmount = event.changeAmtOrPct === 'amount'
+                    ? expectedAnnualChange + event.currAmount
                     : (1 + expectedAnnualChange) * event.currAmount;
-                
+
                 // 2.b. If the inflation-adjustment flag is set, adjust the amount for inflation.
                 if (event.adjustForInflation) {
                     event.currAmount = SimulationUtils.adjustNumber(event.currAmount, curInflationRate);
@@ -149,7 +147,7 @@ async function runSingleSimulation(scenario, simulationId, federalTax, stateTax,
 
                 // 2.d. Add the income to the cash investment.
                 cashInvestment.value += event.currAmount;
-                
+
                 // 2.e. Update running total curYearIncome.
                 curYearIncome += event.currAmount;
 
@@ -198,23 +196,23 @@ async function runSingleSimulation(scenario, simulationId, federalTax, stateTax,
                     // equal to the transferred amount.
 
                     if (!investment || investment.value <= 0) continue;
-                    
+
                     // Ensure investment.value is a valid number
                     if (typeof investment.value !== 'number' || isNaN(investment.value)) {
                         // console.warn(`Invalid investment value for investment ${investment._id}: ${investment.value}`);
                         investment.value = 0;
                         continue;
                     }
-                    
+
                     const transferAmount = Math.min(remainingRmd, investment.value); // Calculate how much we can transfer from this investment
                     investment.value -= transferAmount; // Reduce the source investment's value
-                    
+
                     // Find or create the target investment
-                    let targetInvestment = scenario.investments.find(inv => 
-                        inv.type.name === investment.type.name && 
+                    let targetInvestment = scenario.investments.find(inv =>
+                        inv.type === investment.type &&
                         inv.accountTaxStatus === 'non-retirement'
                     );
-                    
+
                     if (!targetInvestment) {
                         // Create new non-retirement investment with same type
                         targetInvestment = {
@@ -227,12 +225,12 @@ async function runSingleSimulation(scenario, simulationId, federalTax, stateTax,
                         };
                         scenario.investments.push(targetInvestment);
                     }
-                    
+
                     targetInvestment.value += transferAmount; // Add the transferred amount to the target investment
                     remainingRmd -= transferAmount; // Update remaining RMD amount
                     if (remainingRmd <= 0) break; // If we've transferred the full RMD amount, we can stop
                 }
-                
+
                 // If we couldn't transfer the full RMD amount, log a warning
                 if (remainingRmd > 0) {
                     console.warn(`Could not transfer full RMD amount. Remaining: ${remainingRmd}`);
@@ -245,6 +243,7 @@ async function runSingleSimulation(scenario, simulationId, federalTax, stateTax,
             // =================================================================================================
 
             scenario.investments.forEach(investment => {
+
                 // 4.a. Calculate the generated income, using the given fixed amount or percentage, or sampling from the
                 // specified probability distribution.
                 let expectedAnnualIncome = SimulationUtils.sampleValueFromDistribution(investment.type.expectedAnnualIncome);
@@ -282,7 +281,7 @@ async function runSingleSimulation(scenario, simulationId, federalTax, stateTax,
                 // 5.a. Look up curYearFedTaxableIncome in the inflation-adjusted federal income tax brackets for the
                 // current year, to find the user’s current federal income tax bracket, where curYearFedTaxableIncome
                 // = curYearIncome – 0.15*curYearSS. u = the upper limit of that bracket.
-                let curYearFedTaxableIncome = curYearIncome - 0.15*curYearSS;
+                let curYearFedTaxableIncome = curYearIncome - 0.15 * curYearSS;
                 let curYearFedIncomeTaxBracket = SimulationUtils.lookUpTaxBracket(curFederalTaxBrackets.incomeTaxBrackets, curYearFedTaxableIncome);
                 let u = curYearFedIncomeTaxBracket.upperBound;
 
@@ -297,25 +296,25 @@ async function runSingleSimulation(scenario, simulationId, federalTax, stateTax,
                 let remainingRc = rc;
                 for (const investmentId of scenario.rothConversionStrategy) {
                     const investment = getInvestment(investmentId); // Find the investment by its UUID
-                    
+
                     if (!investment || investment.value <= 0) continue;
-                    
+
                     // Ensure investment.value is a valid number
                     if (typeof investment.value !== 'number' || isNaN(investment.value)) {
                         // console.warn(`Invalid investment value for investment ${investment._id}: ${investment.value}`);
                         investment.value = 0;
                         continue;
                     }
-                    
+
                     const transferAmount = Math.min(remainingRc, investment.value);
                     investment.value -= transferAmount;
-                    
+
                     // Find or create the target investment
-                    let targetInvestment = scenario.investments.find(inv => 
-                        inv.type.name === investment.type.name && 
+                    let targetInvestment = scenario.investments.find(inv =>
+                        inv.type === investment.type &&
                         inv.accountTaxStatus === 'after-tax'
                     );
-                    
+
                     if (!targetInvestment) {
                         // Create new after-tax retirement investment with same type
                         targetInvestment = {
@@ -328,13 +327,13 @@ async function runSingleSimulation(scenario, simulationId, federalTax, stateTax,
                         };
                         scenario.investments.push(targetInvestment);
                     }
-                    
+
                     targetInvestment.value += transferAmount;
                     remainingRc -= transferAmount;
-                    
+
                     if (remainingRc <= 0) break;
                 }
-                
+
                 // If we couldn't transfer the full Roth conversion amount, log a warning
                 if (remainingRc > 0) {
                     console.warn(`Could not transfer full Roth conversion amount. Remaining: ${remainingRc}`);
@@ -365,17 +364,17 @@ async function runSingleSimulation(scenario, simulationId, federalTax, stateTax,
                 let standardDeduction = prevYearFederalTaxBrackets.standardDeduction || 0;
                 prevYearFedTaxableIncome = Math.max(0, prevYearFedTaxableIncome - standardDeduction);
                 prevYearFederalIncomeTax = SimulationUtils.calculateTaxFromBrackets(
-                    prevYearFedTaxableIncome, 
+                    prevYearFedTaxableIncome,
                     prevYearFederalTaxBrackets.incomeTaxBrackets
                 );
-                
+
                 // Calculate income state tax if applicable (in a similar fashion as federal)
                 if (prevYearStateTaxBrackets) {
                     let prevYearStateTaxableIncome = prevYearlyData.income;
                     let stateStandardDeduction = prevYearStateTaxBrackets.standardDeduction || 0;
                     prevYearStateTaxableIncome = Math.max(0, prevYearStateTaxableIncome - stateStandardDeduction);
                     prevYearStateIncomeTax = SimulationUtils.calculateTaxFromBrackets(
-                        prevYearStateTaxableIncome, 
+                        prevYearStateTaxableIncome,
                         prevYearStateTaxBrackets.incomeTaxBrackets
                     );
                 }
@@ -384,19 +383,19 @@ async function runSingleSimulation(scenario, simulationId, federalTax, stateTax,
                 // year, and inflation-adjusted federal capital gains tax data for the previous year. Note that capital 
                 // gains tax cannot be negative, even if the user has a net loss.
                 prevYearCapitalGainsTax = Math.max(0, SimulationUtils.calculateTaxFromBrackets(
-                    prevYearlyData.yearGains, 
+                    prevYearlyData.yearGains,
                     prevYearFederalTaxBrackets.capitalGainsBrackets
                 ));
                 if (prevYearStateTaxBrackets && prevYearStateTaxBrackets.capitalGainsBrackets) {
                     prevYearCapitalGainsTax += Math.max(0, SimulationUtils.calculateTaxFromBrackets(
-                        prevYearlyData.yearGains, 
+                        prevYearlyData.yearGains,
                         prevYearStateTaxBrackets.capitalGainsBrackets
                     ));
                 }
 
                 // 6.c. Calculate the previous year’s early withdrawal tax, using the value of curYearEarlyWithdrawals from
                 // the previous year.
-                prevYearEarlyWithdrawlTax = prevYearlyData.earlyWithdrawals * 0.1;    
+                prevYearEarlyWithdrawlTax = prevYearlyData.earlyWithdrawals * 0.1;
             }
 
             // 6.d. total payment amount P = sum of non-discretionary expenses in the current year plus the previous
@@ -404,13 +403,13 @@ async function runSingleSimulation(scenario, simulationId, federalTax, stateTax,
             // income events.
             let P = prevYearFederalIncomeTax + prevYearStateIncomeTax + prevYearCapitalGainsTax + prevYearEarlyWithdrawlTax;
             expenseEvents.filter(event => shouldRunEvent(event) && event.discretionary).forEach(event => {
-                
+
                 // Update and store the amount based on annual change.
                 let expectedAnnualChange = SimulationUtils.sampleValueFromDistribution(event.changeDistribution);
-                event.currAmount = event.changeAmtOrPct === 'amount' 
-                    ? expectedAnnualChange + event.currAmount 
+                event.currAmount = event.changeAmtOrPct === 'amount'
+                    ? expectedAnnualChange + event.currAmount
                     : (1 + expectedAnnualChange) * event.currAmount;
-                
+
                 // If the inflation-adjustment flag is set, adjust for inflation.
                 if (event.adjustForInflation) {
                     event.currAmount = SimulationUtils.adjustNumber(event.currAmount, curInflationRate);
@@ -436,7 +435,7 @@ async function runSingleSimulation(scenario, simulationId, federalTax, stateTax,
 
             // 6.e. total withdrawal amount W = P - (amount of cash)
             let W = P - cashInvestment.value;
-            
+
             // 6.f. Iterate over investments in the expense withdrawal strategy, selling them one by one, until the total
             // amount sold equals W. The last investment to be sold might be partially sold.
 
@@ -446,9 +445,9 @@ async function runSingleSimulation(scenario, simulationId, federalTax, stateTax,
             let remainingW = W;
             for (const investmentId of scenario.expenseWithdrawalStrategy) {
                 const investment = getInvestment(investmentId); // Find the investment by its UUID
-                
+
                 if (!investment || investment.value <= 0) continue;
-                
+
                 // Ensure investment.value is a valid number
                 if (typeof investment.value !== 'number' || isNaN(investment.value)) {
                     // console.warn(`Invalid investment value for investment ${investment._id}: ${investment.value}`);
@@ -465,9 +464,9 @@ async function runSingleSimulation(scenario, simulationId, federalTax, stateTax,
 
                 let purchasePrice = investment.purchasePrice || 0;
                 let saleAmount = Math.min(remainingW, investment.value);
-                
+
                 // Ensure we don't divide by zero
-                let f = investment.value > 0 ? saleAmount / investment.value : 0; 
+                let f = investment.value > 0 ? saleAmount / investment.value : 0;
                 let capitalGain = f * (investment.value - purchasePrice);
                 investment.value -= saleAmount;
 
@@ -488,12 +487,12 @@ async function runSingleSimulation(scenario, simulationId, federalTax, stateTax,
                 // Update running total curYearEarlyWithdrawals, if the investment sold is held in a pre-tax or
                 // after-tax retirement account and the user’s age is less than 59. If the user’s age equals 59, we
                 // assume they perform this withdrawal after they turn 59½.
-                if ((investment.accountTaxStatus === 'pre-tax' 
+                if ((investment.accountTaxStatus === 'pre-tax'
                     || investment.accountTaxStatus === 'after-tax')
                     && getUserAge() < 59) {
                     curEarlyWithdrawals += capitalGain;
                 }
-                
+
                 if (remainingW <= 0) break;
             }
 
@@ -505,18 +504,18 @@ async function runSingleSimulation(scenario, simulationId, federalTax, stateTax,
             // =====================================================================================================
 
             for (const eventSeriesId of scenario.spendingStrategy) {
-                const event = allEvents.find(ev => ev.name === eventSeriesId);
-                
+                const event = getEventSeries(eventSeriesId);
+
                 if (!shouldRunEvent(event)) {
                     continue;
                 }
 
                 // Update and store the amount based on annual change.
                 let expectedAnnualChange = SimulationUtils.sampleValueFromDistribution(event.changeDistribution);
-                event.currAmount = event.changeAmtOrPct === 'amount' 
-                    ? expectedAnnualChange + event.currAmount 
+                event.currAmount = event.changeAmtOrPct === 'amount'
+                    ? expectedAnnualChange + event.currAmount
                     : (1 + expectedAnnualChange) * event.currAmount;
-                
+
                 // If the inflation-adjustment flag is set, adjust for inflation.
                 if (event.adjustForInflation) {
                     event.currAmount = SimulationUtils.adjustNumber(event.currAmount, curInflationRate);
@@ -545,7 +544,7 @@ async function runSingleSimulation(scenario, simulationId, federalTax, stateTax,
             // =======================================================================================================
 
             investEvents.filter(event => shouldRunEvent(event)).forEach(event => {
-                
+
                 // 8.a. Take the inflation-adjusted annual limit L on after-tax retirement account
                 // contributions into account as follows. calculate B = sum of the amounts to buy of
                 // investments with tax status = “after-tax retirement”. If B > L, then uniformly scale down
@@ -566,13 +565,13 @@ async function runSingleSimulation(scenario, simulationId, federalTax, stateTax,
                     event.selectedInvestments.forEach(investmentId => {
                         const investment = getInvestment(investmentId); // Find the investment by its UUID
                         if (investment.accountTaxStatus === 'after-tax') {
-                            moneyToRealloc = investment.purchasePrice * (1-scalingFactor);
+                            moneyToRealloc = investment.purchasePrice * (1 - scalingFactor);
                             investment.purchasePrice *= scalingFactor;
                         }
                         if (investment.accountTaxStatus === 'non-retirement') {
                             investment.purchasePrice += moneyToRealloc;
                             moneyToRealloc = 0;
-                        } 
+                        }
                     });
 
                     // If still money left over, fallback (dump it in the first investment in the strategy)
@@ -597,17 +596,17 @@ async function runSingleSimulation(scenario, simulationId, federalTax, stateTax,
 
                 // Calculate total value of all investments in the rebalance strategy
                 let totalValue = 0;
-                const selectedInvestments = scenario.investments.filter(inv => 
+                const selectedInvestments = scenario.investments.filter(inv =>
                     event.selectedInvestments.includes(inv._id)
                 );
-                
+
                 selectedInvestments.forEach(inv => {
                     totalValue += inv.value;
                 });
 
                 // Calculate target values for each investment based on allocation
                 const targetValues = new Map();
-                
+
                 // Handle both fixed and glide path allocations
                 if (event.allocationType === 'fixed') {
                     // For fixed allocation, use the 'value' property
@@ -620,9 +619,9 @@ async function runSingleSimulation(scenario, simulationId, federalTax, stateTax,
                     const yearsElapsed = curYear - event.start;
                     const totalYears = event.duration;
                     const progress = Math.min(1, Math.max(0, yearsElapsed / totalYears));
-                    
+
                     for (const [investmentId, allocation] of event.allocations.entries()) {
-                        const interpolatedAllocation = allocation.initial + 
+                        const interpolatedAllocation = allocation.initial +
                             (allocation.final - allocation.initial) * progress;
                         const targetValue = totalValue * interpolatedAllocation;
                         targetValues.set(investmentId, targetValue);
@@ -632,10 +631,10 @@ async function runSingleSimulation(scenario, simulationId, federalTax, stateTax,
                 // Process sales first (investments that need to be reduced)
                 for (const investment of selectedInvestments) {
                     const targetValue = targetValues.get(investment._id) || 0;
-                    
+
                     if (investment.value > targetValue) {
                         const amountToSell = investment.value - targetValue; // Need to sell some of this investment
-                        
+
                         // Calculate capital gains for non-retirement investments
                         if (investment.accountTaxStatus === 'non-retirement') {
                             // Ensure we don't divide by zero
@@ -645,7 +644,7 @@ async function runSingleSimulation(scenario, simulationId, federalTax, stateTax,
                             curYearGains += capitalGain; // Update running total of capital gains
                             investment.purchasePrice = purchasePrice * (1 - saleFraction); // Update the purchase price for future calculations
                         }
-                        
+
                         investment.value = targetValue; // Reduce the investment value
                         cashInvestment.value += amountToSell; // Add the proceeds to cash
                     }
@@ -654,33 +653,33 @@ async function runSingleSimulation(scenario, simulationId, federalTax, stateTax,
                 // Process purchases (investments that need to be increased)
                 for (const investment of selectedInvestments) {
                     const targetValue = targetValues.get(investment._id) || 0;
-                    
+
                     if (investment.value < targetValue) {
                         const amountToBuy = targetValue - investment.value; // Need to buy more of this investment
-                        
+
                         // Check if have enough cash
                         if (cashInvestment.value >= amountToBuy) {
                             investment.value = targetValue; // Update the investment value
-                            
+
                             // Update the purchase price for future capital gains calculations
                             if (investment.accountTaxStatus === 'non-retirement') {
                                 investment.purchasePrice = (investment.purchasePrice || 0) + amountToBuy;
                             }
-                            
+
                             cashInvestment.value -= amountToBuy; // Reduce cash
                         } else {
                             // console.warn(`Not enough cash to fully rebalance investment ${investment._id}`); 
-                            
+
                             // Use whatever cash is available
                             const availableCash = cashInvestment.value;
                             if (availableCash > 0) {
                                 investment.value += availableCash;
-                                
+
                                 // Update the purchase price for future capital gains calculations
                                 if (investment.accountTaxStatus === 'non-retirement') {
                                     investment.purchasePrice = (investment.purchasePrice || 0) + availableCash;
                                 }
-                                
+
                                 cashInvestment.value = 0;
                             }
                         }
@@ -694,22 +693,27 @@ async function runSingleSimulation(scenario, simulationId, federalTax, stateTax,
                 income: curYearIncome,
                 socialSecurity: curYearSS,
                 inflationRate: curInflationRate,
-                investments: scenario.investments.map(inv => { 
-                    // Ensure value is a valid number
-                    const validValue = (typeof inv.value === 'number' && !isNaN(inv.value)) ? inv.value : 0;
-                    
-                    // Ensure accountTaxStatus is a valid string
-                    const validAccountTaxStatus = (typeof inv.accountTaxStatus === 'string' && inv.accountTaxStatus) 
-                        ? inv.accountTaxStatus 
-                        : 'non-retirement'; // Default value
-                    
+                investments: scenario.investments.map(inv => {
                     return {
                         id: inv._id,
-                        type: inv.type.name,
-                        accountTaxStatus: validAccountTaxStatus,
-                        value: validValue
+                        type: inv.type,
+                        accountTaxStatus: inv.accountTaxStatus,
+                        value: inv.value
                     };
                 }),
+                incomeEvents: incomeEvents
+                    .filter(event => shouldRunEvent(event))
+                    .map(event => ({
+                        name: event.name,
+                        value: event.currAmount
+                    })),
+                expenseEvents: expenseEvents
+                    .filter(event => shouldRunEvent(event))
+                    .map(event => ({
+                        name: event.name,
+                        value: event.currAmount
+                    })),
+                taxesIncurred: prevYearFederalIncomeTax + prevYearStateIncomeTax + prevYearCapitalGainsTax + prevYearEarlyWithdrawlTax,
                 yearGains: curYearGains,
                 earlyWithdrawals: curEarlyWithdrawals,
                 userAge: getUserAge(),
@@ -751,7 +755,7 @@ async function runSingleSimulation(scenario, simulationId, federalTax, stateTax,
 
 // Handle messages from the parent thread
 parentPort.on('message', async (data) => {
-    try { 
+    try {
         const result = await runSingleSimulation(
             data.scenario,
             data.simulationId,
