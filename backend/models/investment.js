@@ -24,7 +24,11 @@ var InvestmentSchema = new Schema({
         enum: Object.values(AccountTaxStatus),
         required: true,
     },
-})
+});
+
+InvestmentSchema.virtual('name').get(function() {
+    return this.type.name + ' ' + this.accountTaxStatus
+});
 
 const Investment = mongoose.model('Investment', InvestmentSchema);
 

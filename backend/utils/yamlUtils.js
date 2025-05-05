@@ -125,7 +125,7 @@ exports.convertYamlToScenario = (yamlData, userId) => {
                 series.rebalance = {};
                 series.rebalance.allocationType = 'fixed';
                 series.rebalance.selectedInvestments = Object.keys(event.assetAllocation).map(k =>
-                    investments.find(i => i.id === k)?._id
+                    investments.find(i => i.id === k)?.id
                 );
                 series.rebalance.allocations = {};
                 Object.keys(event.assetAllocation).forEach(k => 
@@ -140,16 +140,16 @@ exports.convertYamlToScenario = (yamlData, userId) => {
     }
 
     data.eventSeriesSet = eventSeriesSet;
-    data.spendingStrategy = eventSeriesSet.filter(e => yamlData.spendingStrategy.includes(e.name)).map(e => e._id);
+    data.spendingStrategy = eventSeriesSet.filter(e => yamlData.spendingStrategy.includes(e.name)).map(e => e.id);
 
-    data.expenseWithdrawalStrategy = investments.filter(i => yamlData.expenseWithdrawalStrategy.includes(i.id)).map(i => i._id);
+    data.expenseWithdrawalStrategy = investments.filter(i => yamlData.expenseWithdrawalStrategy.includes(i.name)).map(i => i.id);
 
     data.inflationAssumption = convertYamlToDistribution(yamlData.inflationAssumption);
     data.rothConversionOpt = yamlData.RothConversionOpt;
     data.rothConversionStart = yamlData.RothConversionStart;
     data.rothConversionEnd = yamlData.RothConversionEnd;
-    data.rothConversionStrategy = investments.filter(i => yamlData.RothConversionStrategy.includes(i.id)).map(i => i._id);
-    data.rmdStrategy = investments.filter(i => yamlData.RMDStrategy.includes(i.id)).map(i => i._id);
+    data.rothConversionStrategy = investments.filter(i => yamlData.RothConversionStrategy.includes(i.name)).map(i => i.id);
+    data.rmdStrategy = investments.filter(i => yamlData.RMDStrategy.includes(i.name)).map(i => i.id);
     data.afterTaxContributionLimit = yamlData.afterTaxContributionLimit;
     data.financialGoal = yamlData.financialGoal;
     data.userStateOfResidence = yamlData.residenceState;
@@ -202,7 +202,7 @@ exports.convertScenarioToYaml = (scenario) => {
             investmentType: investment.type.name,
             value: investment.value,
             taxStatus: investment.accountTaxStatus,
-            id: investment.type.name + ' ' + investment.accountTaxStatus,
+            id: investment.name,
         })
     );
     scenario.eventSeriesSet.forEach(event => {
@@ -263,16 +263,17 @@ exports.convertScenarioToYaml = (scenario) => {
     obj.investments = investments;
     obj.eventSeries = eventSeries;
     obj.spendingStrategy = scenario.spendingStrategy.map(e =>
-        scenario.eventSeriesSet.find(t => t._id.toString() === e.toString())?.name
+        scenario.eventSeriesSet.find(t => t.id.toString() === e.toString())?.name
     );
+    
     obj.expenseWithdrawalStrategy = scenario.expenseWithdrawalStrategy.map(i =>
-        scenario.investments.find(t => t._id.toString() === i.toString())?.id
+        scenario.investments.find(t => t.id.toString() === i.toString())?.name
     );
     obj.RMDStrategy = scenario.rmdStrategy.map(i =>
-        scenario.investments.find(t => t._id.toString() === i.toString())?.id
+        scenario.investments.find(t => t.id.toString() === i.toString())?.name
     );
     obj.RothConversionStrategy = scenario.rothConversionStrategy.map(i =>
-        scenario.investments.find(t => t._id.toString() === i.toString())?.id
+        scenario.investments.find(t => t.id.toString() === i.toString())?.name
     );
 
     return yaml.dump(obj);
