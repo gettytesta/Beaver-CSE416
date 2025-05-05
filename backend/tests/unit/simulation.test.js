@@ -13,68 +13,80 @@ const mockScenario = {
     spouseBirthYear: 1987,
     userLifeExpectancy: { type: 'fixed', value: 80 },
     spouseLifeExpectancy: { type: 'normal', mean: 87, stdev: 3 },
-    
-    investmentTypes: [
-        {
-            name: 'cash',
-            description: 'cash',
-            returnAmtOrPct: 'amount',
-            expectedAnnualReturn: { type: 'fixed', value: 0},
-            expenseRatio: 0,
-            incomeAmtOrPct: 'percent',
-            expectedAnnualIncome: {type: 'fixed', value: 0},
-            taxability: true
-        },
-        {
-            name: 'S&P 500',
-            description: 'S&P 500 index fund',
-            returnAmtOrPct: 'percent',
-            expectedAnnualReturn: { type: 'normal', mean: 0.06, stdev: 0.02},
-            expenseRatio: 0.001,
-            incomeAmtOrPct: 'percent',
-            expectedAnnualIncome: {type: 'normal', mean: 0.01, stdev: 0.005},
-            taxability: true
-        },
-        {
-            name: 'tax-exempt bonds',
-            description: 'NY tax-exempt bonds',
-            returnAmtOrPct: 'amount',
-            expectedAnnualReturn: { type: 'fixed', value: 0},
-            expenseRatio: 0.004,
-            incomeAmtOrPct: 'percent',
-            expectedAnnualIncome: {type: 'normal', mean: 0.03, stdev: 0.01},
-            taxability: false
-        },
-    ],
 
     investments: [
         {
             _id: 'cash',
-            type: 'cash',
+            type: {
+                name: 'cash',
+                description: 'cash',
+                returnAmtOrPct: 'amount',
+                expectedAnnualReturn: { type: 'fixed', value: 0 },
+                expenseRatio: 0,
+                incomeAmtOrPct: 'percent',
+                expectedAnnualIncome: { type: 'fixed', value: 0 },
+                taxability: true
+            },
             value: 100,
             taxStatus: 'non-retirement'
         },
         {
             _id: 'S&P 500 non-retirement',
-            type: 'S&P 500',
+            type: {
+                name: 'S&P 500',
+                description: 'S&P 500 index fund',
+                returnAmtOrPct: 'percent',
+                expectedAnnualReturn: { type: 'normal', mean: 0.06, stdev: 0.02 },
+                expenseRatio: 0.001,
+                incomeAmtOrPct: 'percent',
+                expectedAnnualIncome: { type: 'normal', mean: 0.01, stdev: 0.005 },
+                taxability: true
+            },
             value: 10000,
             taxStatus: 'non-retirement'
         },
         {
             _id: 'tax-exempt bonds',
-            type: 'tax-exempt bonds',
+            type: {
+                name: 'tax-exempt bonds',
+                description: 'NY tax-exempt bonds',
+                returnAmtOrPct: 'amount',
+                expectedAnnualReturn: { type: 'fixed', value: 0 },
+                expenseRatio: 0.004,
+                incomeAmtOrPct: 'percent',
+                expectedAnnualIncome: { type: 'normal', mean: 0.03, stdev: 0.01 },
+                taxability: false
+            },
             value: 2000,
             taxStatus: 'non-retirement'
         },
         {
             _id: 'S&P 500 pre-tax',
-            type: 'S&P 500',
+            type: {
+                name: 'S&P 500',
+                description: 'S&P 500 index fund',
+                returnAmtOrPct: 'percent',
+                expectedAnnualReturn: { type: 'normal', mean: 0.06, stdev: 0.02 },
+                expenseRatio: 0.001,
+                incomeAmtOrPct: 'percent',
+                expectedAnnualIncome: { type: 'normal', mean: 0.01, stdev: 0.005 },
+                taxability: true
+            },
             value: 10000,
             taxStatus: 'pre-tax'
         },
         {
             _id: 'S&P 500 after-tax',
-            type: 'S&P 500',
+            type: {
+                name: 'S&P 500',
+                description: 'S&P 500 index fund',
+                returnAmtOrPct: 'percent',
+                expectedAnnualReturn: { type: 'normal', mean: 0.06, stdev: 0.02 },
+                expenseRatio: 0.001,
+                incomeAmtOrPct: 'percent',
+                expectedAnnualIncome: { type: 'normal', mean: 0.01, stdev: 0.005 },
+                taxability: true
+            },
             value: 2000,
             taxStatus: 'after-tax'
         },
@@ -99,7 +111,7 @@ const mockScenario = {
             name: 'food',
             type: 'expense',
             start: { type: 'fixed', value: 2025 }, // TODO replace with { type: 'startWith', eventSeries: 'salary'}
-            duration: { type: 'fixed', value: 200 }, 
+            duration: { type: 'fixed', value: 200 },
             expense: {
                 initialAmount: 5000,
                 changeAmtOrPct: 'percent',
@@ -114,7 +126,7 @@ const mockScenario = {
             name: 'vacation',
             type: 'expense',
             start: { type: 'fixed', value: 2025 }, // TODO replace with { type: 'startWith', eventSeries: 'salary'}
-            duration: { type: 'fixed', value: 40 }, 
+            duration: { type: 'fixed', value: 40 },
             expense: {
                 initialAmount: 1200,
                 changeAmtOrPct: 'amount',
@@ -129,7 +141,7 @@ const mockScenario = {
             name: 'streaming services',
             type: 'expense',
             start: { type: 'fixed', value: 2025 }, // TODO replace with { type: 'startWith', eventSeries: 'salary'}
-            duration: { type: 'fixed', value: 40 }, 
+            duration: { type: 'fixed', value: 40 },
             expense: {
                 initialAmount: 500,
                 changeAmtOrPct: 'amount',
@@ -169,7 +181,7 @@ const mockScenario = {
     spendingStrategy: ["vacation", "streaming services"],
     expenseWithdrawalStrategy: ["S&P 500 non-retirement", "tax-exempt bonds", "S&P 500 after-tax"],
     rmdStrategy: ["S&P 500 pre-tax",],
-    
+
     rothConversionOpt: true,
     rothConversionStart: 2050,
     rothConversionEnd: 2060,
