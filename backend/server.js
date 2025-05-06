@@ -5,6 +5,7 @@ const cors = require('cors');
 const passport = require('passport');
 const session = require('express-session');
 const app = express();
+const guestUtils = require('./utils/guestUtils');
 require('dotenv').config();
 
 // For tax and rmd table updates
@@ -35,6 +36,7 @@ app.use(session({
 app.use(passport.initialize());
 app.use(passport.session());
 require('./config/passport-setup');
+app.use(guestUtils);
 
 // Connect to MongoDB
 mongoose.connect(process.env.MONGO_URI)
