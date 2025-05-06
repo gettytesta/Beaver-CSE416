@@ -4,6 +4,11 @@ import { useState, useRef, useEffect } from "react";
 import ChartModal from "./ChartModal";
 import ParameterModal from "./ParameterModal";
 import OneDimensionalModal from "./OneDimensionalModal";
+import ParamOneModal from "./ParamOneModal";
+import ParamTwoModal from "./ParamTwoModal.jsx";
+import TwoDimensionalModal from "./TwoDimensionalModal";
+
+
 import axios from "axios";
 import { useSimulationResult } from "@/context/SimulationResultContext";
 import { useRouter } from "next/navigation";
@@ -26,6 +31,10 @@ export default function SimulationsTable({ scenarios }) {
   const [activeScenarioId, setActiveScenarioId] = useState(null);
 
   const [showOneDimModal, setShowOneDimModal] = useState(false);
+
+  const [showParam1Modal, setShowParam1Modal] = useState(false);
+  const [showParam2Modal, setShowParam2Modal] = useState(false);
+  const [showTwoDimModal, setShowTwoDimModal] = useState(false);
 
 
   const { setResults } = useSimulationResult();
@@ -62,6 +71,8 @@ export default function SimulationsTable({ scenarios }) {
     return false;
   });
 
+  
+
   const renderStatusBadge = (status = "Inactive") => {
     const styles = {
       Completed: "bg-emerald-100 text-emerald-800",
@@ -83,7 +94,9 @@ export default function SimulationsTable({ scenarios }) {
       </span>
     );
   };
-///2d still not done 
+
+
+
   const handleRunClick = async (scenarioId) => {
     const scenario = scenarios.find((s) => s._id === scenarioId);
     const selectedParameter = selectedParameters[scenarioId];
@@ -208,6 +221,62 @@ export default function SimulationsTable({ scenarios }) {
         console.error("Error running 1D simulation:", err);
         alert("Failed to run 1D simulation: " + err.message);
       }
+    } else if (selectedParameter?.parameterType === "twoDimensional") {
+      console.log("📊 Running 2D parameter simulation for:", scenario.name);
+    
+      const twoDChartsToRun = {
+        surfacePlot: !!selectedCharts?.surfacePlot,
+        contourPlot: !!selectedCharts?.contourPlot,
+        selectedMetrics: [
+          ...(selectedCharts?.surfaceQuantities || []),
+          ...(selectedCharts?.contourQuantities || [])
+        ]
+      };
+    
+      console.log("📊 2D Charts selected:", twoDChartsToRun);
+    
+      console.log("⚙️ Param 1:", selectedParameter?.param1);
+      console.log("⚙️ Param 2:", selectedParameter?.param2);
+  
+      try {
+        const response = await fetch(`http://localhost:5000/api/simulations/${scenarioId}`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          credentials: "include",
+          body: JSON.stringify({
+            numSimulations,
+            parameterType: "twoDimensional",
+            param1: selectedParameter.param1,
+            param2: selectedParameter.param2,
+          }),
+        });
+  
+        const data = await response.json();
+  
+        if (!response.ok) throw new Error(data.message || "2D Simulation failed");
+  
+        alert("2D simulation finished. Ready to view charts.");
+  /*
+        setCompletedSimulations((prev) => ({ ...prev, [scenarioId]: true }));
+  
+        setResults({
+          scenario,
+          scenarioId,
+          numSimulations,
+          selectedCharts: twoDChartsToRun,
+          selectedParameter: {
+            parameterType: "twoDimensional",
+            param1: selectedParameter.param1,
+            param2: selectedParameter.param2
+          },
+          data
+        });*/
+  
+      } catch (err) {
+        console.error("❌ Error running 2D simulation:", err);
+        alert("Failed to run 2D simulation: " + err.message);
+      }
+  
     } else {
       alert(`Simulation type '${selectedParameter?.parameterType}' is not yet supported.`);
     }
@@ -267,7 +336,32 @@ export default function SimulationsTable({ scenarios }) {
                   )}
                 </button>
               </td>
-              <td className="p-4">{scenario.name}</td>
+              <td className="p-4">
+                {scenario.name}
+                {selectedParameters[scenario._id]?.parameterType === "twoDimensional" && (
+                  <div className="mt-1 flex gap-2 text-xs">
+                    <button
+                      className="text-blue-700 bg-blue-100 px-2 py-0.5 rounded hover:bg-blue-200 transition"
+                      onClick={() => {
+                        setActiveScenarioId(scenario._id);
+                        setShowParam1Modal(true);
+                      }}
+                    >
+                      [Param 1]
+                    </button>
+                    <button
+                      className="text-blue-700 bg-blue-100 px-2 py-0.5 rounded hover:bg-blue-200 transition"
+                      onClick={() => {
+                        setActiveScenarioId(scenario._id);
+                        setShowParam2Modal(true);
+                      }}
+                    >
+                      [Param 2]
+                    </button>
+                  </div>
+                )}
+
+              </td>
               <td className="p-4 text-center">%</td>
               <td className="p-4 text-center">Final value</td>
               <td className="p-4 text-center">
@@ -307,6 +401,10 @@ export default function SimulationsTable({ scenarios }) {
                     } else if (param.parameterType === "oneDimensional") {
                       setActiveScenarioId(scenario._id);
                       setShowOneDimModal(true);
+                    } 
+                    else if (param.parameterType === "twoDimensional") {
+                      setActiveScenarioId(scenario._id);
+                      setShowTwoDimModal(true); 
                     } else {
                       alert(`${param.parameterType} charts coming soon`);
                     }
@@ -377,6 +475,52 @@ export default function SimulationsTable({ scenarios }) {
           }))
         }
       />
+
+<TwoDimensionalModal
+  showModal={showTwoDimModal}
+  setShowModal={setShowTwoDimModal}
+  selectedCharts={selectedChartsByScenario[activeScenarioId] || {}}
+  setSelectedCharts={(newCharts) =>
+    setSelectedChartsByScenario((prev) => ({
+      ...prev,
+      [activeScenarioId]: newCharts,
+    }))
+  }
+/>
+
+
+
+<ParamOneModal
+  showModal={showParam1Modal}
+  setShowModal={setShowParam1Modal}
+  scenario={scenarios.find((s) => s._id === activeScenarioId)}
+  param={selectedParameters[activeScenarioId]?.param1 || null}
+  setParam={(updatedParam) =>
+    setSelectedParameters((prev) => ({
+      ...prev,
+      [activeScenarioId]: {
+        ...prev[activeScenarioId],
+        param1: updatedParam,
+      },
+    }))
+  }
+/>
+
+<ParamTwoModal
+  showModal={showParam2Modal}
+  setShowModal={setShowParam2Modal}
+  scenario={scenarios.find((s) => s._id === activeScenarioId)}
+  param={selectedParameters[activeScenarioId]?.param2 || null}
+  setParam={(updatedParam) =>
+    setSelectedParameters((prev) => ({
+      ...prev,
+      [activeScenarioId]: {
+        ...prev[activeScenarioId],
+        param2: updatedParam,
+      },
+    }))
+  }
+/>
 
 
     </div>

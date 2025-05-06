@@ -28,6 +28,12 @@ export default function ParameterModal({
   }, [showModal]);
 
   const handleApply = () => {
+    if (selectedOption === "twoDimensional") {
+      setSelectedParameter({ parameterType: "twoDimensional", param1: null, param2: null });
+      setShowModal(false);
+      return;
+    }
+  
     const parameter = {
       parameterType: selectedOption,
       subParameter: selectedSubOption,
@@ -58,7 +64,7 @@ export default function ParameterModal({
     if (selectedSubOption === "startYearDuration") {
       parameter.field = selectedField;
     }
-
+  
     setSelectedParameter(parameter);
     setShowModal(false);
   };
@@ -148,6 +154,11 @@ export default function ParameterModal({
             <option value="twoDimensional">Two-Dimensional Scenario Exploration</option>
           </select>
         </div>
+        {selectedOption === "twoDimensional" && (
+          <p className="text-sm text-yellow-600 mb-4">
+            ⚠️ Two parameters can't fit in this modal — press Apply and configure them in the Simulations Table.
+          </p>
+        )}
 
         {selectedOption && (
           <p className="text-sm text-gray-500 mb-4">
