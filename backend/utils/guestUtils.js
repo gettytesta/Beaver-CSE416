@@ -4,8 +4,12 @@ const { Scenario } = require('../models/scenario');
 
 const DAY = 24 * 60 * 60 * 1000;
 
+// wipe guests on system start
+Scenario.deleteMany({ 'userId.isGuest': true, })
+    .then(async () => await User.deleteMany({ isGuest: true, }));
+    
 // entry into guests looks like { user.id: expiryTime }
-let guests = {}
+let guests = {};
 
 async function onRequest(req, res, next)
 {
