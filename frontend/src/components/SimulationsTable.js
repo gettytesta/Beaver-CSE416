@@ -74,7 +74,7 @@ export default function SimulationsTable({ scenarios }) {
       </span>
     );
   };
-
+///2d still not done 
   const handleRunClick = async (scenarioId) => {
     const scenario = scenarios.find((s) => s._id === scenarioId);
     const selectedParameter = selectedParameters[scenarioId];
