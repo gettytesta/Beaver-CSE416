@@ -92,6 +92,17 @@ async function runSingleSimulation(scenario, simulationId, federalTax, stateTax,
 
         while (curYear < endYear) {
 
+            // Add this at the beginning of the while loop in the main simulation
+            let debugIncome = {
+                initial: 0,
+                fromEvents: 0,
+                fromRMD: 0,
+                fromInvestments: 0,
+                fromPreTaxWithdrawals: 0,
+                fromRothConversions: 0,
+                final: 0
+            };
+
             // ================
             // 1. Preliminaries
             // ================
@@ -118,6 +129,8 @@ async function runSingleSimulation(scenario, simulationId, federalTax, stateTax,
 
             let curYearIncome = 0;
             let curYearSS = 0;
+
+            debugIncome.initial = curYearIncome;
 
             incomeEvents.filter(event => shouldRunEvent(event)).forEach(event => {
 
@@ -156,6 +169,8 @@ async function runSingleSimulation(scenario, simulationId, federalTax, stateTax,
                     curYearSS += event.currAmount;
                 }
             });
+
+            debugIncome.fromEvents = curYearIncome - debugIncome.initial;
 
             // =========================================================================================================
             // 3. Perform the RMD for the previous year, if the user’s age is at least 74 and at the end of the previous
@@ -237,41 +252,105 @@ async function runSingleSimulation(scenario, simulationId, federalTax, stateTax,
                 }
             }
 
+            debugIncome.fromRMD = curYearIncome - debugIncome.initial - debugIncome.fromEvents;
+
             // =================================================================================================
             // 4. Update the values of investments, reflecting expected annual return, reinvestment of generated
             // income, and subtraction of expenses.
             // =================================================================================================
-            scenario.investments.forEach(investment => {
-                // Calculate the expected return
-                let expectedReturn = SimulationUtils.sampleValueFromDistribution(investment.type.expectedAnnualReturn);
-                let returnAmount = investment.type.returnAmtOrPct === 'amount'
-                    ? expectedReturn
-                    : expectedReturn * investment.value;
-
-                // 4.a. Calculate the generated income, using the given fixed amount or percentage, or sampling from the
-                // specified probability distribution.
-                // Add the return to the investment value
-                investment.value += returnAmount;
-
-                // Calculate and subtract expenses
-                let expenses = investment.type.expenseRatio * investment.value;
-                investment.value -= expenses;
-
-                // Calculate generated income
-                let expectedAnnualIncome = SimulationUtils.sampleValueFromDistribution(investment.type.expectedAnnualIncome);
-                let generatedIncome = investment.type.incomeAmtOrPct === 'amount'
-                    ? expectedAnnualIncome
-                    : expectedAnnualIncome * investment.value;
-
-                // 4.b. Add the income to curYearIncome, if the investment’s tax status is ‘non-retirement’ and the
-                // investment type’s taxability is ‘taxable’. (For investments in pre-tax retirement accounts, the income
-                // is taxable in the year it is withdrawn from the account. For investments in after-tax retirement
-                // accounts, the income is not taxable.)
-                if (investment.accountTaxStatus === 'non-retirement' && investment.type.taxability) {
-                    cashInvestment.value += generatedIncome;
-                    curYearIncome += generatedIncome;
+            scenario.investments.forEach((investment, index) => {
+                try {
+                    
+                    // Validate investment object
+                    if (!investment.type) {
+                        return; // Skip this investment
+                    }
+                    
+                    if (typeof investment.value !== 'number' || isNaN(investment.value)) {
+                        investment.value = 0; // Reset to prevent cascading errors
+                        return; // Skip this investment
+                    }
+                    
+                    // Log expected return calculation
+                    const expectedReturnDist = investment.type.expectedAnnualReturn;
+                    
+                    let expectedReturn;
+                    try {
+                        expectedReturn = SimulationUtils.sampleValueFromDistribution(expectedReturnDist);
+                    } catch (e) {
+                        expectedReturn = 0;
+                    }
+                    
+                    // Calculate return amount with validation
+                    let returnAmount;
+                    if (investment.type.returnAmtOrPct === 'amount') {
+                        returnAmount = expectedReturn;
+                    } else {
+                        returnAmount = expectedReturn * investment.value;
+                    }
+                    
+                    // Validate return amount
+                    if (isNaN(returnAmount)) {
+                        returnAmount = 0;
+                    }
+                    
+                    // Add return to investment value
+                    const oldValue = investment.value;
+                    investment.value += returnAmount;
+                    
+                    // Calculate expenses with validation
+                    let expenseRatio = investment.type.expenseRatio || 0;
+                    if (typeof expenseRatio !== 'number' || isNaN(expenseRatio)) {
+                        expenseRatio = 0;
+                    }
+                    
+                    let expenses = expenseRatio * investment.value;
+                    if (isNaN(expenses)) {
+                        expenses = 0;
+                    }
+                    
+                    // Subtract expenses
+                    investment.value -= expenses;
+                    
+                    // Calculate generated income with validation
+                    let expectedAnnualIncomeDist = investment.type.expectedAnnualIncome;
+                    
+                    let expectedAnnualIncome;
+                    try {
+                        expectedAnnualIncome = SimulationUtils.sampleValueFromDistribution(expectedAnnualIncomeDist);
+                    } catch (e) {
+                        expectedAnnualIncome = 0;
+                    }
+                    
+                    // Calculate generated income
+                    let generatedIncome;
+                    if (investment.type.incomeAmtOrPct === 'amount') {
+                        generatedIncome = expectedAnnualIncome;
+                    } else {
+                        generatedIncome = expectedAnnualIncome * investment.value;
+                    }
+                    
+                    // Validate generated income
+                    if (isNaN(generatedIncome)) {
+                        console.error(`Income calculation produced NaN`);
+                        generatedIncome = 0;
+                    }
+                    
+                    // Add taxable income
+                    if (investment.accountTaxStatus === 'non-retirement' && investment.type.taxability) {
+                        const oldCashValue = cashInvestment.value;
+                        const oldIncome = curYearIncome;
+                        
+                        cashInvestment.value += generatedIncome;
+                        curYearIncome += generatedIncome;
+                        
+                    }
+                } catch (e) {
+                    console.error(`Error processing investment ${index}:`, e);
                 }
             });
+
+            debugIncome.fromInvestments = curYearIncome - debugIncome.initial - debugIncome.fromEvents - debugIncome.fromRMD;
 
             // ============================================================
             // 5. Run the Roth conversion (RC) optimizer, if it is enabled.
@@ -342,6 +421,9 @@ async function runSingleSimulation(scenario, simulationId, federalTax, stateTax,
                 // 5.d.curYearIncome += rc.
                 curYearIncome += rc;
             }
+
+            debugIncome.fromPreTaxWithdrawals = curYearIncome - debugIncome.initial - debugIncome.fromEvents - debugIncome.fromRMD - debugIncome.fromInvestments;
+
 
             // ==================================================================================================
             // 6. Pay non-discretionary expenses and the previous year’s taxes, i.e., subtract them from the cash
@@ -478,6 +560,8 @@ async function runSingleSimulation(scenario, simulationId, federalTax, stateTax,
                         curYearIncome += capitalGain;
                     }
 
+                    debugIncome.fromPreTaxWithdrawals = curYearIncome - debugIncome.initial - debugIncome.fromEvents - debugIncome.fromRMD - debugIncome.fromInvestments;
+
                     if ((investment.accountTaxStatus === 'pre-tax' || investment.accountTaxStatus === 'after-tax')
                         && getUserAge() < 59) {
                         curEarlyWithdrawals += capitalGain;
@@ -489,6 +573,8 @@ async function runSingleSimulation(scenario, simulationId, federalTax, stateTax,
                     if (remainingW <= 0) break;
                 }
             }
+
+            debugIncome.fromRothConversions = curYearIncome - debugIncome.initial - debugIncome.fromEvents - debugIncome.fromRMD - debugIncome.fromInvestments - debugIncome.fromPreTaxWithdrawals;
 
             // Now pay the expenses from cash
             cashInvestment.value -= P;
@@ -704,6 +790,9 @@ async function runSingleSimulation(scenario, simulationId, federalTax, stateTax,
                     }
                 }
             });
+
+            debugIncome.final = curYearIncome;
+            console.log(`Year ${curYear} income breakdown:`, debugIncome);
 
             // Store the yearly data for analysis
             simulationYearlyData.push({
