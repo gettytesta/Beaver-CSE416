@@ -33,7 +33,8 @@ export const MultiLineProbabilityOfSuccessChart = ({scenario, simulationSetResul
         const simulationResults = simulationSetThing.results;
         const successCounts = {}
 
-        simulationResults.forEach(simulation => {
+        simulationResults.data.forEach(sim => {
+            const simulation = sim.data
             simulation.result.yearlyData.forEach(yearData => {
                 if (successCounts[yearData.year] === undefined) {
                     successCounts[yearData.year] = 0; // Initialize count for the year
