@@ -7,7 +7,7 @@ export default function ChartsPage() {
   if (!results) {
     return <div className="p-10 text-gray-500">No simulation results found.</div>;
   }
-
+//
   const {
     scenario,
     scenarioId,
