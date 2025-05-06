@@ -17,13 +17,6 @@ ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Title, T
 //     not the number, of the discretionary expenses in that year).
 
 
-//   <option value="totalInvestments">Total Investments</option>
-//   <option value="totalIncome">Total Income</option>
-//   <option value="totalExpenses">Total Expenses</option>
-//   <option value="earlyWithdrawalTax">Early Withdrawal Tax</option>
-//   <option value="discretionaryExpenses">Discretionary Expenses</option>
-
-
 // TP - ChatGPT - Was asked to create functions for calculating the median of an array of numbers.
 function getMedian(values) {
     values.sort((a, b) => a - b);
