@@ -505,7 +505,7 @@ const ChartsPage = ({scenario, simulationResults, selectedCharts}) => {
 
     const charts = [];
 
-
+    // No paramters
     if (selectedCharts.lineChart) {
         charts.push(<ProbabilityOfSuccessChart scenario={scenario} simulationResults={simulationResults} />);
     }
@@ -541,6 +541,26 @@ const ChartsPage = ({scenario, simulationResults, selectedCharts}) => {
             charts.push(<StackedBarChartExpenses scenario={scenario} simulationResults={simulationResults} 
                                         typeOption={selectedCharts.selectedValueType}
                                         aggregationThreshold={selectedCharts.aggregationThreshold}/>)
+        }
+    }
+
+    // 1d Parameters
+    if (selectedCharts.finalValueVsParameter) {
+        if (selectedCharts.selectedChartType.includes("medianTotalInvestments")) {
+            charts.push(<MultiLineMedianInvestmentsChart scenario={scenario} 
+                                    simulationSetResults={simulationResults} />)
+        }
+        if (selectedCharts.selectedChartType.includes("probabilityOfSuccess")) {
+            charts.push(<MultiLineProbabilityOfSuccessChart scenario={scenario} 
+                                    simulationSetResults={simulationResults} />)
+        }
+    }
+    if (selectedCharts.multiLineOverTime) {
+        if (selectedCharts.selectedChartType.includes("medianTotalInvestments")) {
+            charts.push(<InvesmentsLineChartAsFunction scenario={scenario} simulationSetResults={simulationResults} />)
+        }
+        if (selectedCharts.selectedChartType.includes("probabilityOfSuccess")) {
+            charts.push(<ProbSuccessLineChartAsFunction scenario={scenario} simulationSetResults={simulationResults} />)
         }
     }
 
