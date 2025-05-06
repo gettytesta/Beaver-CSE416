@@ -103,11 +103,11 @@ async function runParallelSimulations(scenario, numSimulations, federalTax, stat
             // Create worker with scenario data
             const worker = new Worker(path.join(__dirname, '../workers/simulationWorker.js'), {
                 workerData: {
-                    scenario: scenario.toObject(),
+                    scenario: JSON.parse(JSON.stringify(scenario.toObject())),
                     simulationId,
-                    federalTax,
-                    stateTax,
-                    rmdTable
+                    federalTax: JSON.parse(JSON.stringify(federalTax.toObject())),
+                    stateTax: JSON.parse(JSON.stringify(stateTax.toObject())),
+                    rmdTable: JSON.parse(JSON.stringify(rmdTable.toObject()))
                 }
             });
             

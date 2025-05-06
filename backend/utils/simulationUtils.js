@@ -69,39 +69,55 @@ exports.initializeEvents = (eventSeriesSet) => {
     if (!eventSeriesSet) {
         return [];
     }
-    
-    return eventSeriesSet
-    .filter(eventSeries => eventSeries.type === 'income' || eventSeries.type === 'expense' || eventSeries.type === 'invest' || eventSeries.type === 'rebalance')
-    .map(eventSeries => {
-      // Sample and set start and duration
-      eventSeries.start = exports.sampleValueFromDistribution(eventSeries.start);
-      eventSeries.duration = exports.sampleValueFromDistribution(eventSeries.duration);
 
-      // "unpack" the values for this type by spreading type-specific properties to the root level
-      if (eventSeries.type === 'income' && eventSeries.income) {
-        Object.assign(eventSeries, eventSeries.income);
+    // First pass: initialize all events with fixed start times
+    const events = eventSeriesSet
+        .filter(eventSeries => eventSeries.type === 'income' || eventSeries.type === 'expense' || eventSeries.type === 'invest' || eventSeries.type === 'rebalance')
+        .map(eventSeries => {
+            // Sample and set start and duration
+            if (eventSeries.start.type === 'fixed' || eventSeries.start.type === 'uniform' || eventSeries.start.type === 'normal') {
+                eventSeries.start = exports.sampleValueFromDistribution(eventSeries.start);
+            }
+            eventSeries.duration = exports.sampleValueFromDistribution(eventSeries.duration);
 
-        // Initialize any new variables for this income event
-        eventSeries.currAmount = eventSeries.initialAmount;
+            // "unpack" the values for this type by spreading type-specific properties to the root level
+            if (eventSeries.type === 'income' && eventSeries.income) {
+                Object.assign(eventSeries, eventSeries.income);
+                eventSeries.currAmount = eventSeries.initialAmount;
+                delete eventSeries.income;
+            } else if (eventSeries.type === 'expense' && eventSeries.expense) {
+                Object.assign(eventSeries, eventSeries.expense);
+                eventSeries.currAmount = eventSeries.initialAmount;
+                delete eventSeries.expense;
+            } else if (eventSeries.type === 'invest' && eventSeries.invest) {
+                Object.assign(eventSeries, eventSeries.invest);
+                delete eventSeries.invest;
+            } else if (eventSeries.type === 'rebalance' && eventSeries.rebalance) {
+                Object.assign(eventSeries, eventSeries.rebalance);
+                delete eventSeries.rebalance;
+            }
 
-        delete eventSeries.income;
-      } else if (eventSeries.type === 'expense' && eventSeries.expense) {
-        Object.assign(eventSeries, eventSeries.expense);
+            return eventSeries;
+        });
 
-        // Initialize any new variables for this expense event
-        eventSeries.currAmount = eventSeries.initialAmount;
-
-        delete eventSeries.expense;
-      } else if (eventSeries.type === 'invest' && eventSeries.invest) {
-        Object.assign(eventSeries, eventSeries.invest);
-        delete eventSeries.invest;
-      } else if (eventSeries.type === 'rebalance' && eventSeries.rebalance) {
-        Object.assign(eventSeries, eventSeries.rebalance);
-        delete eventSeries.rebalance;
-      }
-
-      return eventSeries;
+    // Second pass: handle startWith and startAfter events
+    events.forEach(event => {
+        if (event.start.type === 'startWith' || event.start.type === 'startAfter') {
+            const referencedEvent = events.find(e => e.name === event.start.eventSeries);
+            if (!referencedEvent) {
+                throw new Error(`Referenced event ${event.start.eventSeries} not found for ${event.name}`);
+            }
+            
+            // Set start time based on referenced event
+            if (event.start.type === 'startWith') {
+                event.start = referencedEvent.start;
+            } else if (event.start.type === 'startAfter') {
+                event.start = referencedEvent.start + 1;
+            }
+        }
     });
+
+    return events;
 }
 
 exports.lookUpTaxBracket = (taxBrackets, value) => {

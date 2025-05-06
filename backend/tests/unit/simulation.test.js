@@ -28,7 +28,7 @@ const mockScenario = {
                 taxability: true
             },
             value: 100,
-            taxStatus: 'non-retirement'
+            accountTaxStatus: 'non-retirement'
         },
         {
             _id: 'S&P 500 non-retirement',
@@ -43,7 +43,7 @@ const mockScenario = {
                 taxability: true
             },
             value: 10000,
-            taxStatus: 'non-retirement'
+            accountTaxStatus: 'non-retirement'
         },
         {
             _id: 'tax-exempt bonds',
@@ -58,7 +58,7 @@ const mockScenario = {
                 taxability: false
             },
             value: 2000,
-            taxStatus: 'non-retirement'
+            accountTaxStatus: 'non-retirement'
         },
         {
             _id: 'S&P 500 pre-tax',
@@ -73,7 +73,7 @@ const mockScenario = {
                 taxability: true
             },
             value: 10000,
-            taxStatus: 'pre-tax'
+            accountTaxStatus: 'pre-tax'
         },
         {
             _id: 'S&P 500 after-tax',
@@ -88,7 +88,7 @@ const mockScenario = {
                 taxability: true
             },
             value: 2000,
-            taxStatus: 'after-tax'
+            accountTaxStatus: 'after-tax'
         },
     ],
 
@@ -110,7 +110,7 @@ const mockScenario = {
         {
             name: 'food',
             type: 'expense',
-            start: { type: 'fixed', value: 2025 }, // TODO replace with { type: 'startWith', eventSeries: 'salary'}
+            start: { type: 'startWith', eventSeries: 'salary'},
             duration: { type: 'fixed', value: 200 },
             expense: {
                 initialAmount: 5000,
@@ -125,7 +125,7 @@ const mockScenario = {
         {
             name: 'vacation',
             type: 'expense',
-            start: { type: 'fixed', value: 2025 }, // TODO replace with { type: 'startWith', eventSeries: 'salary'}
+            start: { type: 'startWith', eventSeries: 'salary'},
             duration: { type: 'fixed', value: 40 },
             expense: {
                 initialAmount: 1200,
@@ -140,7 +140,7 @@ const mockScenario = {
         {
             name: 'streaming services',
             type: 'expense',
-            start: { type: 'fixed', value: 2025 }, // TODO replace with { type: 'startWith', eventSeries: 'salary'}
+            start: { type: 'startWith', eventSeries: 'salary'},
             duration: { type: 'fixed', value: 40 },
             expense: {
                 initialAmount: 500,
@@ -152,28 +152,28 @@ const mockScenario = {
             }
         },
 
-        // {
-        //     name: 'my investments',
-        //     type: 'invest',
-        //     start: { type: 'uniform', lower: 2025, upper: 2030 },
-        //     duration: { type: 'fixed', value: 10 }, 
-        //     invest: {
-        //         assetAllocation: {'S&P 500 non-retirement': 0.6, 'S&P 500 after-tax': 0.4}, // TODO handle logic for this in the simulation code
-        //         glidePath: true,
-        //         assetAllocation2: {'S&P 500 non-retirement': 0.8, 'S&P 500 after-tax': 0.2},
-        //         maxCash: 1000
-        //     }
-        // },
+        {
+            name: 'my investments',
+            type: 'invest',
+            start: { type: 'uniform', lower: 2025, upper: 2030 },
+            duration: { type: 'fixed', value: 10 }, 
+            invest: {
+                assetAllocation: {'S&P 500 non-retirement': 0.6, 'S&P 500 after-tax': 0.4},
+                glidePath: true,
+                assetAllocation2: {'S&P 500 non-retirement': 0.8, 'S&P 500 after-tax': 0.2},
+                maxCash: 1000
+            }
+        },
 
-        // {
-        //     name: 'rebalance',
-        //     type: 'rebalance',
-        //     start: { type: 'uniform', lower: 2025, upper: 2030 },
-        //     duration: { type: 'fixed', value: 10 }, 
-        //     rebalance: {
-        //         assetAllocation: {'S&P 500 non-retirement': 0.7, 'tax-exempt bonds': 0.3}, // TODO handle logic for this in the simulation code
-        //     }
-        // }
+        {
+            name: 'rebalance',
+            type: 'rebalance',
+            start: { type: 'uniform', lower: 2025, upper: 2030 },
+            duration: { type: 'fixed', value: 10 }, 
+            rebalance: {
+                assetAllocation: {'S&P 500 non-retirement': 0.7, 'tax-exempt bonds': 0.3},
+            }
+        }
     ],
 
     userRetireContributionLimit: 7000,
