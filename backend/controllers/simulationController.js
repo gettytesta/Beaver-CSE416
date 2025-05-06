@@ -9,7 +9,7 @@ const simulationUtils = require('../utils/simulationUtils');
 
 // Maximum number of concurrent workers (adjust based on server capacity)
 const MAX_CONCURRENT_WORKERS = Math.max(1, Math.floor(os.cpus().length * process.env.SIM_CPU_UTILIZATION_LIMIT || 0.5));
-const MAX_SIMS_PER_REQUEST = process.env.MAX_SIMS_PER_REQUEST || 10000; 
+const MAX_SIMS_PER_REQUEST = process.env.MAX_SIMS_PER_REQUEST || 10000;
 
 exports.runSimulation = async (req, res) => {
     try {
@@ -39,7 +39,7 @@ exports.runSimulation = async (req, res) => {
         // Get state tax
         let stateTax = null;
         if (req.file) { // Check if user provided a YAML file for state tax
-            stateTax = yamlUtils.convertYamlFileToStateTax(file); 
+            stateTax = yamlUtils.convertYamlFileToStateTax(file);
         } else { // Otherwise try to get the state tax based on the users state of residence.
             stateTax = await taxService.getStateTax(scenario.userStateOfResidence);
         }
@@ -50,22 +50,21 @@ exports.runSimulation = async (req, res) => {
         const seed = Date.now().toString();
         simulationUtils.setSeed(seed);
 
-        // Run the correct simulation based on the amount of parameters.
-        const selectedParameter = req.body.selectedParameter || { parameterType: 'noParameters' };
-        if (selectedParameter.parameterType === 'noParameters') {
-            results = await runParallelSimulations(scenario, numSimulations, federalTax, stateTax, rmdTable);
-        } else if (selectedParameter.parameterType === 'oneDimensional') {
-            const { lowerBound, upperBound, delta } = simulationUtils.getBoundsAndDelta(selectedParameter);
+        const param1 = req.body.param1;
+        const param2 = req.body.param2;
 
-            for (let param = lowerBound; param <= upperBound; param += delta) {
-                console.log(param); // test
-
+        if (param1 && param2) {
+            // 2d
+        } else if (param1 && !param2) {
+            // 1d
+            const { l, u, d } = simulationUtils.getBoundsAndDelta(param1);
+            for (let p = l; p <= u; p += d) {
                 // make a copy of the scenario,
-                let scenarioCopy = JSON.parse(JSON.stringify(scenario.toObject())); 
+                let scenarioCopy = JSON.parse(JSON.stringify(scenario.toObject()));
 
                 // set the proper value of what needs to be set based on the selectedParameter values to param
-                if (selectedParameter.subParameter === 'rothOptimizer') {
-
+                if (p.subParameter === 'rothOptimizer') {
+                    // if (p.)
                 } else if (selectedParameter.subParameter === 'startYearDuration') {
 
                 } else if (selectedParameter.subParameter === 'incomeExpenseInitial') {
@@ -81,33 +80,69 @@ exports.runSimulation = async (req, res) => {
                 // reseed
                 simulationUtils.setSeed(seed);
             }
-
-        } else if (selectedParameter.parameterType === 'twoDimensional') {
-            const { lowerBound1, upperBound1, delta1 } = simulationUtils.getBoundsAndDelta(selectedParameter);
-
-            // TODO FIX THIS
-            const { lowerBound2, upperBound2, delta2 } = simulationUtils.getBoundsAndDelta(selectedParameter); 
-
-            for (let param1 = lowerBound1; param1 < upperBound1; param1 += delta1) {
-                for (let param2 = lowerBound2; param2 < upperBound2; param2 += delta2) {
-                    console.log(param1 + " " + param2); // test
-
-                    // make a copy of the scenario,
-                    let scenarioCopy = JSON.parse(JSON.stringify(scenario.toObject())); 
-
-                    // set the proper value of what needs to be set based on the selectedParameter values to param
-                    // TODO
-
-                    // run simulation, collect result and append to results
-                    let result = await runParallelSimulations(scenarioCopy, 1, federalTax, stateTax, rmdTable);
-                    results.push(result);
-
-                    // reseed
-                    simulationUtils.setSeed(seed);
-                }
-            }
+        } else {
+            // regular simulation
+            results = await runParallelSimulations(scenario, numSimulations, federalTax, stateTax, rmdTable);
         }
-     
+
+        // // Run the correct simulation based on the amount of parameters.
+        // const selectedParameter = req.body.selectedParameter || { parameterType: 'noParameters' };
+        // if (selectedParameter.parameterType === 'noParameters') {
+        //     results = await runParallelSimulations(scenario, numSimulations, federalTax, stateTax, rmdTable);
+        // } else if (selectedParameter.parameterType === 'oneDimensional') {
+        //     const { lowerBound, upperBound, delta } = simulationUtils.getBoundsAndDelta(selectedParameter.param1);
+
+        //     for (let param = lowerBound; param <= upperBound; param += delta) {
+        //         console.log(param); // test
+
+        //         // make a copy of the scenario,
+        //         let scenarioCopy = JSON.parse(JSON.stringify(scenario.toObject())); 
+
+        //         // set the proper value of what needs to be set based on the selectedParameter values to param
+        //         if (selectedParameter.subParameter === 'rothOptimizer') {
+        //             if (selectedParameter.)
+        //         } else if (selectedParameter.subParameter === 'startYearDuration') {
+
+        //         } else if (selectedParameter.subParameter === 'incomeExpenseInitial') {
+
+        //         } else if (selectedParameter.subParameter === 'investmentPercentage') {
+
+        //         }
+
+        //         // run simulation, collect result and append to results
+        //         let result = await runParallelSimulations(scenarioCopy, 1, federalTax, stateTax, rmdTable);
+        //         results.push(result);
+
+        //         // reseed
+        //         simulationUtils.setSeed(seed);
+        //     }
+
+        // } else if (selectedParameter.parameterType === 'twoDimensional') {
+        //     const { lowerBound1, upperBound1, delta1 } = simulationUtils.getBoundsAndDelta(selectedParameter.param1);
+
+        //     // TODO FIX THIS
+        //     const { lowerBound2, upperBound2, delta2 } = simulationUtils.getBoundsAndDelta(selectedParameter.param2); 
+
+        //     for (let param1 = lowerBound1; param1 < upperBound1; param1 += delta1) {
+        //         for (let param2 = lowerBound2; param2 < upperBound2; param2 += delta2) {
+        //             console.log(param1 + " " + param2); // test
+
+        //             // make a copy of the scenario,
+        //             let scenarioCopy = JSON.parse(JSON.stringify(scenario.toObject())); 
+
+        //             // set the proper value of what needs to be set based on the selectedParameter values to param
+        //             // TODO
+
+        //             // run simulation, collect result and append to results
+        //             let result = await runParallelSimulations(scenarioCopy, 1, federalTax, stateTax, rmdTable);
+        //             results.push(result);
+
+        //             // reseed
+        //             simulationUtils.setSeed(seed);
+        //         }
+        //     }
+        // }
+
         if (req.user) {
             const resultToLog = results[0].data; // First simulation result should be logged
             logService.logSimulationResult(req.user.name, resultToLog);
@@ -136,13 +171,13 @@ async function runParallelSimulations(scenario, numSimulations, federalTax, stat
         let completedWorkers = 0;
         let activeWorkers = 0;
         let nextSimulationId = 0;
-        
+
         // This function creates and starts a new worker
         const startWorker = () => {
             if (nextSimulationId >= numSimulations || activeWorkers >= MAX_CONCURRENT_WORKERS) {
                 return;
             }
-            
+
             const simulationId = nextSimulationId++;
             activeWorkers++;
 
@@ -156,34 +191,34 @@ async function runParallelSimulations(scenario, numSimulations, federalTax, stat
                     rmdTable: JSON.parse(JSON.stringify(rmdTable.toObject()))
                 }
             });
-            
+
             // Handle message from worker when simulation is complete
             worker.on('message', (result) => {
                 results.push(result);
                 activeWorkers--;
                 completedWorkers++;
                 startWorker(); // Start a new worker
-                
+
                 // If all simulations are done, resolve the promise
                 if (completedWorkers === numSimulations) {
                     resolve(results);
                 }
             });
-            
+
             // Handle errors
             worker.on('error', (err) => {
                 console.error(`Worker error: ${err}`);
                 activeWorkers--;
                 completedWorkers++;
-                
+
                 startWorker(); // Start a new worker
-                
+
                 // If all simulations are done, resolve the promise
                 if (completedWorkers === numSimulations) {
                     resolve(results);
                 }
             });
-            
+
             // Handle worker exit
             worker.on('exit', (code) => {
                 if (code !== 0) {
@@ -191,7 +226,7 @@ async function runParallelSimulations(scenario, numSimulations, federalTax, stat
                 }
             });
         };
-        
+
         // Start initial batch of workers
         for (let i = 0; i < Math.min(numSimulations, MAX_CONCURRENT_WORKERS); i++) {
             startWorker();
