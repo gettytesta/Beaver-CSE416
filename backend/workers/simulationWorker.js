@@ -57,6 +57,10 @@ async function runSingleSimulation(scenario, simulationId, federalTax, stateTax,
         let investEvents = allEvents.filter(event => event.type === 'invest');
         let rebalanceEvents = allEvents.filter(event => event.type === 'rebalance');
 
+        allEvents.forEach(event => {
+            console.log(JSON.stringify(event, null, 4))
+        });
+
         // Initialize investments so that each one has a initial value and purchase price field
         scenario.investments = SimulationUtils.initializeInvestments(scenario.investments);
 
@@ -654,7 +658,7 @@ async function runSingleSimulation(scenario, simulationId, federalTax, stateTax,
                 let L = curUserRetireContributionLimit; // Ignore spouse for now.
                 let B = 0;
                 const selectedInvestments = scenario.investments.filter(
-                    inv => Object.keys(event.assetAllocation).includes(inv._id)
+                    inv => Object.keys(event.allocations).includes(inv._id)
                 );
                 selectedInvestments.forEach(investment => {
                     if (investment.accountTaxStatus === 'after-tax') {
@@ -698,7 +702,7 @@ async function runSingleSimulation(scenario, simulationId, federalTax, stateTax,
                 // Calculate total value of all investments in the rebalance strategy
                 let totalValue = 0;
                 const selectedInvestments = scenario.investments.filter(
-                    inv => Object.keys(event.assetAllocation).includes(inv._id)
+                    inv => Object.keys(event.allocations).includes(inv._id)
                 );
                 selectedInvestments.forEach(inv => {
                     totalValue += inv.value;
@@ -715,9 +719,9 @@ async function runSingleSimulation(scenario, simulationId, federalTax, stateTax,
                     const progress = Math.min(1, Math.max(0, yearsElapsed / totalYears));
 
                     // Calculate target values for each investment based on glide path
-                    for (const [investmentId, allocation] of Object.entries(event.assetAllocation)) {
+                    for (const [investmentId, allocation] of Object.entries(event.allocations)) {
                         const initialAllocation = allocation.initial;
-                        const finalAllocation = event.assetAllocation2.get(investmentId);
+                        const finalAllocation = allocation.final
 
                         // Linear interpolation between initial and final allocations
                         const targetAllocation = initialAllocation + (finalAllocation - initialAllocation) * progress;
@@ -726,7 +730,7 @@ async function runSingleSimulation(scenario, simulationId, federalTax, stateTax,
                     }
                 } else {
                     // For fixed allocation, use the 'value' property
-                    for (const [investmentId, allocation] of Object.entries(event.assetAllocation)) {
+                    for (const [investmentId, allocation] of Object.entries(event.allocations)) {
                         const targetValue = totalValue * allocation.value;
                         targetValues.set(investmentId, targetValue);
                     }
