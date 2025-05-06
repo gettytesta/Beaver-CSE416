@@ -241,36 +241,36 @@ async function runSingleSimulation(scenario, simulationId, federalTax, stateTax,
             // 4. Update the values of investments, reflecting expected annual return, reinvestment of generated
             // income, and subtraction of expenses.
             // =================================================================================================
-
             scenario.investments.forEach(investment => {
+                // Calculate the expected return
+                let expectedReturn = SimulationUtils.sampleValueFromDistribution(investment.type.expectedAnnualReturn);
+                let returnAmount = investment.type.returnAmtOrPct === 'amount'
+                    ? expectedReturn
+                    : expectedReturn * investment.value;
 
                 // 4.a. Calculate the generated income, using the given fixed amount or percentage, or sampling from the
                 // specified probability distribution.
+                // Add the return to the investment value
+                investment.value += returnAmount;
+
+                // Calculate and subtract expenses
+                let expenses = investment.type.expenseRatio * investment.value;
+                investment.value -= expenses;
+
+                // Calculate generated income
                 let expectedAnnualIncome = SimulationUtils.sampleValueFromDistribution(investment.type.expectedAnnualIncome);
-                let generatedIncome = investment.type.incomeAmtOrPct === 'amount' ? expectedAnnualIncome : expectedAnnualIncome * investment.value;
+                let generatedIncome = investment.type.incomeAmtOrPct === 'amount'
+                    ? expectedAnnualIncome
+                    : expectedAnnualIncome * investment.value;
 
                 // 4.b. Add the income to curYearIncome, if the investment’s tax status is ‘non-retirement’ and the
                 // investment type’s taxability is ‘taxable’. (For investments in pre-tax retirement accounts, the income
                 // is taxable in the year it is withdrawn from the account. For investments in after-tax retirement
                 // accounts, the income is not taxable.)
                 if (investment.accountTaxStatus === 'non-retirement' && investment.type.taxability) {
+                    cashInvestment.value += generatedIncome;
                     curYearIncome += generatedIncome;
                 }
-
-                // 4.c. Add the income to the value of the investment.
-                let initialInvestmentValue = investment.value;
-                investment.value += generatedIncome;
-
-                // 4.d. Calculate the change in value, using the given fixed amount or percentage, or sampling from the
-                // specified probability distribution.
-                let investmentValueChange = investment.value - initialInvestmentValue;
-
-                // 4.e. Calculate this year’s expenses, by multiplying the expense ratio and the average value of the
-                // investment (i.e., the average of its value at the beginning and end of the year). Subtract the
-                // expenses from the value.
-                let avgValue = (investment.value + initialInvestmentValue) / 2;
-                let expenses = investment.type.expenseRatio * avgValue;
-                investment.value -= expenses;
             });
 
             // ============================================================
@@ -402,8 +402,7 @@ async function runSingleSimulation(scenario, simulationId, federalTax, stateTax,
             // year’s taxes. Calculate the amounts of expense events in a similar way as calculating the amounts of
             // income events.
             let P = prevYearFederalIncomeTax + prevYearStateIncomeTax + prevYearCapitalGainsTax + prevYearEarlyWithdrawlTax;
-            expenseEvents.filter(event => shouldRunEvent(event) && event.discretionary).forEach(event => {
-
+            expenseEvents.filter(event => shouldRunEvent(event) && !event.discretionary).forEach(event => {
                 // Update and store the amount based on annual change.
                 let expectedAnnualChange = SimulationUtils.sampleValueFromDistribution(event.changeDistribution);
                 event.currAmount = event.changeAmtOrPct === 'amount'
@@ -416,7 +415,6 @@ async function runSingleSimulation(scenario, simulationId, federalTax, stateTax,
                 }
 
                 // If user or their spouse is dead, omit their percentage of the amount.
-                // The system removes the dead person's amount and transfers all ownership to the survivor.
                 if (isUserDead() && event.userPct > 0) {
                     event.currAmount -= (event.currAmount * event.userPct);
                     event.userPct = 0;
@@ -426,75 +424,74 @@ async function runSingleSimulation(scenario, simulationId, federalTax, stateTax,
                     event.userPct = 100;
                 }
 
-                // Subtract from cash investment.
-                cashInvestment.value -= event.currAmount;
-
                 // P calculation
                 P += event.currAmount;
             });
 
             // 6.e. total withdrawal amount W = P - (amount of cash)
-            let W = P - cashInvestment.value;
+            let W = Math.max(0, P - cashInvestment.value);
 
             // 6.f. Iterate over investments in the expense withdrawal strategy, selling them one by one, until the total
             // amount sold equals W. The last investment to be sold might be partially sold.
-
             let curYearGains = 0;
             let curEarlyWithdrawals = 0;
 
-            let remainingW = W;
-            for (const investmentId of scenario.expenseWithdrawalStrategy) {
-                const investment = getInvestment(investmentId); // Find the investment by its UUID
+            if (W > 0) {
+                let remainingW = W;
+                for (const investmentId of scenario.expenseWithdrawalStrategy) {
+                    const investment = getInvestment(investmentId);
 
-                if (!investment || investment.value <= 0) continue;
+                    if (!investment || investment.value <= 0) continue;
 
-                // Ensure investment.value is a valid number
-                if (typeof investment.value !== 'number' || isNaN(investment.value)) {
-                    // console.warn(`Invalid investment value for investment ${investment._id}: ${investment.value}`);
-                    investment.value = 0;
-                    continue;
+                    // Ensure investment.value is a valid number
+                    if (typeof investment.value !== 'number' || isNaN(investment.value)) {
+                        investment.value = 0;
+                        continue;
+                    }
+
+                    // 6.f.i For each sale, compute the capital gain, and update running total curYearGains of capital gains,
+                    // if the sold investment’s tax status is 'non-retirement'. If the entire investment is
+                    // sold, capital gain = current value - purchase price, where purchase price = sum of the amounts
+                    // of purchases of this investment plus the initial value at the start of the simulation. Note that the
+                    // purchase price must be stored, and updated upon each purchase. If a fraction f of an
+                    // investment is sold, then capital gain = f * (current value - purchase price).
+                    let purchasePrice = investment.purchasePrice || 0;
+                    let saleAmount = Math.min(remainingW, investment.value);
+
+                    // Ensure we don't divide by zero
+                    let f = investment.value > 0 ? saleAmount / investment.value : 0;
+                    let capitalGain = f * (investment.value - purchasePrice);
+                    investment.value -= saleAmount;
+                    cashInvestment.value += saleAmount; // Add the proceeds to cash
+
+                    if (investment.accountTaxStatus === 'non-retirement') {
+                        // 6.f.ii Note that the capital “gain” may be negative (i.e., a loss), and that capital gains tax is paid on the
+                        // net capital gain for the year. Note that capital gains in pre-tax retirement accounts are taxed as
+                        // regular income upon withdrawal from the pre-tax retirement account.
+                        curYearGains += capitalGain;
+                    }
+
+                    if (investment.accountTaxStatus === 'pre-tax') {
+                        // 6.f.iii Update running total curYearIncome, if the investment sold is held in a pre-tax retirement
+                        // account. This reflects that we are both selling the investment and withdrawing the funds from
+                        // the pre-tax retirement account in order to pay the expense.
+                        curYearIncome += capitalGain;
+                    }
+
+                    if ((investment.accountTaxStatus === 'pre-tax' || investment.accountTaxStatus === 'after-tax')
+                        && getUserAge() < 59) {
+                        curEarlyWithdrawals += capitalGain;
+                    }
+
+                    // Update running total curYearEarlyWithdrawals, if the investment sold is held in a pre-tax or
+                    // after-tax retirement account and the user’s age is less than 59. If the user’s age equals 59, we
+                    // assume they perform this withdrawal after they turn 59½.
+                    if (remainingW <= 0) break;
                 }
-
-                // 6.f.i For each sale, compute the capital gain, and update running total curYearGains of capital gains,
-                // if the sold investment’s tax status is 'non-retirement'. If the entire investment is
-                // sold, capital gain = current value - purchase price, where purchase price = sum of the amounts
-                // of purchases of this investment plus the initial value at the start of the simulation. Note that the
-                // purchase price must be stored, and updated upon each purchase. If a fraction f of an
-                // investment is sold, then capital gain = f * (current value - purchase price).
-
-                let purchasePrice = investment.purchasePrice || 0;
-                let saleAmount = Math.min(remainingW, investment.value);
-
-                // Ensure we don't divide by zero
-                let f = investment.value > 0 ? saleAmount / investment.value : 0;
-                let capitalGain = f * (investment.value - purchasePrice);
-                investment.value -= saleAmount;
-
-                if (investment.accountTaxStatus === 'non-retirement') {
-                    // 6.f.ii Note that the capital “gain” may be negative (i.e., a loss), and that capital gains tax is paid on the
-                    // net capital gain for the year. Note that capital gains in pre-tax retirement accounts are taxed as
-                    // regular income upon withdrawal from the pre-tax retirement account.
-                    curYearGains += capitalGain;
-                }
-
-                // 6.f.iii Update running total curYearIncome, if the investment sold is held in a pre-tax retirement
-                // account. This reflects that we are both selling the investment and withdrawing the funds from
-                // the pre-tax retirement account in order to pay the expense.
-                if (investment.accountTaxStatus === 'pre-tax') {
-                    curYearIncome += capitalGain;
-                }
-
-                // Update running total curYearEarlyWithdrawals, if the investment sold is held in a pre-tax or
-                // after-tax retirement account and the user’s age is less than 59. If the user’s age equals 59, we
-                // assume they perform this withdrawal after they turn 59½.
-                if ((investment.accountTaxStatus === 'pre-tax'
-                    || investment.accountTaxStatus === 'after-tax')
-                    && getUserAge() < 59) {
-                    curEarlyWithdrawals += capitalGain;
-                }
-
-                if (remainingW <= 0) break;
             }
+
+            // Now pay the expenses from cash
+            cashInvestment.value -= P;
 
             // =====================================================================================================
             // 7. Pay discretionary expenses in the order given by the spending strategy, except stop if continuing
@@ -532,8 +529,25 @@ async function runSingleSimulation(scenario, simulationId, federalTax, stateTax,
                 }
 
                 // Pay as much as possible without violating financial goal
-                let maxAffordablePayment = getTotalAssets() - scenario.financialGoal;
+                let maxAffordablePayment = getTotalAssets() - (scenario.financialGoal || 0);
                 let amountToPay = Math.min(event.currAmount, Math.max(0, maxAffordablePayment));
+
+                if (amountToPay > cashInvestment.value) {
+                    // Need to sell investments to cover the expense
+                    let remainingAmount = amountToPay - cashInvestment.value;
+                    for (const investmentId of scenario.expenseWithdrawalStrategy) {
+                        const investment = getInvestment(investmentId);
+                        if (!investment || investment.value <= 0) continue;
+
+                        let saleAmount = Math.min(remainingAmount, investment.value);
+                        investment.value -= saleAmount;
+                        cashInvestment.value += saleAmount;
+                        remainingAmount -= saleAmount;
+
+                        if (remainingAmount <= 0) break;
+                    }
+                }
+
                 cashInvestment.value -= amountToPay;
             }
 
@@ -553,8 +567,10 @@ async function runSingleSimulation(scenario, simulationId, federalTax, stateTax,
 
                 let L = curUserRetireContributionLimit; // Ignore spouse for now.
                 let B = 0;
-                event.selectedInvestments.forEach(investmentId => {
-                    const investment = getInvestment(investmentId); // Find the investment by its UUID
+                const selectedInvestments = scenario.investments.filter(
+                    inv => Object.keys(event.assetAllocation).includes(inv._id)
+                );
+                selectedInvestments.forEach(investment => {
                     if (investment.accountTaxStatus === 'after-tax') {
                         B += investment.value;
                     }
@@ -562,8 +578,7 @@ async function runSingleSimulation(scenario, simulationId, federalTax, stateTax,
                 if (B > L) {
                     let scalingFactor = L / B;
                     let moneyToRealloc = 0;
-                    event.selectedInvestments.forEach(investmentId => {
-                        const investment = getInvestment(investmentId); // Find the investment by its UUID
+                    selectedInvestments.forEach(investment => {
                         if (investment.accountTaxStatus === 'after-tax') {
                             moneyToRealloc = investment.purchasePrice * (1 - scalingFactor);
                             investment.purchasePrice *= scalingFactor;
@@ -576,7 +591,7 @@ async function runSingleSimulation(scenario, simulationId, federalTax, stateTax,
 
                     // If still money left over, fallback (dump it in the first investment in the strategy)
                     if (moneyToRealloc > 0) {
-                        scenario.investments.find(inv => inv._id === event.selectedInvestments[0]._id).purchasePrice += moneyToRealloc;
+                        selectedInvestments.find(inv => inv._id === selectedInvestments[0]._id).purchasePrice += moneyToRealloc;
                     }
                 }
             });
@@ -596,10 +611,9 @@ async function runSingleSimulation(scenario, simulationId, federalTax, stateTax,
 
                 // Calculate total value of all investments in the rebalance strategy
                 let totalValue = 0;
-                const selectedInvestments = scenario.investments.filter(inv =>
-                    event.selectedInvestments.includes(inv._id)
+                const selectedInvestments = scenario.investments.filter(
+                    inv => Object.keys(event.assetAllocation).includes(inv._id)
                 );
-
                 selectedInvestments.forEach(inv => {
                     totalValue += inv.value;
                 });
@@ -608,22 +622,26 @@ async function runSingleSimulation(scenario, simulationId, federalTax, stateTax,
                 const targetValues = new Map();
 
                 // Handle both fixed and glide path allocations
-                if (event.allocationType === 'fixed') {
-                    // For fixed allocation, use the 'value' property
-                    for (const [investmentId, allocation] of event.allocations.entries()) {
-                        const targetValue = totalValue * allocation.value;
-                        targetValues.set(investmentId, targetValue);
-                    }
-                } else if (event.allocationType === 'glide') {
-                    // For glide path, interpolate between initial and final values based on current year
+                if (event.glidePath) {
+                    // For glide path, interpolate between initial and final values of assetAllocation 1 and 2 based on current year
                     const yearsElapsed = curYear - event.start;
                     const totalYears = event.duration;
                     const progress = Math.min(1, Math.max(0, yearsElapsed / totalYears));
 
-                    for (const [investmentId, allocation] of event.allocations.entries()) {
-                        const interpolatedAllocation = allocation.initial +
-                            (allocation.final - allocation.initial) * progress;
-                        const targetValue = totalValue * interpolatedAllocation;
+                    // Calculate target values for each investment based on glide path
+                    for (const [investmentId, allocation] of Object.entries(event.assetAllocation)) {
+                        const initialAllocation = allocation.initial;
+                        const finalAllocation = event.assetAllocation2.get(investmentId);
+
+                        // Linear interpolation between initial and final allocations
+                        const targetAllocation = initialAllocation + (finalAllocation - initialAllocation) * progress;
+                        const targetValue = totalValue * targetAllocation;
+                        targetValues.set(investmentId, targetValue);
+                    }
+                } else {
+                    // For fixed allocation, use the 'value' property
+                    for (const [investmentId, allocation] of Object.entries(event.assetAllocation)) {
+                        const targetValue = totalValue * allocation.value;
                         targetValues.set(investmentId, targetValue);
                     }
                 }
