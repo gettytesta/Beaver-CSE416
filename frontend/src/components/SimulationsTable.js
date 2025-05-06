@@ -3,6 +3,8 @@ import { CheckSquare, Square } from "lucide-react";
 import { useState, useRef, useEffect } from "react";
 import ChartModal from "./ChartModal";
 import ParameterModal from "./ParameterModal";
+import axios from "axios";
+
 
 export default function SimulationsTable({ scenarios }) {
   const [selected, setSelected] = useState(false);
@@ -72,48 +74,73 @@ export default function SimulationsTable({ scenarios }) {
       </span>
     );
   };
-
-  const handleRunClick = (scenarioId) => {
+///2d still not done 
+  const handleRunClick = async (scenarioId) => {
     const scenario = scenarios.find((s) => s._id === scenarioId);
     const selectedParameter = selectedParameters[scenarioId];
     const selectedCharts = selectedChartsByScenario[scenarioId];
-
-    if (!scenario || !simulationCounts[scenarioId]) {
-      console.warn("Missing scenario or simulation count");
+    const numSimulations = parseInt(simulationCounts[scenarioId]);
+  
+    if (!scenario || isNaN(numSimulations) || numSimulations <= 0) {
+      alert("Missing or invalid scenario/simulation count.");
       return;
     }
-
+  
     if (selectedParameter?.parameterType === "noParameters") {
       console.log("✅ Running basic simulation for:", scenario.name);
-
+  
       const chartsToRun = {};
-
-      if (selectedCharts?.lineChart !== undefined) {
-        chartsToRun.lineChart = selectedCharts.lineChart;
+  
+      if (selectedCharts?.lineChart) {
+        chartsToRun.lineChart = true;
       }
-
-      if (selectedCharts?.shadedLineChart !== undefined) {
-        chartsToRun.shadedLineChart = selectedCharts.shadedLineChart;
-        chartsToRun.selectedQuantity = selectedCharts.selectedQuantity;
+  
+      if (selectedCharts?.shadedLineChart) {
+        chartsToRun.shadedLineChart = true;
+        chartsToRun.selectedQuantities = selectedCharts.selectedQuantities || [];
       }
-
-      if (selectedCharts?.stackedBarChart !== undefined) {
-        chartsToRun.stackedBarChart = selectedCharts.stackedBarChart;
-        chartsToRun.selectedChartType = selectedCharts.selectedChartType;
+  
+      if (selectedCharts?.stackedBarChart) {
+        chartsToRun.stackedBarChart = true;
+        chartsToRun.selectedChartTypes = selectedCharts.selectedChartType || []; // updated key
         chartsToRun.selectedValueType = selectedCharts.selectedValueType;
         chartsToRun.aggregationThreshold = selectedCharts.aggregationThreshold;
       }
-
+  
       console.log("📊 Charts selected:", chartsToRun);
       console.log("⚙️ Parameters selected:", selectedParameter);
-      // TODO: Replace with real backend simulation call
-      // await axios.post("/api/simulate", { scenarioId, chartsToRun, selectedParameter });
- 
-      // TODO: On simulation finish, store results in state and show chart modal or redirect
-
-      alert("Simulation finished (stub). Charts ready to view (stub).");
+      console.log("🛰️ Sending simulation request with:", {
+        scenarioId,
+        numSimulations,
+        selectedCharts,
+        selectedParameter,
+      });
+  
+      try {
+        const response = await fetch(`http://localhost:5000/api/simulations/${scenarioId}`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ numSimulations }),
+        });
+  
+        const data = await response.json();
+  
+        if (!response.ok) {
+          throw new Error(data.message || "Simulation failed");
+        }
+  
+        console.log("✅ Simulation results:", data);
+        // TODO: Redirect or open modal to view charts based on `data`
+        alert("Simulation finished. Ready to view charts.");
+  
+      } catch (err) {
+        console.error("❌ Error running simulation:", err);
+        alert("Failed to run simulation: " + err.message);
+      }
+  
     } else {
       console.warn("Only 'No Parameters' supported for now.");
+      alert("Only basic simulations are supported right now.");
     }
   };
 

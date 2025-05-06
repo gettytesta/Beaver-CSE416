@@ -3,34 +3,48 @@ import { useState, useEffect, useRef } from "react";
 export default function ChartModal({ showModal, setShowModal, selectedCharts, setSelectedCharts }) {
   const wasCancelled = useRef(false);
 
-  const [lineChartCount, setLineChartCount] = useState(0);
-  const [shadedLineChartCount, setShadedLineChartCount] = useState(0);
-  const [stackedBarChartCount, setStackedBarChartCount] = useState(0);
-  const [selectedQuantity, setSelectedQuantity] = useState("totalInvestments");
-  const [selectedChartType, setSelectedChartType] = useState("investments");
+  const [lineChartEnabled, setLineChartEnabled] = useState(false);
+  const [shadedLineChartEnabled, setShadedLineChartEnabled] = useState(false);
+  const [stackedBarChartEnabled, setStackedBarChartEnabled] = useState(false);
+
+  const [selectedQuantities, setSelectedQuantities] = useState([]);
+  const [selectedChartType, setSelectedChartType] = useState([]);
   const [aggregationThreshold, setAggregationThreshold] = useState(0);
   const [selectedValueType, setSelectedValueType] = useState("median");
 
-  // ✅ Sync modal state when modal opens for a new scenario
+  const quantityOptions = [
+    { value: "totalInvestments", label: "Total Investments" },
+    { value: "totalIncome", label: "Total Income" },
+    { value: "totalExpenses", label: "Total Expenses" },
+    { value: "earlyWithdrawalTax", label: "Early Withdrawal Tax" },
+    { value: "discretionaryExpenses", label: "Discretionary Expenses" },
+  ];
+
+  const chartTypeOptions = [
+    { value: "investments", label: "Investments" },
+    { value: "expenses", label: "Expenses" },
+    { value: "income", label: "Income" },
+  ];
+
   useEffect(() => {
     if (showModal) {
-      setLineChartCount(selectedCharts.lineChart || 0);
-      setShadedLineChartCount(selectedCharts.shadedLineChart || 0);
-      setStackedBarChartCount(selectedCharts.stackedBarChart || 0);
-      setSelectedQuantity(selectedCharts.selectedQuantity || "totalInvestments");
-      setSelectedChartType(selectedCharts.selectedChartType || "investments");
+      setLineChartEnabled(!!selectedCharts.lineChart);
+      setShadedLineChartEnabled(!!selectedCharts.shadedLineChart);
+      setStackedBarChartEnabled(!!selectedCharts.stackedBarChart);
+      setSelectedQuantities(selectedCharts.selectedQuantities || []);
+      setSelectedChartType(selectedCharts.selectedChartType || []);
       setAggregationThreshold(selectedCharts.aggregationThreshold || 0);
       setSelectedValueType(selectedCharts.selectedValueType || "median");
     }
-  }, [showModal, selectedCharts]);
+  }, [showModal]);
 
   useEffect(() => {
     if (!showModal && wasCancelled.current) {
-      setLineChartCount(0);
-      setShadedLineChartCount(0);
-      setStackedBarChartCount(0);
-      setSelectedQuantity("totalInvestments");
-      setSelectedChartType("investments");
+      setLineChartEnabled(false);
+      setShadedLineChartEnabled(false);
+      setStackedBarChartEnabled(false);
+      setSelectedQuantities([]);
+      setSelectedChartType([]);
       setAggregationThreshold(0);
       setSelectedValueType("median");
       setSelectedCharts({});
@@ -38,47 +52,36 @@ export default function ChartModal({ showModal, setShowModal, selectedCharts, se
     }
   }, [showModal]);
 
-  const handleCheckboxChange = (e) => {
-    const { name, checked } = e.target;
-    if (name === "lineChart") {
-      setLineChartCount(checked ? 1 : 0);
-    } else if (name === "shadedLineChart") {
-      setShadedLineChartCount(checked ? 1 : 0);
-    } else if (name === "stackedBarChart") {
-      setStackedBarChartCount(checked ? 1 : 0);
-    }
+  const toggleQuantity = (value) => {
+    setSelectedQuantities((prev) =>
+      prev.includes(value) ? prev.filter((q) => q !== value) : [...prev, value]
+    );
   };
 
-  const handleNumberChange = (e, chartType) => {
-    const parsed = Math.max(0, parseInt(e.target.value, 10) || 0);
-    if (chartType === "lineChart") setLineChartCount(parsed);
-    else if (chartType === "shadedLineChart") setShadedLineChartCount(parsed);
-    else if (chartType === "stackedBarChart") setStackedBarChartCount(parsed);
+  const toggleChartType = (value) => {
+    setSelectedChartType((prev) =>
+      prev.includes(value) ? prev.filter((t) => t !== value) : [...prev, value]
+    );
   };
-
-  const handleQuantitySelect = (e) => setSelectedQuantity(e.target.value);
-  const handleChartTypeSelect = (e) => setSelectedChartType(e.target.value);
-  const handleValueTypeSelect = (e) => setSelectedValueType(e.target.value);
-  const handleThresholdChange = (e) => setAggregationThreshold(Math.max(0, parseInt(e.target.value, 10) || 0));
 
   const handleApply = () => {
-    const newSelectedCharts = {};
+    const charts = {};
 
-    if (lineChartCount > 0) newSelectedCharts.lineChart = lineChartCount;
+    if (lineChartEnabled) charts.lineChart = true;
 
-    if (shadedLineChartCount > 0) {
-      newSelectedCharts.shadedLineChart = shadedLineChartCount;
-      newSelectedCharts.selectedQuantity = selectedQuantity;
+    if (shadedLineChartEnabled && selectedQuantities.length > 0) {
+      charts.shadedLineChart = true;
+      charts.selectedQuantities = selectedQuantities;
     }
 
-    if (stackedBarChartCount > 0) {
-      newSelectedCharts.stackedBarChart = stackedBarChartCount;
-      newSelectedCharts.selectedChartType = selectedChartType;
-      newSelectedCharts.selectedValueType = selectedValueType;
-      newSelectedCharts.aggregationThreshold = aggregationThreshold;
+    if (stackedBarChartEnabled && selectedChartType.length > 0) {
+      charts.stackedBarChart = true;
+      charts.selectedChartType = selectedChartType;
+      charts.selectedValueType = selectedValueType;
+      charts.aggregationThreshold = aggregationThreshold;
     }
 
-    setSelectedCharts(newSelectedCharts);
+    setSelectedCharts(charts);
     wasCancelled.current = false;
     setShowModal(false);
   };
@@ -98,111 +101,83 @@ export default function ChartModal({ showModal, setShowModal, selectedCharts, se
           <label className="flex items-center space-x-2">
             <input
               type="checkbox"
-              name="lineChart"
-              onChange={handleCheckboxChange}
-              checked={lineChartCount > 0}
+              checked={lineChartEnabled}
+              onChange={(e) => setLineChartEnabled(e.target.checked)}
             />
             <span className="text-sm text-gray-800">Line Chart (Probability of Success Over Time)</span>
           </label>
-          {lineChartCount > 0 && (
-            <div className="mt-2">
-              <label className="text-sm text-gray-600">Number of Line Charts</label>
-              <input
-                type="number"
-                min="0"
-                value={lineChartCount === 0 ? "" : lineChartCount}
-                onChange={(e) => handleNumberChange(e, "lineChart")}
-                className="w-16 ml-2 p-1 border border-gray-300 rounded-md text-sm"
-              />
-            </div>
-          )}
         </div>
 
         {/* Shaded Line Chart */}
         <div className="mb-4">
-          <label className="flex items-center space-x-2">
+          <label className="flex items-center space-x-2 mb-2">
             <input
               type="checkbox"
-              name="shadedLineChart"
-              onChange={handleCheckboxChange}
-              checked={shadedLineChartCount > 0}
+              checked={shadedLineChartEnabled}
+              onChange={(e) => setShadedLineChartEnabled(e.target.checked)}
             />
             <span className="text-sm text-gray-800">Shaded Line Chart (Probability Ranges Over Time)</span>
           </label>
-          {shadedLineChartCount > 0 && (
-            <>
-              <div className="mt-2">
-                <label className="text-sm text-gray-600">Number of Shaded Line Charts</label>
-                <input
-                  type="number"
-                  min="0"
-                  value={shadedLineChartCount === 0 ? "" : shadedLineChartCount}
-                  onChange={(e) => handleNumberChange(e, "shadedLineChart")}
-                  className="w-16 ml-2 p-1 border border-gray-300 rounded-md text-sm"
-                />
+
+          {shadedLineChartEnabled && (
+            <div className="pl-6 mt-2">
+              <p className="text-sm text-gray-600 mb-2 font-medium">Select Quantities:</p>
+              <div className="grid grid-cols-2 gap-x-4 gap-y-1">
+                {quantityOptions.map((q) => (
+                  <label key={q.value} className="text-sm text-gray-700 flex items-center">
+                    <input
+                      type="checkbox"
+                      checked={selectedQuantities.includes(q.value)}
+                      onChange={() => toggleQuantity(q.value)}
+                      className="mr-2"
+                    />
+                    {q.label}
+                  </label>
+                ))}
               </div>
-              <div className="mt-2">
-                <label className="text-sm text-gray-600">Select Quantity</label>
-                <select
-                  value={selectedQuantity}
-                  onChange={handleQuantitySelect}
-                  className="ml-2 p-1 border border-gray-300 rounded-md text-sm"
-                >
-                  <option value="totalInvestments">Total Investments</option>
-                  <option value="totalIncome">Total Income</option>
-                  <option value="totalExpenses">Total Expenses</option>
-                  <option value="earlyWithdrawalTax">Early Withdrawal Tax</option>
-                  <option value="discretionaryExpenses">Discretionary Expenses</option>
-                </select>
-              </div>
-            </>
+            </div>
           )}
         </div>
 
         {/* Stacked Bar Chart */}
         <div className="mb-4">
-          <label className="flex items-center space-x-2">
+          <label className="flex items-center space-x-2 mb-2">
             <input
               type="checkbox"
-              name="stackedBarChart"
-              onChange={handleCheckboxChange}
-              checked={stackedBarChartCount > 0}
+              checked={stackedBarChartEnabled}
+              onChange={(e) => setStackedBarChartEnabled(e.target.checked)}
             />
             <span className="text-sm text-gray-800">Stacked Bar Chart (Median/Average Values Over Time)</span>
           </label>
-          {stackedBarChartCount > 0 && (
-            <>
-              <div className="mt-2">
-                <label className="text-sm text-gray-600">Number of Stacked Bar Charts</label>
-                <input
-                  type="number"
-                  min="0"
-                  value={stackedBarChartCount === 0 ? "" : stackedBarChartCount}
-                  onChange={(e) => handleNumberChange(e, "stackedBarChart")}
-                  className="w-16 ml-2 p-1 border border-gray-300 rounded-md text-sm"
-                />
+
+          {stackedBarChartEnabled && (
+            <div className="ml-4 space-y-3">
+              <div>
+                <p className="text-sm text-gray-600 mb-2 font-medium">Select Data Types:</p>
+                <div className="flex flex-col space-y-1 ml-2">
+                  {chartTypeOptions.map((t) => (
+                    <label key={t.value} className="text-sm text-gray-700 flex items-center">
+                      <input
+                        type="checkbox"
+                        checked={selectedChartType.includes(t.value)}
+                        onChange={() => toggleChartType(t.value)}
+                        className="mr-2"
+                      />
+                      {t.label}
+                    </label>
+                  ))}
+                </div>
               </div>
-              <div className="mt-2">
-                <label className="text-sm text-gray-600">Select Data Type</label>
-                <select
-                  value={selectedChartType}
-                  onChange={handleChartTypeSelect}
-                  className="ml-2 p-1 border border-gray-300 rounded-md text-sm"
-                >
-                  <option value="investments">Investments</option>
-                  <option value="income">Income</option>
-                  <option value="expenses">Expenses</option>
-                </select>
-              </div>
-              <div className="mt-2">
+
+              <div>
                 <label className="text-sm text-gray-600">Select Median or Average</label>
-                <div className="flex items-center">
+                <div className="flex items-center mt-1">
                   <label className="mr-4">
                     <input
                       type="radio"
                       value="median"
                       checked={selectedValueType === "median"}
-                      onChange={handleValueTypeSelect}
+                      onChange={(e) => setSelectedValueType(e.target.value)}
                       className="mr-1"
                     />
                     Median
@@ -212,25 +187,26 @@ export default function ChartModal({ showModal, setShowModal, selectedCharts, se
                       type="radio"
                       value="average"
                       checked={selectedValueType === "average"}
-                      onChange={handleValueTypeSelect}
+                      onChange={(e) => setSelectedValueType(e.target.value)}
                       className="mr-1"
                     />
                     Average
                   </label>
                 </div>
               </div>
-              <div className="mt-2">
+
+              <div>
                 <label className="text-sm text-gray-600">Aggregation Threshold</label>
                 <input
                   type="number"
                   min="0"
                   value={aggregationThreshold}
-                  onChange={handleThresholdChange}
+                  onChange={(e) => setAggregationThreshold(Math.max(0, parseInt(e.target.value) || 0))}
                   className="ml-2 p-1 border border-gray-300 rounded-md text-sm"
                   placeholder="0"
                 />
               </div>
-            </>
+            </div>
           )}
         </div>
 
