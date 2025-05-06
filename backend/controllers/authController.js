@@ -1,3 +1,6 @@
+const { Scenario } = require('../models/scenario');
+const User = require('../models/user');
+
 // Google callback handler
 exports.googleCallback = (req, res) => {
     req.session.save(() => {
@@ -65,6 +68,14 @@ exports.getCurrentUser = async (req, res) => {
 
 // Logout
 exports.logout = (req, res) => {
+    // delete stuff if guest
+    let id = req.user.id; // store id to retrieve after deletion
+    if (req.user.isGuest)
+    {
+        Scenario.deleteMany({ userId: id })
+            .then(() =>
+                User.findByIdAndDelete(id));
+    }
     req.logout((err) => {
         if (err) {
             return res.status(500).json({
