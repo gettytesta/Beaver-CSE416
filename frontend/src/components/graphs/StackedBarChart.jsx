@@ -46,31 +46,37 @@ const getRandomColor = () => {
 //                       The code required heavy editing however.
 export const StackedBarChartInvestments = ({scenario, simulationResults, typeOption, aggregationThreshold }) => {
     const investmentData = {};
-    const investmentCategories = simulationResults[0].result.yearlyData[0].investments.map(investment => investment.type);
-    investmentCategories.push("Other"); // Add "Other" category for aggregation
+    const investmentCategories = new Set();
+    
+    simulationResults.data[0].data.result.yearlyData[0].investments.forEach(investment => investmentCategories.add(investment.type.name));
+    investmentCategories.add("Other"); // Add "Other" category for aggregation
 
-    simulationResults.forEach(simulation => {
+    console.log(investmentCategories)
+
+    simulationResults.data.forEach(sim => {
+        const simulation = sim.data
         simulation.result.yearlyData.forEach(yearData => {
             if (investmentData[yearData.year] === undefined) {
                 investmentData[yearData.year] = {};
+                investmentData[yearData.year]['Other'] = [];
             }
             yearData.investments.forEach(investment => {
-                if (investmentData[yearData.year][investment.type] === undefined) {
-                    investmentData[yearData.year][investment.type] = [];
+                if (investmentData[yearData.year][investment.type.name] === undefined) {
+                    investmentData[yearData.year][investment.type.name] = [];
                 }
                 if (investment.value >= aggregationThreshold) { 
-                    investmentData[yearData.year][investment.type].push(investment.value);
-                    
+                    investmentData[yearData.year][investment.type.name].push(investment.value);
                 } else {
-                    investmentData[yearData.year]["Other"].push(investment.value);
+                    investmentData[yearData.year]['Other'].push(investment.value);
                 }
             })
         });
     })
 
     const labels = Object.keys(investmentData).sort((a, b) => a - b); // Sort years in ascending order
-    const colors = investmentCategories.map(() => getRandomColor()); // Generate random colors for each year
-    const datasets = investmentCategories.map(category => ({
+    console.log(investmentData)
+    const colors = Array.from(investmentCategories).map(() => getRandomColor()); // Generate random colors for each year
+    const datasets = Array.from(investmentCategories).map(category => ({
         label: category,
         data: labels.map(year => {
             const values = investmentData[year][category];
@@ -80,7 +86,7 @@ export const StackedBarChartInvestments = ({scenario, simulationResults, typeOpt
             return typeOption === "median" ? getMedian(values) : getAverage(values);
         }),
         borderWidth: 1,
-        backgroundColor: colors[investmentCategories.indexOf(category)],
+        backgroundColor: colors[Array.from(investmentCategories).indexOf(category)],
     }));
 
     const data = {
@@ -130,13 +136,15 @@ export const StackedBarChartInvestments = ({scenario, simulationResults, typeOpt
 
 export const StackedBarChartIncome = ({scenario, simulationResults, typeOption, aggregationThreshold }) => {
     const eventIncome = {};
-    const eventSeriesNames = simulationResults[0].result.yearlyData[0].incomeEvents.map(event => event.name);
+    const eventSeriesNames = simulationResults.data[0].data.result.yearlyData[0].incomeEvents.map(event => event.name);
     eventSeriesNames.push("Other"); // Add "Other" category for aggregation
 
-    simulationResults.forEach(simulation => {
+    simulationResults.data.forEach(sim => {
+        const simulation = sim.data
         simulation.result.yearlyData.forEach(yearData => {
             if (eventIncome[yearData.year] === undefined) {
                 eventIncome[yearData.year] = {};
+                eventIncome[yearData.year]['Other'] = [];
             }
             yearData.incomeEvents.forEach(event => {
                 if (eventIncome[yearData.year][event.name] === undefined) {
@@ -214,14 +222,16 @@ export const StackedBarChartIncome = ({scenario, simulationResults, typeOption, 
 
 export const StackedBarChartExpenses = ({scenario, simulationResults, typeOption, aggregationThreshold }) => {
     const eventExpenses = {};
-    const eventSeriesNames = simulationResults[0].result.yearlyData[0].expenseEvents.map(event => event.name);
+    const eventSeriesNames = simulationResults.data[0].data.result.yearlyData[0].expenseEvents.map(event => event.name);
     eventSeriesNames.push("Other"); // Add "Other" category for aggregation
     eventSeriesNames.push("Taxes");
 
-    simulationResults.forEach(simulation => {
+    simulationResults.data.forEach(sim => {
+        const simulation = sim.data
         simulation.result.yearlyData.forEach(yearData => {
             if (eventExpenses[yearData.year] === undefined) {
                 eventExpenses[yearData.year] = {};
+                eventExpenses[yearData.year]['Other'] = [];
             }
             yearData.expenseEvents.forEach(event => {
                 if (eventExpenses[yearData.year][event.name] === undefined) {

@@ -33,7 +33,8 @@ export const ProbabilityRangesChartInvestment = ({ scenario, simulationResults }
     const medianValues = {};
 
     // Collect incomes for each year
-    simulationResults.forEach(simulation => {
+    simulationResults.data.forEach(sim => {
+        const simulation = sim.data
         simulation.result.yearlyData.forEach(yearData => {
             if (medianValues[yearData.year] === undefined) {
                 medianValues[yearData.year] = [];
@@ -179,7 +180,8 @@ export const ProbabilityRangesChartIncome = ({ scenario, simulationResults }) =>
     const medianValues = {};
 
     // Collect incomes for each year
-    simulationResults.forEach(simulation => {
+    simulationResults.data.forEach(sim => {
+        const simulation = sim.data
         simulation.result.yearlyData.forEach(yearData => {
             if (medianValues[yearData.year] === undefined) {
                 medianValues[yearData.year] = [];
@@ -315,12 +317,13 @@ export const ProbabilityRangesChartExpenses = ({ scenario, simulationResults }) 
     const medianValues = {};
 
     // Collect incomes for each year
-    simulationResults.forEach(simulation => {
+    simulationResults.data.forEach(sim => {
+        const simulation = sim.data
         simulation.result.yearlyData.forEach(yearData => {
             if (medianValues[yearData.year] === undefined) {
                 medianValues[yearData.year] = [];
             }
-            medianValues[yearData.year].push(yearData.expenses);
+            medianValues[yearData.year].push(yearData.totalExpenses + yearData.taxesIncurred);
         });
     });
 
@@ -451,7 +454,8 @@ export const ProbabilityRangesChartWithdrawalTax = ({ scenario, simulationResult
     const medianValues = {};
 
     // Collect incomes for each year
-    simulationResults.forEach(simulation => {
+    simulationResults.data.forEach(sim => {
+        const simulation = sim.data
         simulation.result.yearlyData.forEach(yearData => {
             if (medianValues[yearData.year] === undefined) {
                 medianValues[yearData.year] = [];
@@ -553,7 +557,7 @@ export const ProbabilityRangesChartWithdrawalTax = ({ scenario, simulationResult
             },
             title: {
                 display: true,
-                text: 'Probability Ranges of Total Investments Over Time',
+                text: 'Probability Ranges of Early Withdrawal Tax Over Time',
             },
         },
         layout: {
@@ -575,7 +579,7 @@ export const ProbabilityRangesChartWithdrawalTax = ({ scenario, simulationResult
                 beginAtZero: true,
                 title: {
                     display: true,
-                    text: 'Total Investments ($)',
+                    text: 'Early Withdrawal Tax ($)',
                 },
             },
         },
@@ -588,12 +592,13 @@ export const ProbabilityRangesChartDiscretionaryExpenses = ({ scenario, simulati
     const medianValues = {};
 
     // Collect incomes for each year
-    simulationResults.forEach(simulation => {
+    simulationResults.data.forEach(sim => {
+        const simulation = sim.data
         simulation.result.yearlyData.forEach(yearData => {
             if (medianValues[yearData.year] === undefined) {
                 medianValues[yearData.year] = [];
             }
-            medianValues[yearData.year].push(yearData.discretionaryExpenses);
+            medianValues[yearData.year].push(yearData.percentDiscretionary);
         });
     });
 
@@ -689,7 +694,7 @@ export const ProbabilityRangesChartDiscretionaryExpenses = ({ scenario, simulati
             },
             title: {
                 display: true,
-                text: 'Probability Ranges of Total Investments Over Time',
+                text: 'Probability Ranges of Discretionary Expenses Over Time',
             },
         },
         layout: {
@@ -711,7 +716,7 @@ export const ProbabilityRangesChartDiscretionaryExpenses = ({ scenario, simulati
                 beginAtZero: true,
                 title: {
                     display: true,
-                    text: 'Total Investments ($)',
+                    text: 'Discretionary Expenses ($)',
                 },
             },
         },

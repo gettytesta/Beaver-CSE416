@@ -19,7 +19,8 @@ const ProbabilityOfSuccessChart = ({scenario, simulationResults}) => {
     const financialGoal = scenario.financialGoal;
     const successCounts = {};
 
-    simulationResults.forEach(simulation => {
+    simulationResults.data.forEach(sim => {
+        const simulation = sim.data
         simulation.result.yearlyData.forEach(yearData => {
             if (successCounts[yearData.year] === undefined) {
                 successCounts[yearData.year] = 0; // Initialize count for the year
@@ -33,7 +34,7 @@ const ProbabilityOfSuccessChart = ({scenario, simulationResults}) => {
 
     // Extract labels (years) and data (number of successful simulations)
     const labels = Object.keys(successCounts).sort((a, b) => a - b); // Sort years in ascending order
-    const dataPoints = labels.map(year => successCounts[year] / simulationResults.length * 100);
+    const dataPoints = labels.map(year => successCounts[year] / simulationResults.data.length * 100);
 
     const data = {
         labels,
