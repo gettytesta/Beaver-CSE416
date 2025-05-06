@@ -150,7 +150,7 @@ export const StackedBarChartIncome = ({scenario, simulationResults, typeOption, 
                 if (eventIncome[yearData.year][event.name] === undefined) {
                     eventIncome[yearData.year][event.name] = [];
                 }
-                if (event.income >= aggregationThreshold) { 
+                if (event.value >= aggregationThreshold) { 
                     eventIncome[yearData.year][event.name].push(event.value);
                     
                 } else {
@@ -237,7 +237,7 @@ export const StackedBarChartExpenses = ({scenario, simulationResults, typeOption
                 if (eventExpenses[yearData.year][event.name] === undefined) {
                     eventExpenses[yearData.year][event.name] = [];
                 }
-                if (event.income >= aggregationThreshold) { 
+                if (event.value >= aggregationThreshold) { 
                     eventExpenses[yearData.year][event.name].push(event.value);
                     
                 } else {

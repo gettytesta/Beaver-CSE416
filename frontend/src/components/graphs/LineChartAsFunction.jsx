@@ -30,7 +30,8 @@ export const ProbSuccessLineChartAsFunction = ({scenario, simulationSetResults})
         const simulationResults = simulationSetThing.results;
         let successCount = 0;
 
-        simulationResults.forEach(simulation => {
+        simulationResults.data.forEach(sim => {
+            const simulation = sim.data
             const lastYearSim = simulation.result.yearlyData[simulation.result.endYear-simulation.result.yearlyData[0].year];
             const totalInvestments = lastYearSim.investments.reduce((sum, investment) => sum + investment.value, 0);
             if (totalInvestments >= financialGoal) {
@@ -104,7 +105,8 @@ export const InvesmentsLineChartAsFunction = ({scenario, simulationSetResults}) 
         const simulationResults = simulationSetThing.results;
         const totalInvestments = [];
 
-        simulationResults.forEach(simulation => {
+        simulationResults.data.forEach(sim => {
+            const simulation = sim.data
             const lastYearSim = simulation.result.yearlyData[simulation.result.endYear-simulation.result.yearlyData[0].year];
             const investments = lastYearSim.investments.reduce((sum, investment) => sum + investment.value, 0);
             totalInvestments.push(investments);

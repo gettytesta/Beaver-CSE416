@@ -112,7 +112,8 @@ export const MultiLineMedianInvestmentsChart = ({scenario, simulationSetResults}
         const simulationResults = simulationSetThing.results;
         const medianValues = {}
 
-        simulationResults.forEach(simulation => {
+        simulationResults.forEach(sim => {
+            const simulation = sim.data
             simulation.result.yearlyData.forEach(yearData => {
                 if (medianValues[yearData.year] === undefined) {
                     medianValues[yearData.year] = [];
