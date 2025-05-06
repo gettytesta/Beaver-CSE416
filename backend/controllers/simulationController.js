@@ -9,14 +9,6 @@ const logService = require('../services/logService');
 const MAX_CONCURRENT_WORKERS = Math.max(1, Math.floor(os.cpus().length * process.env.SIM_CPU_UTILIZATION_LIMIT || 0.5));
 const MAX_SIMS_PER_REQUEST = process.env.MAX_SIMS_PER_REQUEST || 10000; 
 
-// TODO runSimulation does not feature support for Guest users to be able to run simulations.
-// I'm still not sure how we're going to set up persisence when it comes to guests (MongoDB expiration date on files sounded pretty good)
-// Two ideas for solution:
-// - Set a expiration date on files when saving to MongoDB
-// - Simply have Guest users send the scenario object itself in the request body
-
-// TODO Still have to convert uploaded .yaml file to StateTax (see below)
-
 exports.runSimulation = async (req, res) => {
     try {
         const { scenarioId } = req.params; // Get the scenario ID from the request
@@ -51,12 +43,17 @@ exports.runSimulation = async (req, res) => {
         const federalTax = await taxService.getFederalTax();
         const rmdTable = await taxService.getRMDTable();
 
+        if (!federalTax || !rmdTable) {
+            return res.status(500).json({
+                success: false,
+                message: 'Failed to load tax data or RMD table'
+            });
+        }
+
         // Get state tax
         let stateTax = null;
         if (req.file) { // Check if user provided a YAML file for state tax
             // TODO convert the uploaded YAML file to StateTax.
-            // there is a convertYamlToStateTax in yamlUtils but that requires a filepath, not the actual file itself, so idk
-            // maybe create a uploads folder? then store the file there (With a deletion timer) and pass the filepath?
             stateTax = null; 
         } else { // Otherwise try to get the state tax based on the users state of residence.
             stateTax = await taxService.getStateTax(scenario.userStateOfResidence);
@@ -64,15 +61,19 @@ exports.runSimulation = async (req, res) => {
         
         // Collect and format simulation result
         const results = await runParallelSimulations(scenario, numSimulations, federalTax, stateTax, rmdTable);
-        const resultToLog = results[0]; // First simulation result should be logged
-        await logService.logSimulationResult(req.user.username, resultToLog);
-        const formattedResults = formatSimulationResults(results, scenario);
         
+        // Only log the result if the user is authenticated
+        if (req.user && results.length > 0) {
+            const resultToLog = results[0]; // First simulation result should be logged
+            await logService.logSimulationResult(req.user.username, resultToLog);
+        }
+
         res.status(200).json({
             success: true,
-            data: formattedResults
+            data: results
         });
     } catch (error) {
+        console.error('Simulation error:', error);
         res.status(500).json({
             success: false,
             message: 'Error running simulation',
@@ -106,7 +107,7 @@ async function runParallelSimulations(scenario, numSimulations, federalTax, stat
                     scenario: JSON.parse(JSON.stringify(scenario.toObject())),
                     simulationId,
                     federalTax: JSON.parse(JSON.stringify(federalTax.toObject())),
-                    stateTax: JSON.parse(JSON.stringify(stateTax.toObject())),
+                    stateTax: stateTax ? JSON.parse(JSON.stringify(stateTax.toObject())) : null,
                     rmdTable: JSON.parse(JSON.stringify(rmdTable.toObject()))
                 }
             });
@@ -152,19 +153,3 @@ async function runParallelSimulations(scenario, numSimulations, federalTax, stat
         }
     });
 }
-
-/**
- * Format simulation results for client response
- */
-function formatSimulationResults(results, scenario) {
-
-    // TODO: implement this function
-    
-    return {
-        scenarioId: scenario._id,
-        scenarioName: scenario.name,
-        numSimulations: results.length,
-        timestamp: new Date(),
-        // TODO more results
-    };
-} 
