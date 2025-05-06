@@ -5,6 +5,7 @@ const os = require('os');
 const taxService = require('../services/taxService');
 const logService = require('../services/logService');
 const yamlUtils = require('../utils/yamlUtils');
+const simulationUtils = require('../utils/simulationUtils');
 
 // Maximum number of concurrent workers (adjust based on server capacity)
 const MAX_CONCURRENT_WORKERS = Math.max(1, Math.floor(os.cpus().length * process.env.SIM_CPU_UTILIZATION_LIMIT || 0.5));
@@ -12,7 +13,7 @@ const MAX_SIMS_PER_REQUEST = process.env.MAX_SIMS_PER_REQUEST || 10000;
 
 exports.runSimulation = async (req, res) => {
     try {
-        const { scenarioId } = req.params; // Get the scenario ID from the request
+        const { scenarioId } = req.params; // Get the sim params from the request
         let numSimulations = parseInt(req.body.numSimulations) || 50;  // Get the number of simulations from the request body
         numSimulations = Math.min(numSimulations, MAX_SIMS_PER_REQUEST); // Enforce maximum number of simulations that can be run per request
         const scenario = await Scenario.findById(scenarioId); // Find the scenario
@@ -42,9 +43,71 @@ exports.runSimulation = async (req, res) => {
         } else { // Otherwise try to get the state tax based on the users state of residence.
             stateTax = await taxService.getStateTax(scenario.userStateOfResidence);
         }
-        
-        // Collect simulation result
-        const results = await runParallelSimulations(scenario, numSimulations, federalTax, stateTax, rmdTable);
+
+        let results = [];
+
+        // set seed as current timestamp
+        const seed = Date.now().toString();
+        simulationUtils.setSeed(seed);
+
+        // Run the correct simulation based on the amount of parameters.
+        const selectedParameter = req.body.selectedParameter || { parameterType: 'noParameters' };
+        if (selectedParameter.parameterType === 'noParameters') {
+            results = await runParallelSimulations(scenario, numSimulations, federalTax, stateTax, rmdTable);
+        } else if (selectedParameter.parameterType === 'oneDimensional') {
+            const { lowerBound, upperBound, delta } = simulationUtils.getBoundsAndDelta(selectedParameter);
+
+            for (let param = lowerBound; param <= upperBound; param += delta) {
+                console.log(param); // test
+
+                // make a copy of the scenario,
+                let scenarioCopy = JSON.parse(JSON.stringify(scenario.toObject())); 
+
+                // set the proper value of what needs to be set based on the selectedParameter values to param
+                if (selectedParameter.subParameter === 'rothOptimizer') {
+
+                } else if (selectedParameter.subParameter === 'startYearDuration') {
+
+                } else if (selectedParameter.subParameter === 'incomeExpenseInitial') {
+
+                } else if (selectedParameter.subParameter === 'investmentPercentage') {
+
+                }
+
+                // run simulation, collect result and append to results
+                let result = await runParallelSimulations(scenarioCopy, 1, federalTax, stateTax, rmdTable);
+                results.push(result);
+
+                // reseed
+                simulationUtils.setSeed(seed);
+            }
+
+        } else if (selectedParameter.parameterType === 'twoDimensional') {
+            const { lowerBound1, upperBound1, delta1 } = simulationUtils.getBoundsAndDelta(selectedParameter);
+
+            // TODO FIX THIS
+            const { lowerBound2, upperBound2, delta2 } = simulationUtils.getBoundsAndDelta(selectedParameter); 
+
+            for (let param1 = lowerBound1; param1 < upperBound1; param1 += delta1) {
+                for (let param2 = lowerBound2; param2 < upperBound2; param2 += delta2) {
+                    console.log(param1 + " " + param2); // test
+
+                    // make a copy of the scenario,
+                    let scenarioCopy = JSON.parse(JSON.stringify(scenario.toObject())); 
+
+                    // set the proper value of what needs to be set based on the selectedParameter values to param
+                    // TODO
+
+                    // run simulation, collect result and append to results
+                    let result = await runParallelSimulations(scenarioCopy, 1, federalTax, stateTax, rmdTable);
+                    results.push(result);
+
+                    // reseed
+                    simulationUtils.setSeed(seed);
+                }
+            }
+        }
+     
         if (req.user) {
             const resultToLog = results[0].data; // First simulation result should be logged
             logService.logSimulationResult(req.user.name, resultToLog);

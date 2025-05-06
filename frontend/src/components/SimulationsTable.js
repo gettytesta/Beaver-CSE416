@@ -3,6 +3,7 @@ import { CheckSquare, Square } from "lucide-react";
 import { useState, useRef, useEffect } from "react";
 import ChartModal from "./ChartModal";
 import ParameterModal from "./ParameterModal";
+import OneDimensionalModal from "./OneDimensionalModal";
 import axios from "axios";
 import { useSimulationResult } from "@/context/SimulationResultContext";
 import { useRouter } from "next/navigation";
@@ -23,6 +24,8 @@ export default function SimulationsTable({ scenarios }) {
   const [showModal, setShowModal] = useState(false);
   const [showParameterModal, setShowParameterModal] = useState(false);
   const [activeScenarioId, setActiveScenarioId] = useState(null);
+
+  const [showOneDimModal, setShowOneDimModal] = useState(false);
 
 
   const { setResults } = useSimulationResult();
@@ -127,7 +130,7 @@ export default function SimulationsTable({ scenarios }) {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           credentials: "include",
-          body: JSON.stringify({ numSimulations, selectedParameter }),
+          body: JSON.stringify({ numSimulations, selectedCharts, selectedParameter }),
         });
   
         const data = await response.json();
@@ -159,9 +162,54 @@ export default function SimulationsTable({ scenarios }) {
         alert("Failed to run simulation: " + err.message);
       }
   
+    } else if (selectedParameter?.parameterType === "oneDimensional") {
+      console.log("📈 Running 1D parameter simulation for:", scenario.name);
+    
+      const oneDChartsToRun = {
+        multiLineOverTime: !!selectedCharts?.multiLine,
+        finalValueVsParameter: !!selectedCharts?.finalVsParam,
+        selectedMetrics: [
+          ...(selectedCharts?.multiLineQuantities || []),
+          ...(selectedCharts?.finalValueQuantities || [])
+        ]
+      };
+    
+      console.log("📊 1D Charts selected:", oneDChartsToRun);
+      console.log("⚙️ Parameters selected:", selectedParameter);
+    
+      try {
+        const response = await fetch(`http://localhost:5000/api/simulations/${scenarioId}`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          credentials: "include",
+          body: JSON.stringify({
+            numSimulations,
+            selectedParameter,
+          }),
+        });
+    
+        const data = await response.json();
+    
+        if (!response.ok) throw new Error(data.message || "1D Simulation failed");
+    
+        alert("1D simulation finished. Ready to view charts.");
+        /*setCompletedSimulations((prev) => ({ ...prev, [scenarioId]: true }));
+    
+        setResults({
+          scenario,
+          scenarioId,
+          numSimulations,
+          selectedCharts: oneDChartsToRun,
+          selectedParameter,
+          data
+        });*/
+    
+      } catch (err) {
+        console.error("Error running 1D simulation:", err);
+        alert("Failed to run 1D simulation: " + err.message);
+      }
     } else {
-      console.warn("Only 'No Parameters' supported for now.");
-      alert("Only basic simulations are supported right now.");
+      alert(`Simulation type '${selectedParameter?.parameterType}' is not yet supported.`);
     }
   };
 
@@ -256,6 +304,9 @@ export default function SimulationsTable({ scenarios }) {
                     } else if (param.parameterType === "noParameters") {
                       setActiveScenarioId(scenario._id);
                       setShowModal(true);
+                    } else if (param.parameterType === "oneDimensional") {
+                      setActiveScenarioId(scenario._id);
+                      setShowOneDimModal(true);
                     } else {
                       alert(`${param.parameterType} charts coming soon`);
                     }
@@ -314,6 +365,20 @@ export default function SimulationsTable({ scenarios }) {
           }))
         }
       />
+
+      <OneDimensionalModal
+        showModal={showOneDimModal}
+        setShowModal={setShowOneDimModal}
+        selectedCharts={selectedChartsByScenario[activeScenarioId] || {}}
+        setSelectedCharts={(newCharts) =>
+          setSelectedChartsByScenario((prev) => ({
+            ...prev,
+            [activeScenarioId]: newCharts,
+          }))
+        }
+      />
+
+
     </div>
   );
 }

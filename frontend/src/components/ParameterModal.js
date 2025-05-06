@@ -15,14 +15,6 @@ export default function ParameterModal({
   const [selectedEventId, setSelectedEventId] = useState("");
   const [selectedField, setSelectedField] = useState("start");
 
-  const [selectedSubOption2, setSelectedSubOption2] = useState("");
-  const [rangeValues2, setRangeValues2] = useState({ lower: "", upper: "", step: "" });
-  const [selectedEventId2, setSelectedEventId2] = useState("");
-  const [selectedField2, setSelectedField2] = useState("start");
-  const [firstParamSaved, setFirstParamSaved] = useState(false);
-
-
-
   useEffect(() => {
     if (showModal) {
       setSelectedOption(currentParameter?.parameterType || "");
@@ -32,13 +24,6 @@ export default function ParameterModal({
       setRothEnd(currentParameter?.rothEnd || "");
       setSelectedEventId(currentParameter?.eventId || "");
       setSelectedField(currentParameter?.field || "start");
-
-      setSelectedSubOption2(currentParameter?.subParameter2 || "");
-      setRangeValues2(currentParameter?.range2 || { lower: "", upper: "", step: "" });
-      setSelectedEventId2(currentParameter?.eventId2 || "");
-      setSelectedField2(currentParameter?.field2 || "start");
-      setFirstParamSaved(false);
-
     }
   }, [showModal]);
 
@@ -48,6 +33,7 @@ export default function ParameterModal({
       subParameter: selectedSubOption,
     };
   
+    // FIRST sub-parameter logic
     if (selectedSubOption === "rothOptimizer" && !scenario.rothConversionOpt) {
       parameter.rothStart = rothStart;
       parameter.rothEnd = rothEnd;
@@ -72,37 +58,7 @@ export default function ParameterModal({
     if (selectedSubOption === "startYearDuration") {
       parameter.field = selectedField;
     }
-  
-    // twoDimensional logic
-    if (selectedOption === "twoDimensional") {
-      if (!firstParamSaved) {
-        setFirstParamSaved(true);
-        return;
-      }
-  
-      parameter.subParameter2 = selectedSubOption2;
-  
-      if (
-        selectedSubOption2 === "startYearDuration" ||
-        selectedSubOption2 === "incomeExpenseInitial" ||
-        selectedSubOption2 === "investmentPercentage"
-      ) {
-        parameter.eventId2 = selectedEventId2;
-      }
-  
-      if (
-        selectedSubOption2 === "investmentPercentage" ||
-        (selectedSubOption2 === "startYearDuration" && isStartOrDurationNumeric2) ||
-        (selectedSubOption2 === "incomeExpenseInitial" && typeof currentValue2 === "number")
-      ) {
-        parameter.range2 = rangeValues2;
-      }
-  
-      if (selectedSubOption2 === "startYearDuration") {
-        parameter.field2 = selectedField2;
-      }
-    }
-  
+
     setSelectedParameter(parameter);
     setShowModal(false);
   };
@@ -112,7 +68,7 @@ export default function ParameterModal({
     const value = e.target.value;
     setSelectedOption(value);
   
-    // Reset all fields regardless of option
+    // Always reset everything when switching parameter type
     setSelectedSubOption("");
     setSelectedEventId("");
     setSelectedField("start");
@@ -120,15 +76,8 @@ export default function ParameterModal({
     setRothStart("");
     setRothEnd("");
   
-    // Also reset 2D-specific fields
-    setSelectedSubOption2("");
-    setSelectedEventId2("");
-    setSelectedField2("start");
-    setRangeValues2({ lower: "", upper: "", step: "" });
-    setFirstParamSaved(false);
-  
     if (value === "noParameters") {
-      setSelectedParameter(null); // Clear any existing parameter
+      setSelectedParameter(null); // Clear param completely if "noParameters" is picked
     }
   };
   const handleSubOptionChange = (e) => {
@@ -181,33 +130,6 @@ export default function ParameterModal({
       ? selectedEvent?.start?.value ?? selectedEvent?.start?.year ?? "Unavailable"
       : selectedEvent?.duration?.value ?? "Unavailable";
 
-
-
-  const selectedEvent2 = scenario?.eventSeriesSet?.find((e) => e._id === selectedEventId2);
-  const startType2 = selectedEvent2?.start?.type;
-  const durationType2 = selectedEvent2?.duration?.type;
-  const isStartOrDurationNumeric2 =
-    selectedSubOption2 === "startYearDuration" &&
-    selectedEvent2 &&
-    (
-      (selectedField2 === "start" && ["fixed", "uniform", "normal"].includes(startType2)) ||
-      (selectedField2 === "duration" && ["fixed", "uniform", "normal"].includes(durationType2))
-    );
-      
-  const currentValue2 = selectedSubOption2 === "incomeExpenseInitial"
-    ? selectedEvent2?.[selectedEvent2.type]?.initialAmount ?? "Unavailable"
-    : selectedField2 === "start"
-      ? selectedEvent2?.start?.value ?? selectedEvent2?.start?.year ?? "Unavailable"
-      : selectedEvent2?.duration?.value ?? "Unavailable";
-
-
-
-
-
-
-
-
-
   return (
     <div className={`fixed inset-0 bg-gray-500 bg-opacity-50 flex justify-center items-center ${showModal ? "block" : "hidden"}`}>
       <div className="bg-white p-8 rounded-lg shadow-lg w-full max-w-md">
@@ -251,8 +173,130 @@ export default function ParameterModal({
           </div>
         )}
 
-       
-    {/* -------------------- 2d goes here  -------------------- */}
+        {(selectedSubOption === "startYearDuration" || selectedSubOption === "incomeExpenseInitial") && (
+          <div className="mb-4">
+            <label className="block text-sm text-gray-600 mb-2">Select Event Series</label>
+            <select
+              value={selectedEventId}
+              onChange={(e) => setSelectedEventId(e.target.value)}
+              className="w-full px-4 py-2 border border-gray-300 rounded-md"
+            >
+              <option value="">Select one</option>
+              {incomeOrExpenseEvents.map((e) => (
+                <option key={e._id} value={e._id}>
+                  {e.name} ({e.type})
+                </option>
+              ))}
+            </select>
+          </div>
+        )}
+
+        {selectedSubOption === "investmentPercentage" && (
+          <div className="mb-4">
+            <label className="block text-sm text-gray-600 mb-2">Select Invest Event (2 allocations only)</label>
+            <select
+              value={selectedEventId}
+              onChange={(e) => setSelectedEventId(e.target.value)}
+              className="w-full px-4 py-2 border border-gray-300 rounded-md"
+            >
+              <option value="">Select one</option>
+              {validInvestEvents.map((e) => (
+                <option key={e._id} value={e._id}>{e.name}</option>
+              ))}
+            </select>
+          </div>
+        )}
+
+        {selectedSubOption === "startYearDuration" && selectedEventId && (
+          <>
+            <div className="mb-2">
+              <label className="block text-sm text-gray-600 mb-2">Select Field</label>
+              <select
+                value={selectedField}
+                onChange={(e) => setSelectedField(e.target.value)}
+                className="w-full px-4 py-2 border border-gray-300 rounded-md"
+              >
+                <option value="start">Start Year</option>
+                <option value="duration">Duration</option>
+              </select>
+            </div>
+
+            <p className="text-sm text-gray-600 mb-4">
+              Current value: <span className="font-medium">{currentValue}</span>
+            </p>
+
+            {isStartOrDurationNumeric && ["lower", "upper", "step"].map((field) => (
+              <div key={field} className="mb-4">
+                <label className="block text-sm text-gray-600 mb-2 capitalize">{field} Bound</label>
+                <input
+                  type="number"
+                  name={field}
+                  value={rangeValues[field]}
+                  onChange={handleRangeChange}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-md"
+                  placeholder={`Enter ${field} bound`}
+                />
+              </div>
+            ))}
+          </>
+        )}
+
+        {selectedSubOption === "incomeExpenseInitial" && selectedEventId && (
+          <>
+            <p className="text-sm text-gray-600 mb-4">
+              Initial Amount: <span className="font-medium">{currentValue}</span>
+            </p>
+
+            {typeof currentValue === "number" && ["lower", "upper", "step"].map((field) => (
+              <div key={field} className="mb-4">
+                <label className="block text-sm text-gray-600 mb-2 capitalize">{field} Bound</label>
+                <input
+                  type="number"
+                  name={field}
+                  value={rangeValues[field]}
+                  onChange={handleRangeChange}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-md"
+                  placeholder={`Enter ${field} bound`}
+                />
+              </div>
+            ))}
+          </>
+        )}
+
+        {selectedSubOption === "rothOptimizer" && showRCOOption && (
+          <div className="mb-4">
+            <label className="block text-sm text-gray-600 mb-2">Roth Conversion Start Year</label>
+            <input
+              type="number"
+              value={rothStart}
+              onChange={(e) => setRothStart(e.target.value)}
+              className="w-full px-4 py-2 border border-gray-300 rounded-md mb-4"
+              placeholder="Enter start year"
+            />
+            <label className="block text-sm text-gray-600 mb-2">Roth Conversion End Year</label>
+            <input
+              type="number"
+              value={rothEnd}
+              onChange={(e) => setRothEnd(e.target.value)}
+              className="w-full px-4 py-2 border border-gray-300 rounded-md"
+              placeholder="Enter end year"
+            />
+          </div>
+        )}
+
+        {(selectedSubOption === "investmentPercentage") && ["lower", "upper", "step"].map((field) => (
+          <div key={field} className="mb-4">
+            <label className="block text-sm text-gray-600 mb-2 capitalize">{field} Bound</label>
+            <input
+              type="number"
+              name={field}
+              value={rangeValues[field]}
+              onChange={handleRangeChange}
+              className="w-full px-4 py-2 border border-gray-300 rounded-md"
+              placeholder={`Enter ${field} bound`}
+            />
+          </div>
+        ))}
 
         <div className="mt-6 flex justify-end space-x-4">
           <button onClick={handleCancel} className="px-4 py-2 text-gray-600 border border-gray-300 rounded-md text-sm">Cancel</button>
