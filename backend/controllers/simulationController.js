@@ -46,7 +46,7 @@ exports.runSimulation = async (req, res) => {
         // Collect simulation result
         const results = await runParallelSimulations(scenario, numSimulations, federalTax, stateTax, rmdTable);
         const resultToLog = results[0].data; // First simulation result should be logged
-        console.log(JSON.stringify(resultToLog, null, 4));
+        // console.log(JSON.stringify(resultToLog, null, 4));
         logService.logSimulationResult("Test", resultToLog);
 
         res.status(200).json({
