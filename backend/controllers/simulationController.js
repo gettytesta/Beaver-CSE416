@@ -25,6 +25,8 @@ exports.runSimulation = async (req, res) => {
             });
         }
 
+        console.log("Running simulation for scenarioId " + scenarioId);
+
         // Get federal tax and RMD table
         const federalTax = await taxService.getFederalTax();
         const rmdTable = await taxService.getRMDTable();
@@ -50,102 +52,175 @@ exports.runSimulation = async (req, res) => {
         const seed = Date.now().toString();
         simulationUtils.setSeed(seed);
 
-        const param1 = req.body.param1;
-        const param2 = req.body.param2;
+        if (req.body.parameterType === 'twoDimensional') {
+            // 2d parameterization
+            const param1 = req.body.param1;
+            const param2 = req.body.param2;
 
-        if (param1 && param2) {
-            // 2d
-        } else if (param1 && !param2) {
-            // 1d
-            const { l, u, d } = simulationUtils.getBoundsAndDelta(param1);
-            for (let p = l; p <= u; p += d) {
-                // make a copy of the scenario,
-                let scenarioCopy = JSON.parse(JSON.stringify(scenario.toObject()));
+            try {
+                // Special case for Roth Optimizer (has no range)
+                if (param1.subParameter === 'rothOptimizer' || param2.subParameter === 'rothOptimizer') {
+                    const rothParam = param1.subParameter === 'rothOptimizer' ? param1 : param2;
+                    const otherParam = param1.subParameter === 'rothOptimizer' ? param2 : param1;
 
-                // set the proper value of what needs to be set based on the selectedParameter values to param
-                if (p.subParameter === 'rothOptimizer') {
-                    // if (p.)
-                } else if (selectedParameter.subParameter === 'startYearDuration') {
+                    // Get range for the non-Roth parameter
+                    const otherLowerBound = parseInt(otherParam.range.lower);
+                    const otherUpperBound = parseInt(otherParam.range.upper);
+                    const otherStep = parseInt(otherParam.range.step);
 
-                } else if (selectedParameter.subParameter === 'incomeExpenseInitial') {
+                    // For each value in the range of the non-Roth parameter
+                    for (let otherValue = otherLowerBound; otherValue <= otherUpperBound; otherValue += otherStep) {
+                        // With Roth enabled
+                        let scenarioCopy1 = JSON.parse(JSON.stringify(scenario.toObject()));
+                        scenarioCopy1.rothConversionOpt = true;
+                        scenarioCopy1.rothConversionStart = rothParam.rothStart;
+                        scenarioCopy1.rothConversionEnd = rothParam.rothEnd;
 
-                } else if (selectedParameter.subParameter === 'investmentPercentage') {
+                        // Apply the other parameter
+                        applyParameterToScenario(scenarioCopy1, otherParam, otherValue);
 
+                        let result1 = await runParallelSimulations(scenarioCopy1, 1, federalTax, stateTax, rmdTable);
+                        let formattedResult1 = {
+                            parameter1: {
+                                name: param1.subParameter,
+                                value: param1.subParameter === 'rothOptimizer' ? true : otherValue
+                            },
+                            parameter2: {
+                                name: param2.subParameter,
+                                value: param2.subParameter === 'rothOptimizer' ? true : otherValue
+                            },
+                            results: result1[0].data.result
+                        };
+                        results.push(formattedResult1);
+
+                        // With Roth disabled
+                        let scenarioCopy2 = JSON.parse(JSON.stringify(scenario.toObject()));
+                        scenarioCopy2.rothConversionOpt = false;
+
+                        // Apply the other parameter
+                        applyParameterToScenario(scenarioCopy2, otherParam, otherValue);
+
+                        let result2 = await runParallelSimulations(scenarioCopy2, 1, federalTax, stateTax, rmdTable);
+                        let formattedResult2 = {
+                            parameter1: {
+                                name: param1.subParameter,
+                                value: param1.subParameter === 'rothOptimizer' ? false : otherValue
+                            },
+                            parameter2: {
+                                name: param2.subParameter,
+                                value: param2.subParameter === 'rothOptimizer' ? false : otherValue
+                            },
+                            results: result2[0].data.result
+                        };
+                        results.push(formattedResult2);
+
+                        simulationUtils.setSeed(seed); // reseed
+                    }
+                } else {
+                    // Standard 2D parameter sweep (matrix of parameter combinations)
+                    // Handle bounds for first parameter
+                    const lowerBound1 = parseInt(param1.range.lower);
+                    const upperBound1 = parseInt(param1.range.upper);
+                    const step1 = parseInt(param1.range.step);
+
+                    // Handle bounds for second parameter
+                    const lowerBound2 = parseInt(param2.range.lower);
+                    const upperBound2 = parseInt(param2.range.upper);
+                    const step2 = parseInt(param2.range.step);
+
+                    for (let paramValue1 = lowerBound1; paramValue1 <= upperBound1; paramValue1 += step1) {
+                        for (let paramValue2 = lowerBound2; paramValue2 <= upperBound2; paramValue2 += step2) {
+                            let scenarioCopy = JSON.parse(JSON.stringify(scenario.toObject()));
+
+                            // Apply both parameters to the scenario
+                            applyParameterToScenario(scenarioCopy, param1, paramValue1);
+                            applyParameterToScenario(scenarioCopy, param2, paramValue2);
+
+                            let result = await runParallelSimulations(scenarioCopy, 1, federalTax, stateTax, rmdTable);
+                            let formattedResult = {
+                                parameter1: {
+                                    name: param1.subParameter,
+                                    value: paramValue1
+                                },
+                                parameter2: {
+                                    name: param2.subParameter,
+                                    value: paramValue2
+                                },
+                                results: result[0].data.result
+                            };
+                            results.push(formattedResult);
+                            simulationUtils.setSeed(seed); // reseed
+                        }
+                    }
                 }
-
-                // run simulation, collect result and append to results
-                let result = await runParallelSimulations(scenarioCopy, 1, federalTax, stateTax, rmdTable);
-                results.push(result);
-
-                // reseed
-                simulationUtils.setSeed(seed);
+            } catch (error) {
+                console.error("Error in 2D parameterization:", error);
+                throw error; // Re-throw to be handled by the outer error handler
             }
-        } else {
+        } else if (req.body.parameterType === 'oneDimensional') {
+            // 1d
+            const param1 = req.body.param1;
+            if (param1.subParameter === 'rothOptimizer') {
+                // Run two simulations, one with roth on and roth off
+                let scenarioCopy1 = JSON.parse(JSON.stringify(scenario.toObject()));
+                scenarioCopy1.rothConversionOpt = true;
+                scenarioCopy1.rothConversionStart = param1.rothStart;
+                scenarioCopy1.rothConversionEnd = param1.rothEnd;
+                let result1 = await runParallelSimulations(scenarioCopy1, 1, federalTax, stateTax, rmdTable);
+                let formattedResult1 = {
+                    parameter: param1.subParameter,
+                    value: true,
+                    results: result1[0].data.result
+                };
+
+                let scenarioCopy2 = JSON.parse(JSON.stringify(scenario.toObject()));
+                scenarioCopy2.rothConversionOpt = false;
+                let result2 = await runParallelSimulations(scenarioCopy2, 1, federalTax, stateTax, rmdTable);
+                let formattedResult2 = {
+                    parameter: param1.subParameter,
+                    value: false,
+                    results: result2[0].data.result
+                };
+
+                results.push(formattedResult1);
+                results.push(formattedResult2);
+            } else {
+                const lowerBound = parseInt(param1.range.lower);
+                const upperBound = parseInt(param1.range.upper);
+                const step = parseInt(param1.range.step);
+                for (let paramValue = lowerBound; paramValue <= upperBound; paramValue += step) {
+                    let scenarioCopy = JSON.parse(JSON.stringify(scenario.toObject()));
+
+                    // Apply parameter to scenario
+                    applyParameterToScenario(scenarioCopy, param1, paramValue);
+
+                    let result = await runParallelSimulations(scenarioCopy, 1, federalTax, stateTax, rmdTable);
+                    let formattedResult = {
+                        parameter: param1.subParameter,
+                        value: paramValue,
+                        results: result[0].data.result
+                    }
+                    results.push(formattedResult);
+                    simulationUtils.setSeed(seed); // reseed
+                }
+            }
+        }
+        else {
             // regular simulation
-            results = await runParallelSimulations(scenario, numSimulations, federalTax, stateTax, rmdTable);
+            let scenarioCopy = JSON.parse(JSON.stringify(scenario.toObject()));
+            results = await runParallelSimulations(scenarioCopy, numSimulations, federalTax, stateTax, rmdTable);
         }
 
-        // // Run the correct simulation based on the amount of parameters.
-        // const selectedParameter = req.body.selectedParameter || { parameterType: 'noParameters' };
-        // if (selectedParameter.parameterType === 'noParameters') {
-        //     results = await runParallelSimulations(scenario, numSimulations, federalTax, stateTax, rmdTable);
-        // } else if (selectedParameter.parameterType === 'oneDimensional') {
-        //     const { lowerBound, upperBound, delta } = simulationUtils.getBoundsAndDelta(selectedParameter.param1);
-
-        //     for (let param = lowerBound; param <= upperBound; param += delta) {
-        //         console.log(param); // test
-
-        //         // make a copy of the scenario,
-        //         let scenarioCopy = JSON.parse(JSON.stringify(scenario.toObject())); 
-
-        //         // set the proper value of what needs to be set based on the selectedParameter values to param
-        //         if (selectedParameter.subParameter === 'rothOptimizer') {
-        //             if (selectedParameter.)
-        //         } else if (selectedParameter.subParameter === 'startYearDuration') {
-
-        //         } else if (selectedParameter.subParameter === 'incomeExpenseInitial') {
-
-        //         } else if (selectedParameter.subParameter === 'investmentPercentage') {
-
-        //         }
-
-        //         // run simulation, collect result and append to results
-        //         let result = await runParallelSimulations(scenarioCopy, 1, federalTax, stateTax, rmdTable);
-        //         results.push(result);
-
-        //         // reseed
-        //         simulationUtils.setSeed(seed);
-        //     }
-
-        // } else if (selectedParameter.parameterType === 'twoDimensional') {
-        //     const { lowerBound1, upperBound1, delta1 } = simulationUtils.getBoundsAndDelta(selectedParameter.param1);
-
-        //     // TODO FIX THIS
-        //     const { lowerBound2, upperBound2, delta2 } = simulationUtils.getBoundsAndDelta(selectedParameter.param2); 
-
-        //     for (let param1 = lowerBound1; param1 < upperBound1; param1 += delta1) {
-        //         for (let param2 = lowerBound2; param2 < upperBound2; param2 += delta2) {
-        //             console.log(param1 + " " + param2); // test
-
-        //             // make a copy of the scenario,
-        //             let scenarioCopy = JSON.parse(JSON.stringify(scenario.toObject())); 
-
-        //             // set the proper value of what needs to be set based on the selectedParameter values to param
-        //             // TODO
-
-        //             // run simulation, collect result and append to results
-        //             let result = await runParallelSimulations(scenarioCopy, 1, federalTax, stateTax, rmdTable);
-        //             results.push(result);
-
-        //             // reseed
-        //             simulationUtils.setSeed(seed);
-        //         }
-        //     }
-        // }
-
         if (req.user) {
-            const resultToLog = results[0].data; // First simulation result should be logged
-            logService.logSimulationResult(req.user.name, resultToLog);
+            if (req.body.parameterType === 'twoDimensional') {
+                logService.logSimulationResult(req.user.name, { result: results[0].results });
+            }
+            else if (req.body.parameterType === 'oneDimensional') {
+                logService.logSimulationResult(req.user.name, { result: results[0].results });
+            } else {
+                const resultToLog = results[0].data; // First simulation result should be logged
+                logService.logSimulationResult(req.user.name, resultToLog);
+            }
         }
 
         res.status(200).json({
@@ -162,10 +237,77 @@ exports.runSimulation = async (req, res) => {
     }
 };
 
+// Helper function to apply parameter settings to a scenario based on parameter type
+function applyParameterToScenario(scenarioCopy, param, paramValue) {
+    // For Roth Optimizer, we don't need to find events
+    if (param.subParameter === 'rothOptimizer') {
+        scenarioCopy.rothConversionOpt = paramValue;
+        if (paramValue === true) {
+            scenarioCopy.rothConversionStart = param.rothStart;
+            scenarioCopy.rothConversionEnd = param.rothEnd;
+        }
+        return;
+    }
+    
+    // For other parameters, we need to find the correct event
+    // We need a reliable way to identify the same event in the copy
+    // Let's directly modify the original code to avoid the ObjectId problem
+    
+    if (param.subParameter === 'startYearDuration') {
+        // Process all events and make changes only to the matching one
+        for (let i = 0; i < scenarioCopy.eventSeriesSet.length; i++) {
+            // Check if this event matches by comparing a string representation of the _id
+            // or other unique identifiers in the event
+            if (scenarioCopy.eventSeriesSet[i]._id.toString() === param.eventId || 
+                scenarioCopy.eventSeriesSet[i]._id === param.eventId) {
+                
+                if (param.selectedField === 'start') {
+                    scenarioCopy.eventSeriesSet[i].start = { type: 'fixed', value: paramValue };
+                } else if (param.selectedField === 'duration') {
+                    scenarioCopy.eventSeriesSet[i].duration = { type: 'fixed', value: paramValue };
+                }
+                break;
+            }
+        }
+    } else if (param.subParameter === 'incomeExpenseInitial') {
+        for (let i = 0; i < scenarioCopy.eventSeriesSet.length; i++) {
+            if (scenarioCopy.eventSeriesSet[i]._id.toString() === param.eventId || 
+                scenarioCopy.eventSeriesSet[i]._id === param.eventId) {
+                
+                let event = scenarioCopy.eventSeriesSet[i];
+                if (event.type === 'income') {
+                    event.income.initialAmount = paramValue;
+                } else if (event.type === 'expense') {
+                    event.expense.initialAmount = paramValue;
+                }
+                break;
+            }
+        }
+    } else if (param.subParameter === 'investmentPercentage') {
+        for (let i = 0; i < scenarioCopy.eventSeriesSet.length; i++) {
+            if (scenarioCopy.eventSeriesSet[i]._id.toString() === param.eventId || 
+                scenarioCopy.eventSeriesSet[i]._id === param.eventId) {
+                
+                // First check if the required properties exist
+                if (scenarioCopy.eventSeriesSet[i].invest && 
+                    scenarioCopy.eventSeriesSet[i].invest.allocations && 
+                    scenarioCopy.eventSeriesSet[i].invest.allocations.length >= 2) {
+                    
+                    scenarioCopy.eventSeriesSet[i].invest.allocations[0].initial = paramValue;
+                    scenarioCopy.eventSeriesSet[i].invest.allocations[0].final = 1-paramValue;
+                    scenarioCopy.eventSeriesSet[i].invest.allocations[1].initial = 1-paramValue;
+                    scenarioCopy.eventSeriesSet[i].invest.allocations[1].final = paramValue;
+                }
+                break;
+            }
+        }
+    }
+}
+
 /**
  * Run multiple simulations in parallel using worker threads
  */
-async function runParallelSimulations(scenario, numSimulations, federalTax, stateTax, rmdTable) {
+async function runParallelSimulations(scenarioCopy, numSimulations, federalTax, stateTax, rmdTable) {
     return new Promise((resolve) => {
         const results = [];
         let completedWorkers = 0;
@@ -184,7 +326,7 @@ async function runParallelSimulations(scenario, numSimulations, federalTax, stat
             // Create worker with scenario data
             const worker = new Worker(path.join(__dirname, '../workers/simulationWorker.js'), {
                 workerData: {
-                    scenario: JSON.parse(JSON.stringify(scenario.toObject())),
+                    scenario: scenarioCopy,
                     simulationId,
                     federalTax: JSON.parse(JSON.stringify(federalTax.toObject())),
                     stateTax: stateTax ? JSON.parse(JSON.stringify(stateTax.toObject())) : null,

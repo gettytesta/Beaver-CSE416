@@ -139,11 +139,14 @@ export default function SimulationsTable({ scenarios }) {
       });
   
       try {
-        const response = await fetch(`http://localhost:4000/api/simulations/${scenarioId}`, {
+        const response = await fetch(`http://localhost:5000/api/simulations/${scenarioId}`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           credentials: "include",
-          body: JSON.stringify({ numSimulations, selectedCharts, selectedParameter }),
+          body: JSON.stringify({
+            numSimulations,
+            parameterType: "noParameters"
+          })
         });
   
         const data = await response.json();
@@ -197,16 +200,19 @@ export default function SimulationsTable({ scenarios }) {
           credentials: "include",
           body: JSON.stringify({
             numSimulations,
-            selectedParameter,
+            parameterType: "oneDimensional",
+            param1: selectedParameter
           }),
         });
     
         const data = await response.json();
+
+        console.log(data);
     
         if (!response.ok) throw new Error(data.message || "1D Simulation failed");
     
         alert("1D simulation finished. Ready to view charts.");
-        /*setCompletedSimulations((prev) => ({ ...prev, [scenarioId]: true }));
+        setCompletedSimulations((prev) => ({ ...prev, [scenarioId]: true }));
     
         setResults({
           scenario,
@@ -215,7 +221,7 @@ export default function SimulationsTable({ scenarios }) {
           selectedCharts: oneDChartsToRun,
           selectedParameter,
           data
-        });*/
+        });
     
       } catch (err) {
         console.error("Error running 1D simulation:", err);

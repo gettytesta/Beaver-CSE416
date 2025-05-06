@@ -57,9 +57,9 @@ async function runSingleSimulation(scenario, simulationId, federalTax, stateTax,
         let investEvents = allEvents.filter(event => event.type === 'invest');
         let rebalanceEvents = allEvents.filter(event => event.type === 'rebalance');
 
-        allEvents.forEach(event => {
-            console.log(JSON.stringify(event, null, 4))
-        });
+        // allEvents.forEach(event => {
+        //     console.log(JSON.stringify(event, null, 4))
+        // });
 
         // Initialize investments so that each one has a initial value and purchase price field
         scenario.investments = SimulationUtils.initializeInvestments(scenario.investments);
@@ -406,7 +406,7 @@ async function runSingleSimulation(scenario, simulationId, federalTax, stateTax,
 
                 // If we couldn't transfer the full Roth conversion amount, log a warning
                 if (remainingRc > 0) {
-                    console.warn(`Could not transfer full Roth conversion amount. Remaining: ${remainingRc}`);
+                    // console.warn(`Could not transfer full Roth conversion amount. Remaining: ${remainingRc}`);
                 }
 
                 // 5.d.curYearIncome += rc.
