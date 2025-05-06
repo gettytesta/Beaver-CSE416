@@ -75,7 +75,7 @@ async function runSingleSimulation(scenario, simulationId, federalTax, stateTax,
             return scenario.investments.find(inv => inv._id === id);
         };
         const getEventSeries = (id) => {
-            return allEvents.find(event => event.name == id);
+            return allEvents.find(event => event._id === id || event.name === id);
         }
 
         // Cash investment
@@ -771,19 +771,18 @@ async function runSingleSimulation(scenario, simulationId, federalTax, stateTax,
     }
 }
 
-// Handle messages from the parent thread
-parentPort.on('message', async (data) => {
+(async () => {
     try {
         const result = await runSingleSimulation(
-            data.scenario,
-            data.simulationId,
-            data.federalTax,
-            data.stateTax,
-            data.rmdTable
+            workerData.scenario,
+            workerData.simulationId,
+            workerData.federalTax,
+            workerData.stateTax,
+            workerData.rmdTable
         );
         parentPort.postMessage({ success: true, data: result });
     } catch (error) {
         console.error('Error in simulation:', error);
         parentPort.postMessage({ success: false, error: error.message });
     }
-}); 
+})();

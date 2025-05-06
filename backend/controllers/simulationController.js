@@ -4,6 +4,7 @@ const path = require('path');
 const os = require('os');
 const taxService = require('../services/taxService');
 const logService = require('../services/logService');
+const yamlUtils = require('../utils/yamlUtils');
 
 // Maximum number of concurrent workers (adjust based on server capacity)
 const MAX_CONCURRENT_WORKERS = Math.max(1, Math.floor(os.cpus().length * process.env.SIM_CPU_UTILIZATION_LIMIT || 0.5));
@@ -15,28 +16,12 @@ exports.runSimulation = async (req, res) => {
         let numSimulations = parseInt(req.body.numSimulations) || 50;  // Get the number of simulations from the request body
         numSimulations = Math.min(numSimulations, MAX_SIMS_PER_REQUEST); // Enforce maximum number of simulations that can be run per request
         const scenario = await Scenario.findById(scenarioId); // Find the scenario
-        
+
         if (!scenario) {
             return res.status(404).json({
                 success: false,
                 message: 'Scenario not found'
             });
-        }
-        
-        // A simulation can only be run if the user is authenticated and has access to the scenario.
-        if (req.user) {
-            const isOwner = scenario.userId.toString() === req.user._id.toString();
-            if (!isOwner) {
-                const sharedInfo = scenario.sharedWith.find(share => 
-                    share.userId.toString() === req.user._id.toString()
-                );
-                if (!sharedInfo) {
-                    return res.status(403).json({
-                        success: false,
-                        message: 'Not authorized to run simulation on this scenario'
-                    });
-                }
-            }
         }
 
         // Get federal tax and RMD table
@@ -53,20 +38,16 @@ exports.runSimulation = async (req, res) => {
         // Get state tax
         let stateTax = null;
         if (req.file) { // Check if user provided a YAML file for state tax
-            // TODO convert the uploaded YAML file to StateTax.
-            stateTax = null; 
+            stateTax = yamlUtils.convertYamlFileToStateTax(file); 
         } else { // Otherwise try to get the state tax based on the users state of residence.
             stateTax = await taxService.getStateTax(scenario.userStateOfResidence);
         }
         
-        // Collect and format simulation result
+        // Collect simulation result
         const results = await runParallelSimulations(scenario, numSimulations, federalTax, stateTax, rmdTable);
-        
-        // Only log the result if the user is authenticated
-        if (req.user && results.length > 0) {
-            const resultToLog = results[0]; // First simulation result should be logged
-            await logService.logSimulationResult(req.user.username, resultToLog);
-        }
+        const resultToLog = results[0]; // First simulation result should be logged
+        console.log(JSON.stringify(resultToLog, null, 4));
+        // logService.logSimulationResult("Test", resultToLog);
 
         res.status(200).json({
             success: true,
@@ -100,7 +81,7 @@ async function runParallelSimulations(scenario, numSimulations, federalTax, stat
             
             const simulationId = nextSimulationId++;
             activeWorkers++;
-            
+
             // Create worker with scenario data
             const worker = new Worker(path.join(__dirname, '../workers/simulationWorker.js'), {
                 workerData: {
