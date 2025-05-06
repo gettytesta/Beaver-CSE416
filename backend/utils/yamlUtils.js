@@ -308,6 +308,29 @@ exports.convertYamlToStateTax = async (filePath) => {
     }
 }
 
+exports.convertYamlFileToStateTax = async (file) => {
+    try {
+        const parsedYaml = yaml.load(file); // Parse YAML
+        
+        if (!parsedYaml || !parsedYaml.stateCode || 
+            !parsedYaml.single || !parsedYaml.marriedFilingJointly) {
+            throw new Error('Invalid state tax YAML structure');
+        }
+        
+        // Create StateTax object
+        const stateTax = new StateTax({
+            stateCode: parsedYaml.stateCode,
+            single: parsedYaml.single,
+            marriedFilingJointly: parsedYaml.marriedFilingJointly
+        });
+        
+        return stateTax;
+    } catch (error) {
+        console.error(`Error converting YAML to StateTax: ${error}`);
+        throw error;
+    }
+}
+
 function convertYamlToDistribution(yamlData)
 {
     let type = ({

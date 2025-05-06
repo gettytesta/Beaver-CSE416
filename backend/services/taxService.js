@@ -42,7 +42,7 @@ exports.updateData = async () => {
 exports.getFederalTax = async () => {
     try {
         const currentYear = new Date().getFullYear();
-        let federalTax = await FederalTax.findOne({ currentYear });
+        let federalTax = await FederalTax.findOne({ year: currentYear });
         if (!federalTax) {
             console.log(`Federal tax data not found for current year ${currentYear}, restart the server to update.`);
         }
@@ -70,7 +70,7 @@ exports.getStateTax = async (stateName) => {
 exports.getRMDTable = async () => {
     try {
         const currentYear = new Date().getFullYear();
-        let rmdTable = await RMDTable.findOne({ currentYear });
+        let rmdTable = await RMDTable.findOne({ year: currentYear });
         if (!rmdTable) {
             console.log(`RMD table not found for current year ${currentYear}, restart the server to update.`);
         }

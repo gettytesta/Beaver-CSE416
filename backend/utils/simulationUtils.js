@@ -69,56 +69,77 @@ exports.initializeEvents = (eventSeriesSet) => {
     if (!eventSeriesSet) {
         return [];
     }
-
-    // First pass: initialize all events with fixed start times
-    const events = eventSeriesSet
-        .filter(eventSeries => eventSeries.type === 'income' || eventSeries.type === 'expense' || eventSeries.type === 'invest' || eventSeries.type === 'rebalance')
-        .map(eventSeries => {
-            // Sample and set start and duration
-            if (eventSeries.start.type === 'fixed' || eventSeries.start.type === 'uniform' || eventSeries.start.type === 'normal') {
-                eventSeries.start = exports.sampleValueFromDistribution(eventSeries.start);
-            }
-            eventSeries.duration = exports.sampleValueFromDistribution(eventSeries.duration);
-
-            // "unpack" the values for this type by spreading type-specific properties to the root level
-            if (eventSeries.type === 'income' && eventSeries.income) {
-                Object.assign(eventSeries, eventSeries.income);
-                eventSeries.currAmount = eventSeries.initialAmount;
-                delete eventSeries.income;
-            } else if (eventSeries.type === 'expense' && eventSeries.expense) {
-                Object.assign(eventSeries, eventSeries.expense);
-                eventSeries.currAmount = eventSeries.initialAmount;
-                delete eventSeries.expense;
-            } else if (eventSeries.type === 'invest' && eventSeries.invest) {
-                Object.assign(eventSeries, eventSeries.invest);
-                delete eventSeries.invest;
-            } else if (eventSeries.type === 'rebalance' && eventSeries.rebalance) {
-                Object.assign(eventSeries, eventSeries.rebalance);
-                delete eventSeries.rebalance;
-            }
-
-            return eventSeries;
-        });
+    
+    // Create a shallow copy of the array but keep original objects
+    const eventsToProcess = [...eventSeriesSet].filter(
+        eventSeries => eventSeries.type === 'income' || 
+                      eventSeries.type === 'expense' || 
+                      eventSeries.type === 'invest' || 
+                      eventSeries.type === 'rebalance'
+    );
+    
+    // First pass: initialize event properties
+    eventsToProcess.forEach(eventSeries => {
+        // Sample and set start and duration
+        const originalId = eventSeries._id; // Save original ID 
+        
+        if (eventSeries.start.type === 'fixed' || eventSeries.start.type === 'uniform' || eventSeries.start.type === 'normal') {
+            eventSeries.startValue = exports.sampleValueFromDistribution(eventSeries.start);
+        }
+        eventSeries.durationValue = exports.sampleValueFromDistribution(eventSeries.duration);
+        
+        // "unpack" the values for this type by copying type-specific properties
+        if (eventSeries.type === 'income' && eventSeries.income) {
+            Object.keys(eventSeries.income).forEach(key => {
+                if (key !== '_id') { // Avoid overwriting _id
+                    eventSeries[key] = eventSeries.income[key];
+                }
+            });
+            eventSeries.currAmount = eventSeries.initialAmount;
+        } else if (eventSeries.type === 'expense' && eventSeries.expense) {
+            Object.keys(eventSeries.expense).forEach(key => {
+                if (key !== '_id') { // Avoid overwriting _id
+                    eventSeries[key] = eventSeries.expense[key];
+                }
+            });
+            eventSeries.currAmount = eventSeries.initialAmount;
+        } else if (eventSeries.type === 'invest' && eventSeries.invest) {
+            Object.keys(eventSeries.invest).forEach(key => {
+                if (key !== '_id') { // Avoid overwriting _id
+                    eventSeries[key] = eventSeries.invest[key];
+                }
+            });
+        } else if (eventSeries.type === 'rebalance' && eventSeries.rebalance) {
+            Object.keys(eventSeries.rebalance).forEach(key => {
+                if (key !== '_id') { // Avoid overwriting _id
+                    eventSeries[key] = eventSeries.rebalance[key];
+                }
+            });
+        }
+        
+        // Make sure _id is preserved
+        eventSeries._id = originalId;
+    });
 
     // Second pass: handle startWith and startAfter events
-    events.forEach(event => {
-        if (event.start.type === 'startWith' || event.start.type === 'startAfter') {
-            const referencedEvent = events.find(e => e.name === event.start.eventSeries);
+    eventsToProcess.forEach(event => {
+        if (event.start && (event.start.type === 'startWith' || event.start.type === 'startAfter')) {
+            const referencedEvent = eventsToProcess.find(e => e.name === event.start.eventSeries);
             if (!referencedEvent) {
                 throw new Error(`Referenced event ${event.start.eventSeries} not found for ${event.name}`);
             }
             
-            // Set start time based on referenced event
+            // Use the calculated value instead of replacing the start object
             if (event.start.type === 'startWith') {
-                event.start = referencedEvent.start;
+                event.startValue = referencedEvent.startValue;
             } else if (event.start.type === 'startAfter') {
-                event.start = referencedEvent.start + 1;
+                event.startValue = referencedEvent.startValue + 1;
             }
         }
     });
 
-    return events;
-}
+    return eventsToProcess;
+};
 
 exports.lookUpTaxBracket = (taxBrackets, value) => {
     // Find the bracket where the value falls within the lower and upper bounds
