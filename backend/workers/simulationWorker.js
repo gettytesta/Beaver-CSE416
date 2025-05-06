@@ -96,17 +96,6 @@ async function runSingleSimulation(scenario, simulationId, federalTax, stateTax,
 
         while (curYear < endYear) {
 
-            // Add this at the beginning of the while loop in the main simulation
-            let debugIncome = {
-                initial: 0,
-                fromEvents: 0,
-                fromRMD: 0,
-                fromInvestments: 0,
-                fromPreTaxWithdrawals: 0,
-                fromRothConversions: 0,
-                final: 0
-            };
-
             // ================
             // 1. Preliminaries
             // ================
@@ -133,8 +122,8 @@ async function runSingleSimulation(scenario, simulationId, federalTax, stateTax,
 
             let curYearIncome = 0;
             let curYearSS = 0;
-
-            debugIncome.initial = curYearIncome;
+            let curYearExpenses = 0;
+            let curYearDiscretionaryExpenses = 0;
 
             incomeEvents.filter(event => shouldRunEvent(event)).forEach(event => {
 
@@ -174,7 +163,6 @@ async function runSingleSimulation(scenario, simulationId, federalTax, stateTax,
                 }
             });
 
-            debugIncome.fromEvents = curYearIncome - debugIncome.initial;
 
             // =========================================================================================================
             // 3. Perform the RMD for the previous year, if the user’s age is at least 74 and at the end of the previous
@@ -256,7 +244,6 @@ async function runSingleSimulation(scenario, simulationId, federalTax, stateTax,
                 }
             }
 
-            debugIncome.fromRMD = curYearIncome - debugIncome.initial - debugIncome.fromEvents;
 
             // =================================================================================================
             // 4. Update the values of investments, reflecting expected annual return, reinvestment of generated
@@ -315,6 +302,7 @@ async function runSingleSimulation(scenario, simulationId, federalTax, stateTax,
                     
                     // Subtract expenses
                     investment.value -= expenses;
+                    curYearExpenses += expenses;
                     
                     // Calculate generated income with validation
                     let expectedAnnualIncomeDist = investment.type.expectedAnnualIncome;
@@ -354,7 +342,6 @@ async function runSingleSimulation(scenario, simulationId, federalTax, stateTax,
                 }
             });
 
-            debugIncome.fromInvestments = curYearIncome - debugIncome.initial - debugIncome.fromEvents - debugIncome.fromRMD;
 
             // ============================================================
             // 5. Run the Roth conversion (RC) optimizer, if it is enabled.
@@ -425,9 +412,6 @@ async function runSingleSimulation(scenario, simulationId, federalTax, stateTax,
                 // 5.d.curYearIncome += rc.
                 curYearIncome += rc;
             }
-
-            debugIncome.fromPreTaxWithdrawals = curYearIncome - debugIncome.initial - debugIncome.fromEvents - debugIncome.fromRMD - debugIncome.fromInvestments;
-
 
             // ==================================================================================================
             // 6. Pay non-discretionary expenses and the previous year’s taxes, i.e., subtract them from the cash
@@ -564,7 +548,7 @@ async function runSingleSimulation(scenario, simulationId, federalTax, stateTax,
                         curYearIncome += capitalGain;
                     }
 
-                    debugIncome.fromPreTaxWithdrawals = curYearIncome - debugIncome.initial - debugIncome.fromEvents - debugIncome.fromRMD - debugIncome.fromInvestments;
+    
 
                     if ((investment.accountTaxStatus === 'pre-tax' || investment.accountTaxStatus === 'after-tax')
                         && getUserAge() < 59) {
@@ -578,10 +562,10 @@ async function runSingleSimulation(scenario, simulationId, federalTax, stateTax,
                 }
             }
 
-            debugIncome.fromRothConversions = curYearIncome - debugIncome.initial - debugIncome.fromEvents - debugIncome.fromRMD - debugIncome.fromInvestments - debugIncome.fromPreTaxWithdrawals;
 
             // Now pay the expenses from cash
             cashInvestment.value -= P;
+            curYearExpenses += P;
 
             // =====================================================================================================
             // 7. Pay discretionary expenses in the order given by the spending strategy, except stop if continuing
@@ -637,6 +621,9 @@ async function runSingleSimulation(scenario, simulationId, federalTax, stateTax,
                         if (remainingAmount <= 0) break;
                     }
                 }
+
+                curYearExpenses += amountToPay;
+                curYearDiscretionaryExpenses += amountToPay;
 
                 cashInvestment.value -= amountToPay;
             }
@@ -795,8 +782,6 @@ async function runSingleSimulation(scenario, simulationId, federalTax, stateTax,
                 }
             });
 
-            debugIncome.final = curYearIncome;
-            console.log(`Year ${curYear} income breakdown:`, debugIncome);
 
             // Store the yearly data for analysis
             simulationYearlyData.push({
@@ -827,6 +812,8 @@ async function runSingleSimulation(scenario, simulationId, federalTax, stateTax,
                 taxesIncurred: prevYearFederalIncomeTax + prevYearStateIncomeTax + prevYearCapitalGainsTax + prevYearEarlyWithdrawlTax,
                 yearGains: curYearGains,
                 earlyWithdrawals: curEarlyWithdrawals,
+                totalExpenses: curYearExpenses,
+                percentDiscretionary: (curYearDiscretionaryExpenses / curYearExpenses) * 100,
                 userAge: getUserAge(),
                 spouseAge: getSpouseAge(),
                 isUserAlive: !isUserDead(),
