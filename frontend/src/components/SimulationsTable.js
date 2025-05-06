@@ -4,7 +4,8 @@ import { useState, useRef, useEffect } from "react";
 import ChartModal from "./ChartModal";
 import ParameterModal from "./ParameterModal";
 import axios from "axios";
-
+import { useSimulationResult } from "@/context/SimulationResultContext";
+import { useRouter } from "next/navigation";
 
 export default function SimulationsTable({ scenarios }) {
   const [selected, setSelected] = useState(false);
@@ -13,7 +14,8 @@ export default function SimulationsTable({ scenarios }) {
   const [filter, setFilter] = useState("All");
   const [simulationCounts, setSimulationCounts] = useState({});
 
-  // ✅ NEW: Per-scenario state
+  const [completedSimulations, setCompletedSimulations] = useState({});
+  
   const [selectedParameters, setSelectedParameters] = useState({});
   const [selectedChartsByScenario, setSelectedChartsByScenario] = useState({});
 
@@ -21,6 +23,10 @@ export default function SimulationsTable({ scenarios }) {
   const [showModal, setShowModal] = useState(false);
   const [showParameterModal, setShowParameterModal] = useState(false);
   const [activeScenarioId, setActiveScenarioId] = useState(null);
+
+
+  const { setResults } = useSimulationResult();
+  const router = useRouter();
 
   const toggleSelection = () => setSelected(!selected);
 
@@ -131,8 +137,22 @@ export default function SimulationsTable({ scenarios }) {
         }
   
         console.log("✅ Simulation results:", data);
-        // TODO: Redirect or open modal to view charts based on `data`
         alert("Simulation finished. Ready to view charts.");
+
+        setCompletedSimulations((prev) => ({
+          ...prev,
+          [scenarioId]: true,
+        }));
+
+        setResults({
+          scenario,
+          scenarioId,
+          numSimulations,
+          selectedCharts,
+          selectedParameter,
+          data
+        });
+        
   
       } catch (err) {
         console.error("❌ Error running simulation:", err);
@@ -245,12 +265,23 @@ export default function SimulationsTable({ scenarios }) {
                 </button>
               </td>
               <td className="p-4 text-center">
-                <button
-                  className="px-4 py-2 bg-orange-500 text-white rounded-md text-sm font-medium"
-                  onClick={() => handleRunClick(scenario._id)}
-                >
-                  Run
-                </button>
+                <div className="flex items-center justify-center gap-2">
+                  <button
+                    className="px-4 py-2 bg-orange-500 text-white rounded-md text-sm font-medium"
+                    onClick={() => handleRunClick(scenario._id)}
+                  >
+                    Run
+                  </button>
+
+                  {completedSimulations[scenario._id] && (
+                    <button
+                      className="px-4 py-2 bg-indigo-600 text-white rounded-md text-sm font-medium"
+                      onClick={() => router.push("/charts")}
+                    >
+                      View Charts
+                    </button>
+                  )}
+                </div>
               </td>
             </tr>
           ))}
