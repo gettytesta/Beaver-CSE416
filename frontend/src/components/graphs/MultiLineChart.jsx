@@ -29,33 +29,33 @@ export const MultiLineProbabilityOfSuccessChart = ({scenario, simulationSetResul
     const datasets = [];
     const allYears = new Set();
 
-    simulationSetResults.forEach((simulationSetThing, setIndex) => {
+    simulationSetResults.data.forEach((simulationSetThing, setIndex) => {
         const simulationResults = simulationSetThing.results;
         const successCounts = {}
 
-        simulationResults.data.forEach(sim => {
-            const simulation = sim.data
-            simulation.result.yearlyData.forEach(yearData => {
-                if (successCounts[yearData.year] === undefined) {
-                    successCounts[yearData.year] = 0; // Initialize count for the year
-                }
-                const totalInvestments = yearData.investments.reduce((sum, investment) => sum + investment.value, 0);
-                if (totalInvestments >= financialGoal) {
-                    successCounts[yearData.year] += 1;
-                }
-                allYears.add(yearData.year); // Collect all unique years
-            });
+        simulationResults.yearlyData.forEach(yearData => {
+            if (successCounts[yearData.year] === undefined) {
+                successCounts[yearData.year] = 0; // Initialize count for the year
+            }
+            const totalInvestments = yearData.investments.reduce((sum, investment) => sum + investment.value, 0);
+            if (totalInvestments >= financialGoal) {
+                successCounts[yearData.year] += 1;
+            }
+            allYears.add(yearData.year); // Collect all unique years
         })
 
         // Extract labels (years) and data (number of successful simulations)
         const sortedYears = Array.from(allYears).sort((a, b) => a - b);
-        const dataPoints = sortedYears.map(year => (successCounts[year] || 0) / simulationResults.length * 100);
+        const dataPoints = sortedYears.map(year => (successCounts[year] || 0) * 100);
+
+        console.log("Sorted Years: ", simulationSetThing);
+        console.log("Success: ", dataPoints);
 
         datasets.push({
             label: `${simulationSetThing.parameter}: ${simulationSetThing.value}` ,
             data: dataPoints,
-            borderColor: `hsl(${(setIndex * 360) / simulationSetResults.length}, 70%, 50%)`,
-            backgroundColor: `hsla(${(setIndex * 360) / simulationSetResults.length}, 70%, 50%, 0.3)`,
+            borderColor: `hsl(${(setIndex * 360) / simulationSetResults.data.length}, 70%, 50%)`,
+            backgroundColor: `hsla(${(setIndex * 360) / simulationSetResults.data.length}, 70%, 50%, 0.3)`,
         });
     })
 
@@ -108,25 +108,11 @@ export const MultiLineMedianInvestmentsChart = ({scenario, simulationSetResults}
     const datasets = [];
     const allYears = new Set();
 
-    // Check if simulationSetResults is an array before using forEach
-    if (!Array.isArray(simulationSetResults)) {
-        console.error("simulationSetResults is not an array:", simulationSetResults);
-        return <p>No data available</p>;
-    }
-
-    simulationSetResults.forEach((simulationSetThing, setIndex) => {
+    simulationSetResults.data.forEach((simulationSetThing, setIndex) => {
         const simulationResults = simulationSetThing.results;
         const medianValues = {}
 
-        // Check if simulationResults has the expected structure
-        if (!simulationResults || !simulationResults.data) {
-            console.error("Invalid simulation results structure:", simulationResults);
-            return;
-        }
-
-        simulationResults.forEach(sim => {
-            const simulation = sim.data
-            simulation.result.yearlyData.forEach(yearData => {
+        simulationResults.yearlyData.forEach(yearData => {
                 if (medianValues[yearData.year] === undefined) {
                     medianValues[yearData.year] = [];
                 }
@@ -135,7 +121,6 @@ export const MultiLineMedianInvestmentsChart = ({scenario, simulationSetResults}
                 medianValues[yearData.year].push(totalInvestments);
 
                 allYears.add(yearData.year); // Collect all unique years
-            });
         })
 
         // Extract labels (years) and data (number of successful simulations)
@@ -145,8 +130,8 @@ export const MultiLineMedianInvestmentsChart = ({scenario, simulationSetResults}
         datasets.push({
             label: `${simulationSetThing.parameter}: ${simulationSetThing.value}`,
             data: dataPoints,
-            borderColor: `hsl(${(setIndex * 360) / simulationSetResults.length}, 70%, 50%)`,
-            backgroundColor: `hsla(${(setIndex * 360) / simulationSetResults.length}, 70%, 50%, 0.3)`,
+            borderColor: `hsl(${(setIndex * 360) / simulationSetResults.data.length}, 70%, 50%)`,
+            backgroundColor: `hsla(${(setIndex * 360) / simulationSetResults.data.length}, 70%, 50%, 0.3)`,
         });
     })
 

@@ -18,7 +18,7 @@ export default function ChartsLandingPage() {
     data
   } = results;
 
-  console.log(data)
+  console.log(results)
 
   return (
     <div className="text-center mt-20">

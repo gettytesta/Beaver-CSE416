@@ -26,19 +26,17 @@ export const ProbSuccessLineChartAsFunction = ({scenario, simulationSetResults})
     const financialGoal = scenario.financialGoal;
     const values = {}
 
-    simulationSetResults.forEach((simulationSetThing, setIndex) => {
+    simulationSetResults.data.forEach((simulationSetThing, setIndex) => {
         const simulationResults = simulationSetThing.results;
         let successCount = 0;
 
-        simulationResults.data.forEach(sim => {
-            const simulation = sim.data
-            const lastYearSim = simulation.result.yearlyData[simulation.result.endYear-simulation.result.yearlyData[0].year];
-            const totalInvestments = lastYearSim.investments.reduce((sum, investment) => sum + investment.value, 0);
-            if (totalInvestments >= financialGoal) {
-                successCount += + 1;
-            }
-        })
-        values[simulationSetThing.value] = successCount / simulationResults.length * 100;
+        const lastYearSim = simulationResults.yearlyData[simulationResults.yearlyData.length - 1];
+        console.log("Last Year Sim: ", lastYearSim);   
+        const totalInvestments = lastYearSim.investments.reduce((sum, investment) => sum + investment.value, 0);
+        if (totalInvestments >= financialGoal) {
+            successCount += + 1;
+        }
+        values[simulationSetThing.value] = successCount * 100;
     })
 
     // Extract labels (years) and data (number of successful simulations)
@@ -65,7 +63,7 @@ export const ProbSuccessLineChartAsFunction = ({scenario, simulationSetResults})
             },
             title: {
                 display: true,
-                text: `Probability of Success as a Function of ${simulationSetResults[0].parameter}`, // Title of the chart
+                text: `Probability of Success as a Function of ${simulationSetResults.data[0].parameter}`, // Title of the chart
             },
         },
         layout: {
@@ -101,20 +99,16 @@ export const InvesmentsLineChartAsFunction = ({scenario, simulationSetResults}) 
     const financialGoal = scenario.financialGoal;
     const values = {}
 
-    simulationSetResults.forEach((simulationSetThing, setIndex) => {
+    simulationSetResults.data.forEach((simulationSetThing, setIndex) => {
         const simulationResults = simulationSetThing.results;
         const totalInvestments = [];
 
-        simulationResults.data.forEach(sim => {
-            const simulation = sim.data
-            const lastYearSim = simulation.result.yearlyData[simulation.result.endYear-simulation.result.yearlyData[0].year];
-            const investments = lastYearSim.investments.reduce((sum, investment) => sum + investment.value, 0);
-            totalInvestments.push(investments);
-        })
+        const lastYearSim = simulationResults.yearlyData[simulationResults.yearlyData.length - 1];
+        const investments = lastYearSim.investments.reduce((sum, investment) => sum + investment.value, 0);
+        totalInvestments.push(investments);
+
         values[simulationSetThing.value] = getMedian(totalInvestments);
     })
-
-    console.log("values", values);
 
     // Extract labels (years) and data (number of successful simulations)
     const labels = Object.keys(values).sort((a, b) => a - b); // Sort years in ascending order
@@ -140,7 +134,7 @@ export const InvesmentsLineChartAsFunction = ({scenario, simulationSetResults}) 
             },
             title: {
                 display: true,
-                text: `Median Total Investments as a function of ${simulationSetResults[0].parameter}`,
+                text: `Median Total Investments as a function of ${simulationSetResults.data[0].parameter}`,
             },
         },
         layout: {
@@ -162,7 +156,7 @@ export const InvesmentsLineChartAsFunction = ({scenario, simulationSetResults}) 
                 beginAtZero: true,
                 title: {
                     display: true,
-                    text: simulationSetResults[0].parameter, // Label for the y-axis
+                    text: simulationSetResults.data[0].parameter, // Label for the y-axis
                 },
             },
         },

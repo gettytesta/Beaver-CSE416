@@ -545,34 +545,30 @@ const ChartsPage = ({scenario, simulationResults, selectedCharts}) => {
     }
 
     // 1d Parameters
-    if (selectedCharts.finalValueVsParameter) {
-        // Check if selectedMetrics is available (from 1D parameter structure)
-        const metrics = selectedCharts.selectedMetrics || [];
-        
-        if (metrics.includes("medianTotalInvestments") || 
-            (selectedCharts.finalValueQuantities?.includes("medianTotalInvestments"))) {
-            charts.push(<MultiLineMedianInvestmentsChart scenario={scenario} 
-                                    simulationSetResults={simulationResults} />);
-        }
-        
-        if (metrics.includes("probabilityOfSuccess") || 
-            (selectedCharts.finalValueQuantities?.includes("probabilityOfSuccess"))) {
-            charts.push(<MultiLineProbabilityOfSuccessChart scenario={scenario} 
-                                    simulationSetResults={simulationResults} />);
-        }
-    }
     if (selectedCharts.multiLineOverTime) {
         // Check if selectedMetrics is available (from 1D parameter structure)
         const metrics = selectedCharts.selectedMetrics || [];
         
-        if (metrics.includes("medianTotalInvestments") || 
-            (selectedCharts.multiLineQuantities?.includes("medianTotalInvestments"))) {
+        if (metrics.includes("medianTotalInvestments")) {
+            charts.push(<MultiLineMedianInvestmentsChart scenario={scenario} 
+                                    simulationSetResults={simulationResults} />);
+        }
+        
+        if (metrics.includes("probabilityOfSuccess")) {
+            charts.push(<MultiLineProbabilityOfSuccessChart scenario={scenario} 
+                                    simulationSetResults={simulationResults} />);
+        }
+    }
+    if (selectedCharts.finalValueVsParameter) {
+        // Check if selectedMetrics is available (from 1D parameter structure)
+        const metrics = selectedCharts.selectedMetrics || [];
+        
+        if (metrics.includes("finalMedianTotalInvestments")) {
             charts.push(<InvesmentsLineChartAsFunction scenario={scenario} 
                                     simulationSetResults={simulationResults} />);
         }
         
-        if (metrics.includes("probabilityOfSuccess") || 
-            (selectedCharts.multiLineQuantities?.includes("probabilityOfSuccess"))) {
+        if (metrics.includes("finalProbabilityOfSuccess")) {
             charts.push(<ProbSuccessLineChartAsFunction scenario={scenario} 
                                     simulationSetResults={simulationResults} />);
         }
