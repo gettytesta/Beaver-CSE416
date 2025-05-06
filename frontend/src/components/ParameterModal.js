@@ -19,6 +19,9 @@ export default function ParameterModal({
   const [rangeValues2, setRangeValues2] = useState({ lower: "", upper: "", step: "" });
   const [selectedEventId2, setSelectedEventId2] = useState("");
   const [selectedField2, setSelectedField2] = useState("start");
+  const [firstParamSaved, setFirstParamSaved] = useState(false);
+
+
 
   useEffect(() => {
     if (showModal) {
@@ -34,6 +37,8 @@ export default function ParameterModal({
       setRangeValues2(currentParameter?.range2 || { lower: "", upper: "", step: "" });
       setSelectedEventId2(currentParameter?.eventId2 || "");
       setSelectedField2(currentParameter?.field2 || "start");
+      setFirstParamSaved(false);
+
     }
   }, [showModal]);
 
@@ -43,7 +48,6 @@ export default function ParameterModal({
       subParameter: selectedSubOption,
     };
   
-    // FIRST sub-parameter logic
     if (selectedSubOption === "rothOptimizer" && !scenario.rothConversionOpt) {
       parameter.rothStart = rothStart;
       parameter.rothEnd = rothEnd;
@@ -69,8 +73,13 @@ export default function ParameterModal({
       parameter.field = selectedField;
     }
   
-    // SECOND sub-parameter logic for two-dimensional case
+    // twoDimensional logic
     if (selectedOption === "twoDimensional") {
+      if (!firstParamSaved) {
+        setFirstParamSaved(true);
+        return;
+      }
+  
       parameter.subParameter2 = selectedSubOption2;
   
       if (
@@ -102,13 +111,24 @@ export default function ParameterModal({
   const handleOptionChange = (e) => {
     const value = e.target.value;
     setSelectedOption(value);
+  
+    // Reset all fields regardless of option
+    setSelectedSubOption("");
+    setSelectedEventId("");
+    setSelectedField("start");
+    setRangeValues({ lower: "", upper: "", step: "" });
+    setRothStart("");
+    setRothEnd("");
+  
+    // Also reset 2D-specific fields
+    setSelectedSubOption2("");
+    setSelectedEventId2("");
+    setSelectedField2("start");
+    setRangeValues2({ lower: "", upper: "", step: "" });
+    setFirstParamSaved(false);
+  
     if (value === "noParameters") {
-      setSelectedSubOption("");
-      setSelectedEventId("");
-      setSelectedField("start");
-      setRangeValues({ lower: "", upper: "", step: "" });
-      setRothStart("");
-      setRothEnd("");
+      setSelectedParameter(null); // Clear any existing parameter
     }
   };
   const handleSubOptionChange = (e) => {
@@ -163,9 +183,6 @@ export default function ParameterModal({
 
 
 
-
-
-
   const selectedEvent2 = scenario?.eventSeriesSet?.find((e) => e._id === selectedEventId2);
   const startType2 = selectedEvent2?.start?.type;
   const durationType2 = selectedEvent2?.duration?.type;
@@ -182,6 +199,14 @@ export default function ParameterModal({
     : selectedField2 === "start"
       ? selectedEvent2?.start?.value ?? selectedEvent2?.start?.year ?? "Unavailable"
       : selectedEvent2?.duration?.value ?? "Unavailable";
+
+
+
+
+
+
+
+
 
   return (
     <div className={`fixed inset-0 bg-gray-500 bg-opacity-50 flex justify-center items-center ${showModal ? "block" : "hidden"}`}>
@@ -228,6 +253,38 @@ export default function ParameterModal({
 
        
     {/* -------------------- 2d goes here  -------------------- */}
+
+    {selectedOption === "twoDimensional" && firstParamSaved && (
+  <>
+    {/* -------------------- Second Sub-Parameter Configuration -------------------- */}
+    <div className="mb-4 border-t pt-4">
+      <h4 className="text-md font-semibold mb-2">Second Sub-Parameter Configuration</h4>
+
+      <label className="block text-sm text-gray-600 mb-2">Choose second sub-parameter</label>
+      <select
+        value={selectedSubOption2}
+        onChange={(e) => {
+          const val = e.target.value;
+          setSelectedSubOption2(val);
+          setSelectedEventId2("");
+          setSelectedField2("start");
+          setRangeValues2({ lower: "", upper: "", step: "" });
+        }}
+        className="w-full px-4 py-2 border border-gray-300 rounded-md"
+      >
+        <option value="">Select a sub-parameter</option>
+        {showRCOOption && <option value="rothOptimizer">Roth Conversion Optimizer (RCO)</option>}
+        {!showRCOOption && <option value="rothOptimizer" disabled>RCO (Already Enabled)</option>}
+        <option value="startYearDuration">Start Year / Duration of Event Series</option>
+        <option value="incomeExpenseInitial">Initial Amount of Income/Expense Event</option>
+        <option value="investmentPercentage">Percentage of First Investment in Asset Allocation</option>
+      </select>
+
+      {/* Rest of your second param rendering logic below */}
+      {/* Include event selector, field selector, bounds inputs, etc. just like you did with param 1 */}
+    </div>
+  </>
+)}
 
 {/* -------------------- 2d ends here   -------------------- */}
 
