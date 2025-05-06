@@ -4,6 +4,7 @@ import ProbabilityOfSuccessChart from './graphs/ProbabilityOfSuccess.jsx';
 import { ProbabilityRangesChartIncome, ProbabilityRangesChartInvestment, ProbabilityRangesChartWithdrawalTax } from './graphs/ProbabilityRanges.jsx';
 import { StackedBarChartInvestments }  from './graphs/StackedBarChart.jsx';
 import { MultiLineMedianInvestmentsChart, MultiLineProbabilityOfSuccessChart } from './graphs/MultiLineChart.jsx';
+import { InvesmentsLineChartAsFunction, ProbSuccessLineChartAsFunction } from './graphs/LineChartAsFunction.jsx';
 
 // TODO - IMPORT DATA THAT WILL BE USED FOR THE CHARTS
 //        IMPORT THE TYPES OF CHARTS THAT WILL BE USED
@@ -744,6 +745,8 @@ const ChartsPage = () => {
                                     typeOption={"median"} aggregationThreshold={0}/>,
         <MultiLineProbabilityOfSuccessChart scenario={scenario} simulationSetResults={dummySimulationSetResult} />,
         <MultiLineMedianInvestmentsChart scenario={scenario} simulationSetResults={dummySimulationSetResult} />,
+        <ProbSuccessLineChartAsFunction scenario={scenario} simulationSetResults={dummySimulationSetResult} />,
+        <InvesmentsLineChartAsFunction scenario={scenario} simulationSetResults={dummySimulationSetResult} />,
     ];
 
     const handlePrevious = () => {

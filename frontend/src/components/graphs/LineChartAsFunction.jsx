@@ -23,21 +23,35 @@ function getMedian(values) {
 //                       The code required heavy editing however.
 
 export const ProbSuccessLineChartAsFunction = ({scenario, simulationSetResults}) => {
-    const yearlyData = simulationResults.result.yearlyData;
+    const financialGoal = scenario.financialGoal;
+    const values = {}
 
-    // Extract data for the chart
-    const labels = yearlyData.map(data => data.year);
-    const probabilities = yearlyData.map(data => data.yearGains / 50000 * 100);
+    simulationSetResults.forEach((simulationSetThing, setIndex) => {
+        const simulationResults = simulationSetThing.results;
+        let successCount = 0;
+
+        simulationResults.forEach(simulation => {
+            const lastYearSim = simulation.result.yearlyData[simulation.result.endYear-simulation.result.yearlyData[0].year];
+            const totalInvestments = lastYearSim.investments.reduce((sum, investment) => sum + investment.value, 0);
+            if (totalInvestments >= financialGoal) {
+                successCount += + 1;
+            }
+        })
+        values[simulationSetThing.value] = successCount / simulationResults.length * 100;
+    })
+
+    // Extract labels (years) and data (number of successful simulations)
+    const labels = Object.keys(values).sort((a, b) => a - b); // Sort years in ascending order
+    const dataPoints = labels.map(value => values[value]);
 
     const data = {
         labels,
         datasets: [
             {
                 label: 'Probability of Success',
-                data: probabilities,
-                borderColor: 'rgba(75, 192, 192, 1)',
-                backgroundColor: 'rgba(75, 192, 192, 0.2)',
-                tension: 0.4,
+                data: dataPoints,
+                borderColor: 'rgb(171, 19, 19)',
+                backgroundColor: 'rgba(171, 19, 19,0.3)',
             },
         ],
     };
@@ -50,7 +64,7 @@ export const ProbSuccessLineChartAsFunction = ({scenario, simulationSetResults})
             },
             title: {
                 display: true,
-                text: 'Probability of Success Over Time',
+                text: `Probability of Success as a Function of ${simulationSetResults[0].parameter}`, // Title of the chart
             },
         },
         layout: {
@@ -65,7 +79,7 @@ export const ProbSuccessLineChartAsFunction = ({scenario, simulationSetResults})
             x: {
                 title: {
                     display: true,
-                    text: 'Years', // Label for the x-axis
+                    text: 'Value', // Label for the x-axis
                 },
             },
             y: {
@@ -73,7 +87,7 @@ export const ProbSuccessLineChartAsFunction = ({scenario, simulationSetResults})
                 max: 100, // Probability is between 0 and 1
                 title: {
                     display: true,
-                    text: 'Probability (%)', // Label for the y-axis
+                    text: 'Probability of Success (%)', // Label for the y-axis
                 },
             },
         },
@@ -83,21 +97,35 @@ export const ProbSuccessLineChartAsFunction = ({scenario, simulationSetResults})
 };
 
 export const InvesmentsLineChartAsFunction = ({scenario, simulationSetResults}) => {
-    const yearlyData = simulationResults.result.yearlyData;
+    const financialGoal = scenario.financialGoal;
+    const values = {}
 
-    // Extract data for the chart
-    const labels = yearlyData.map(data => data.year);
-    const probabilities = yearlyData.map(data => data.yearGains / 50000 * 100);
+    simulationSetResults.forEach((simulationSetThing, setIndex) => {
+        const simulationResults = simulationSetThing.results;
+        const totalInvestments = [];
+
+        simulationResults.forEach(simulation => {
+            const lastYearSim = simulation.result.yearlyData[simulation.result.endYear-simulation.result.yearlyData[0].year];
+            const investments = lastYearSim.investments.reduce((sum, investment) => sum + investment.value, 0);
+            totalInvestments.push(investments);
+        })
+        values[simulationSetThing.value] = getMedian(totalInvestments);
+    })
+
+    console.log("values", values);
+
+    // Extract labels (years) and data (number of successful simulations)
+    const labels = Object.keys(values).sort((a, b) => a - b); // Sort years in ascending order
+    const dataPoints = labels.map(value => values[value]);
 
     const data = {
         labels,
         datasets: [
             {
-                label: 'Probability of Success',
-                data: probabilities,
-                borderColor: 'rgba(75, 192, 192, 1)',
-                backgroundColor: 'rgba(75, 192, 192, 0.2)',
-                tension: 0.4,
+                label: 'Median Total Investments',
+                data: dataPoints,
+                borderColor: 'rgb(171, 19, 19)',
+                backgroundColor: 'rgba(171, 19, 19,0.3)',
             },
         ],
     };
@@ -110,7 +138,7 @@ export const InvesmentsLineChartAsFunction = ({scenario, simulationSetResults}) 
             },
             title: {
                 display: true,
-                text: 'Probability of Success Over Time',
+                text: `Median Total Investments as a function of ${simulationSetResults[0].parameter}`,
             },
         },
         layout: {
@@ -125,15 +153,14 @@ export const InvesmentsLineChartAsFunction = ({scenario, simulationSetResults}) 
             x: {
                 title: {
                     display: true,
-                    text: 'Years', // Label for the x-axis
+                    text: "Value", // Label for the x-axis
                 },
             },
             y: {
                 beginAtZero: true,
-                max: 100, // Probability is between 0 and 1
                 title: {
                     display: true,
-                    text: 'Probability (%)', // Label for the y-axis
+                    text: simulationSetResults[0].parameter, // Label for the y-axis
                 },
             },
         },
