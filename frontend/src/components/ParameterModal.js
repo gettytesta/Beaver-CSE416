@@ -19,6 +19,9 @@ export default function ParameterModal({
   const [rangeValues2, setRangeValues2] = useState({ lower: "", upper: "", step: "" });
   const [selectedEventId2, setSelectedEventId2] = useState("");
   const [selectedField2, setSelectedField2] = useState("start");
+  const [firstParamSaved, setFirstParamSaved] = useState(false);
+
+
 
   useEffect(() => {
     if (showModal) {
@@ -34,6 +37,8 @@ export default function ParameterModal({
       setRangeValues2(currentParameter?.range2 || { lower: "", upper: "", step: "" });
       setSelectedEventId2(currentParameter?.eventId2 || "");
       setSelectedField2(currentParameter?.field2 || "start");
+      setFirstParamSaved(false);
+
     }
   }, [showModal]);
 
@@ -43,7 +48,6 @@ export default function ParameterModal({
       subParameter: selectedSubOption,
     };
   
-    // FIRST sub-parameter logic
     if (selectedSubOption === "rothOptimizer" && !scenario.rothConversionOpt) {
       parameter.rothStart = rothStart;
       parameter.rothEnd = rothEnd;
@@ -69,8 +73,13 @@ export default function ParameterModal({
       parameter.field = selectedField;
     }
   
-    // SECOND sub-parameter logic for two-dimensional case
+    // twoDimensional logic
     if (selectedOption === "twoDimensional") {
+      if (!firstParamSaved) {
+        setFirstParamSaved(true);
+        return;
+      }
+  
       parameter.subParameter2 = selectedSubOption2;
   
       if (
@@ -102,13 +111,24 @@ export default function ParameterModal({
   const handleOptionChange = (e) => {
     const value = e.target.value;
     setSelectedOption(value);
+  
+    // Reset all fields regardless of option
+    setSelectedSubOption("");
+    setSelectedEventId("");
+    setSelectedField("start");
+    setRangeValues({ lower: "", upper: "", step: "" });
+    setRothStart("");
+    setRothEnd("");
+  
+    // Also reset 2D-specific fields
+    setSelectedSubOption2("");
+    setSelectedEventId2("");
+    setSelectedField2("start");
+    setRangeValues2({ lower: "", upper: "", step: "" });
+    setFirstParamSaved(false);
+  
     if (value === "noParameters") {
-      setSelectedSubOption("");
-      setSelectedEventId("");
-      setSelectedField("start");
-      setRangeValues({ lower: "", upper: "", step: "" });
-      setRothStart("");
-      setRothEnd("");
+      setSelectedParameter(null); // Clear any existing parameter
     }
   };
   const handleSubOptionChange = (e) => {
@@ -163,9 +183,6 @@ export default function ParameterModal({
 
 
 
-
-
-
   const selectedEvent2 = scenario?.eventSeriesSet?.find((e) => e._id === selectedEventId2);
   const startType2 = selectedEvent2?.start?.type;
   const durationType2 = selectedEvent2?.duration?.type;
@@ -182,6 +199,14 @@ export default function ParameterModal({
     : selectedField2 === "start"
       ? selectedEvent2?.start?.value ?? selectedEvent2?.start?.year ?? "Unavailable"
       : selectedEvent2?.duration?.value ?? "Unavailable";
+
+
+
+
+
+
+
+
 
   return (
     <div className={`fixed inset-0 bg-gray-500 bg-opacity-50 flex justify-center items-center ${showModal ? "block" : "hidden"}`}>
@@ -228,134 +253,6 @@ export default function ParameterModal({
 
        
     {/* -------------------- 2d goes here  -------------------- */}
-
-{/* -------------------- 2d ends here   -------------------- */}
-
-
-        {(selectedSubOption === "startYearDuration" || selectedSubOption === "incomeExpenseInitial") && (
-          <div className="mb-4">
-            <label className="block text-sm text-gray-600 mb-2">Select Event Series</label>
-            <select
-              value={selectedEventId}
-              onChange={(e) => setSelectedEventId(e.target.value)}
-              className="w-full px-4 py-2 border border-gray-300 rounded-md"
-            >
-              <option value="">Select one</option>
-              {incomeOrExpenseEvents.map((e) => (
-                <option key={e._id} value={e._id}>
-                  {e.name} ({e.type})
-                </option>
-              ))}
-            </select>
-          </div>
-        )}
-
-        {selectedSubOption === "investmentPercentage" && (
-          <div className="mb-4">
-            <label className="block text-sm text-gray-600 mb-2">Select Invest Event (2 allocations only)</label>
-            <select
-              value={selectedEventId}
-              onChange={(e) => setSelectedEventId(e.target.value)}
-              className="w-full px-4 py-2 border border-gray-300 rounded-md"
-            >
-              <option value="">Select one</option>
-              {validInvestEvents.map((e) => (
-                <option key={e._id} value={e._id}>{e.name}</option>
-              ))}
-            </select>
-          </div>
-        )}
-
-        {selectedSubOption === "startYearDuration" && selectedEventId && (
-          <>
-            <div className="mb-2">
-              <label className="block text-sm text-gray-600 mb-2">Select Field</label>
-              <select
-                value={selectedField}
-                onChange={(e) => setSelectedField(e.target.value)}
-                className="w-full px-4 py-2 border border-gray-300 rounded-md"
-              >
-                <option value="start">Start Year</option>
-                <option value="duration">Duration</option>
-              </select>
-            </div>
-
-            <p className="text-sm text-gray-600 mb-4">
-              Current value: <span className="font-medium">{currentValue}</span>
-            </p>
-
-            {isStartOrDurationNumeric && ["lower", "upper", "step"].map((field) => (
-              <div key={field} className="mb-4">
-                <label className="block text-sm text-gray-600 mb-2 capitalize">{field} Bound</label>
-                <input
-                  type="number"
-                  name={field}
-                  value={rangeValues[field]}
-                  onChange={handleRangeChange}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-md"
-                  placeholder={`Enter ${field} bound`}
-                />
-              </div>
-            ))}
-          </>
-        )}
-
-        {selectedSubOption === "incomeExpenseInitial" && selectedEventId && (
-          <>
-            <p className="text-sm text-gray-600 mb-4">
-              Initial Amount: <span className="font-medium">{currentValue}</span>
-            </p>
-
-            {typeof currentValue === "number" && ["lower", "upper", "step"].map((field) => (
-              <div key={field} className="mb-4">
-                <label className="block text-sm text-gray-600 mb-2 capitalize">{field} Bound</label>
-                <input
-                  type="number"
-                  name={field}
-                  value={rangeValues[field]}
-                  onChange={handleRangeChange}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-md"
-                  placeholder={`Enter ${field} bound`}
-                />
-              </div>
-            ))}
-          </>
-        )}
-
-        {selectedSubOption === "rothOptimizer" && showRCOOption && (
-          <div className="mb-4">
-            <label className="block text-sm text-gray-600 mb-2">Roth Conversion Start Year</label>
-            <input
-              type="number"
-              value={rothStart}
-              onChange={(e) => setRothStart(e.target.value)}
-              className="w-full px-4 py-2 border border-gray-300 rounded-md mb-4"
-              placeholder="Enter start year"
-            />
-            <label className="block text-sm text-gray-600 mb-2">Roth Conversion End Year</label>
-            <input
-              type="number"
-              value={rothEnd}
-              onChange={(e) => setRothEnd(e.target.value)}
-              className="w-full px-4 py-2 border border-gray-300 rounded-md"
-              placeholder="Enter end year"
-            />
-          </div>
-        )}
-
-        {(selectedSubOption === "investmentPercentage") && ["lower", "upper", "step"].map((field) => (
-          <div key={field} className="mb-4">
-            <label className="block text-sm text-gray-600 mb-2 capitalize">{field} Bound</label>
-            <input
-              type="number"
-              name={field}
-              value={rangeValues[field]}
-              onChange={handleRangeChange}
-              className="w-full px-4 py-2 border border-gray-300 rounded-md"
-              placeholder={`Enter ${field} bound`}
-            />
-          </div>
-        ))}
 
         <div className="mt-6 flex justify-end space-x-4">
           <button onClick={handleCancel} className="px-4 py-2 text-gray-600 border border-gray-300 rounded-md text-sm">Cancel</button>
