@@ -189,26 +189,3 @@ exports.calculateTaxFromBrackets = (value, taxBrackets) => {
 
     return totalTax;
 }
-
-exports.getBoundsAndDelta = (selectedParameter) => {
-    let lowerBound;
-    let upperBound;
-    let delta;
-
-    if (selectedParameter.subParameter === 'rothOptimizer') {
-        lowerBound = selectedParameter.rothStart;
-        upperBound = selectedParameter.rothEnd;
-        delta = 1; // 1 year
-    } else if (
-        selectedParameter.subParameter === 'startYearDuration' ||
-        selectedParameter.subParameter === 'incomeExpenseInitial' ||
-        selectedParameter.subParameter === 'investmentPercentage'
-    ) {
-        lowerBound = selectedParameter.range.lower;
-        upperBound = selectedParameter.range.upper;
-        delta = selectedParameter.range.step;
-    }
-
-    return { lowerBound, upperBound, delta };
-}
-

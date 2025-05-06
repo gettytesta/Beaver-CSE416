@@ -108,9 +108,21 @@ export const MultiLineMedianInvestmentsChart = ({scenario, simulationSetResults}
     const datasets = [];
     const allYears = new Set();
 
+    // Check if simulationSetResults is an array before using forEach
+    if (!Array.isArray(simulationSetResults)) {
+        console.error("simulationSetResults is not an array:", simulationSetResults);
+        return <p>No data available</p>;
+    }
+
     simulationSetResults.forEach((simulationSetThing, setIndex) => {
         const simulationResults = simulationSetThing.results;
         const medianValues = {}
+
+        // Check if simulationResults has the expected structure
+        if (!simulationResults || !simulationResults.data) {
+            console.error("Invalid simulation results structure:", simulationResults);
+            return;
+        }
 
         simulationResults.forEach(sim => {
             const simulation = sim.data
@@ -137,6 +149,11 @@ export const MultiLineMedianInvestmentsChart = ({scenario, simulationSetResults}
             backgroundColor: `hsla(${(setIndex * 360) / simulationSetResults.length}, 70%, 50%, 0.3)`,
         });
     })
+
+    // If no datasets were created, return a message
+    if (datasets.length === 0) {
+        return <p>No data available to display</p>;
+    }
 
     console.log("Datasets: ", datasets);
 
