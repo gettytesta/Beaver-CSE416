@@ -503,15 +503,7 @@ const scenario = {
 const ChartsPage = ({scenario, simulationResults, selectedCharts}) => {
     const [currentChartIndex, setCurrentChartIndex] = useState(0);
 
-    const charts = [
-        // <ProbabilityRangesChartInvestment scenario={scenario} simulationResults={dummySimulationResult} />,
-        // <StackedBarChartInvestments scenario={scenario} simulationResults={dummySimulationResult} 
-        //                             typeOption={"median"} aggregationThreshold={0}/>,
-        // <MultiLineProbabilityOfSuccessChart scenario={scenario} simulationSetResults={dummySimulationSetResult} />,
-        // <MultiLineMedianInvestmentsChart scenario={scenario} simulationSetResults={dummySimulationSetResult} />,
-        // <ProbSuccessLineChartAsFunction scenario={scenario} simulationSetResults={dummySimulationSetResult} />,
-        // <InvesmentsLineChartAsFunction scenario={scenario} simulationSetResults={dummySimulationSetResult} />,
-    ];
+    const charts = [];
 
 
     if (selectedCharts.lineChart) {

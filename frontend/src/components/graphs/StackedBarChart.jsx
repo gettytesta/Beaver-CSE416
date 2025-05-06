@@ -58,6 +58,7 @@ export const StackedBarChartInvestments = ({scenario, simulationResults, typeOpt
         simulation.result.yearlyData.forEach(yearData => {
             if (investmentData[yearData.year] === undefined) {
                 investmentData[yearData.year] = {};
+                investmentData[yearData.year]['Other'] = [];
             }
             yearData.investments.forEach(investment => {
                 if (investmentData[yearData.year][investment.type.name] === undefined) {
@@ -65,9 +66,8 @@ export const StackedBarChartInvestments = ({scenario, simulationResults, typeOpt
                 }
                 if (investment.value >= aggregationThreshold) { 
                     investmentData[yearData.year][investment.type.name].push(investment.value);
-                    
                 } else {
-                    investmentData[yearData.year]["Other"].push(investment.value);
+                    investmentData[yearData.year]['Other'].push(investment.value);
                 }
             })
         });
@@ -144,6 +144,7 @@ export const StackedBarChartIncome = ({scenario, simulationResults, typeOption, 
         simulation.result.yearlyData.forEach(yearData => {
             if (eventIncome[yearData.year] === undefined) {
                 eventIncome[yearData.year] = {};
+                eventIncome[yearData.year]['Other'] = [];
             }
             yearData.incomeEvents.forEach(event => {
                 if (eventIncome[yearData.year][event.name] === undefined) {
@@ -230,6 +231,7 @@ export const StackedBarChartExpenses = ({scenario, simulationResults, typeOption
         simulation.result.yearlyData.forEach(yearData => {
             if (eventExpenses[yearData.year] === undefined) {
                 eventExpenses[yearData.year] = {};
+                eventExpenses[yearData.year]['Other'] = [];
             }
             yearData.expenseEvents.forEach(event => {
                 if (eventExpenses[yearData.year][event.name] === undefined) {

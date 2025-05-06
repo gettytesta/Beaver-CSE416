@@ -323,7 +323,7 @@ export const ProbabilityRangesChartExpenses = ({ scenario, simulationResults }) 
             if (medianValues[yearData.year] === undefined) {
                 medianValues[yearData.year] = [];
             }
-            medianValues[yearData.year].push(yearData.expenses + yearData.taxesIncurred);
+            medianValues[yearData.year].push(yearData.totalExpenses + yearData.taxesIncurred);
         });
     });
 
@@ -598,7 +598,7 @@ export const ProbabilityRangesChartDiscretionaryExpenses = ({ scenario, simulati
             if (medianValues[yearData.year] === undefined) {
                 medianValues[yearData.year] = [];
             }
-            medianValues[yearData.year].push(yearData.discretionaryExpenses);
+            medianValues[yearData.year].push(yearData.percentDiscretionary);
         });
     });
 
