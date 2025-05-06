@@ -130,7 +130,7 @@ export default function SimulationsTable({ scenarios }) {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           credentials: "include",
-          body: JSON.stringify({ numSimulations, selectedParameter }),
+          body: JSON.stringify({ numSimulations, selectedCharts, selectedParameter }),
         });
   
         const data = await response.json();

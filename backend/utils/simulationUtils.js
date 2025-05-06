@@ -1,13 +1,21 @@
+const seedrandom = require('seedrandom');
+
+let rng = Math.random;
+
+exports.setSeed = (seed) => {
+    rng = seedrandom(seed);
+};
+
 exports.generateNormalRandom = (mean, stdev) => {
-    const u1 = Math.random();
-    const u2 = Math.random();
+    const u1 = rng();
+    const u2 = rng();
     const z0 = Math.sqrt(-2.0 * Math.log(u1)) * Math.cos(2.0 * Math.PI * u2);
     return z0 * stdev + mean;
-}
+};
 
 exports.sampleValueFromDistribution = (distObj) => {
     if (!distObj || !distObj.type) {
-        return 0; // Avoid throwing errors.
+        return 0;
     }
 
     switch (distObj.type) {
@@ -18,12 +26,12 @@ exports.sampleValueFromDistribution = (distObj) => {
             return exports.generateNormalRandom(distObj.mean, distObj.stdev);
 
         case 'uniform':
-            return distObj.lower + Math.random() * (distObj.upper - distObj.lower);
+            return distObj.lower + rng() * (distObj.upper - distObj.lower);
 
         default:
             throw new Error(`Unknown distribution type: ${distObj.type}`);
     }
-}
+};
 
 exports.adjustNumber = (num, inflationRate) => {
     return Math.round(num * (1 + inflationRate));
@@ -32,7 +40,7 @@ exports.adjustNumber = (num, inflationRate) => {
 exports.adjustTaxBrackets = (taxBrackets, inflationRate) => {
     const adjustBracket = (bracket) => {
         return {
-            lowerBound: exports.adjustNumber(bracket.lowerBound, inflationRate), 
+            lowerBound: exports.adjustNumber(bracket.lowerBound, inflationRate),
             upperBound: exports.adjustNumber(bracket.upperBound, inflationRate),
             rate: exports.adjustNumber(bracket.rate, inflationRate)
         };
@@ -42,7 +50,7 @@ exports.adjustTaxBrackets = (taxBrackets, inflationRate) => {
     if (Array.isArray(taxBrackets)) {
         return taxBrackets.map(adjustBracket);
     }
-    
+
     // Otherwise, it's the full tax brackets object
     return {
         standardDeduction: exports.adjustNumber(taxBrackets.standardDeduction, inflationRate),
@@ -69,25 +77,29 @@ exports.initializeEvents = (eventSeriesSet) => {
     if (!eventSeriesSet) {
         return [];
     }
-    
+
     // Create a shallow copy of the array but keep original objects
     const eventsToProcess = [...eventSeriesSet].filter(
-        eventSeries => eventSeries.type === 'income' || 
-                      eventSeries.type === 'expense' || 
-                      eventSeries.type === 'invest' || 
-                      eventSeries.type === 'rebalance'
+        eventSeries => eventSeries.type === 'income' ||
+            eventSeries.type === 'expense' ||
+            eventSeries.type === 'invest' ||
+            eventSeries.type === 'rebalance'
     );
-    
+
     // First pass: initialize event properties
     eventsToProcess.forEach(eventSeries => {
-        // Sample and set start and duration
         const originalId = eventSeries._id; // Save original ID 
-        
-        if (eventSeries.start.type === 'fixed' || eventSeries.start.type === 'uniform' || eventSeries.start.type === 'normal') {
-            eventSeries.startValue = exports.sampleValueFromDistribution(eventSeries.start);
+        if (!(eventSeries.start.type === 'startWith' || eventSeries.start.type === 'startAfter')) {
+            // Sample and set start
+            
+            if (eventSeries.start.type === 'fixed' || eventSeries.start.type === 'uniform' || eventSeries.start.type === 'normal') {
+                eventSeries.start = Math.round(exports.sampleValueFromDistribution(eventSeries.start));
+            }
         }
-        eventSeries.durationValue = exports.sampleValueFromDistribution(eventSeries.duration);
-        
+
+        // Sample and set duration
+        eventSeries.duration = Math.round(exports.sampleValueFromDistribution(eventSeries.duration));
+
         // "unpack" the values for this type by copying type-specific properties
         if (eventSeries.type === 'income' && eventSeries.income) {
             Object.keys(eventSeries.income).forEach(key => {
@@ -116,24 +128,25 @@ exports.initializeEvents = (eventSeriesSet) => {
                 }
             });
         }
-        
+
         // Make sure _id is preserved
         eventSeries._id = originalId;
+
     });
 
     // Second pass: handle startWith and startAfter events
     eventsToProcess.forEach(event => {
-        if (event.start && (event.start.type === 'startWith' || event.start.type === 'startAfter')) {
+        if (event.start.type === 'startWith' || event.start.type === 'startAfter') {
             const referencedEvent = eventsToProcess.find(e => e.name === event.start.eventSeries);
             if (!referencedEvent) {
                 throw new Error(`Referenced event ${event.start.eventSeries} not found for ${event.name}`);
             }
-            
+
             // Use the calculated value instead of replacing the start object
             if (event.start.type === 'startWith') {
-                event.startValue = referencedEvent.startValue;
+                event.start = referencedEvent.start;
             } else if (event.start.type === 'startAfter') {
-                event.startValue = referencedEvent.startValue + 1;
+                event.start = referencedEvent.start + 1;
             }
         }
     });
@@ -148,7 +161,7 @@ exports.lookUpTaxBracket = (taxBrackets, value) => {
             return bracket;
         }
     }
-    
+
     // If no bracket is found (shouldn't happen with proper tax brackets that include Infinity)
     // Return the highest bracket as a fallback
     return taxBrackets[taxBrackets.length - 1];
@@ -164,15 +177,38 @@ exports.calculateTaxFromBrackets = (value, taxBrackets) => {
 
     for (const bracket of taxBrackets) {
         if (remainingValue <= 0) break;
-        
+
         let taxableInThisBracket = Math.min(
             remainingValue,
             bracket.upperBound - bracket.lowerBound + 1
         );
-        
+
         totalTax += taxableInThisBracket * bracket.rate;
         remainingValue -= taxableInThisBracket;
     }
 
     return totalTax;
 }
+
+exports.getBoundsAndDelta = (selectedParameter) => {
+    let lowerBound;
+    let upperBound;
+    let delta;
+
+    if (selectedParameter.subParameter === 'rothOptimizer') {
+        lowerBound = selectedParameter.rothStart;
+        upperBound = selectedParameter.rothEnd;
+        delta = 1; // 1 year
+    } else if (
+        selectedParameter.subParameter === 'startYearDuration' ||
+        selectedParameter.subParameter === 'incomeExpenseInitial' ||
+        selectedParameter.subParameter === 'investmentPercentage'
+    ) {
+        lowerBound = selectedParameter.range.lower;
+        upperBound = selectedParameter.range.upper;
+        delta = selectedParameter.range.step;
+    }
+
+    return { lowerBound, upperBound, delta };
+}
+
